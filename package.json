@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node node_modules/next/dist/bin/next dev",
-    "build": "node node_modules/prisma/build/index.js generate && node node_modules/next/dist/bin/next build",
-    "start": "node node_modules/next/dist/bin/next start",
-    "lint": "node node_modules/next/dist/bin/next lint",
-    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
-    "postinstall": "node node_modules/prisma/build/index.js generate",
-    "db:push": "node node_modules/prisma/build/index.js db push",
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "jose": "^5.6.3",
     "lucide-react": "^0.424.0",
     "next": "14.2.5",
+    "prisma": "^5.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.12.7",
@@ -35,7 +36,6 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
     "postcss": "^8.4.40",
-    "prisma": "^5.18.0",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4"
   }
