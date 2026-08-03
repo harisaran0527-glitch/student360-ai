@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Shield/Base -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Outer Orbit Circle -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="url(#accentGrad)" stroke-width="12" stroke-dasharray="12 16" opacity="0.6" />
+
+  <!-- Center Core 360 Icon -->
+  <g transform="translate(256, 256)">
+    <!-- Outer Ring -->
+    <circle cx="0" cy="0" r="110" fill="none" stroke="url(#accentGrad)" stroke-width="18" />
+    
+    <!-- Graduation Cap Symbol -->
+    <path d="M-60,-20 L0,-50 L60,-20 L0,10 Z" fill="#ffffff" />
+    <path d="M-40,-5 L-40,25 C-40,40 40,40 40,25 L40,-5" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" />
+    <path d="M50,-15 L50,30" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="round" />
+
+    <!-- AI Sparkles -->
+    <path d="M-80,-70 L-70,-90 L-60,-70 L-40,-60 L-60,-50 L-70,-30 L-80,-50 L-100,-60 Z" fill="#fbbf24" />
+    <path d="M70,50 L77,35 L85,50 L100,57 L85,65 L77,80 L70,65 L55,57 Z" fill="#38bdf8" />
+  </g>
+
+  <!-- Text Label -->
+  <text x="256" y="440" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="44" fill="#ffffff" text-anchor="middle" letter-spacing="4">
+    STUDENT360 AI
+  </text>
+</svg>

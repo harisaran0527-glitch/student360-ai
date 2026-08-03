@@ -1,0 +1,15 @@
+# ============================================================
+# Student360 AI — Netlify Configuration
+# ============================================================
+
+[build]
+  command   = "npm run build"
+  publish   = ".next"
+
+[build.environment]
+  NODE_VERSION    = "20"
+  NPM_FLAGS       = "--legacy-peer-deps"
+
+# Next.js App Router requires the Netlify Next.js plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

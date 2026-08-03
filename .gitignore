@@ -1,0 +1,55 @@
+# ============================================================
+# Student360 AI — .gitignore
+# ============================================================
+
+# --- Environment & Secrets (NEVER commit) ---
+.env
+.env.local
+.env.production
+.env.staging
+.env*.local
+*.env
+
+# --- Next.js Build Output ---
+.next/
+out/
+build/
+
+# --- Node Modules ---
+node_modules/
+
+# --- Prisma SQLite Dev Database (DO NOT commit) ---
+prisma/dev.db
+prisma/dev.db.backup
+prisma/*.db
+prisma/*.db-journal
+
+# --- Local File Uploads (ephemeral, use Supabase Storage in prod) ---
+public/uploads/
+
+# --- OS & Editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+
+# --- Logs ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# --- TypeScript build info ---
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Coverage & Tests ---
+coverage/
+.nyc_output/
+
+# --- Netlify cache ---
+.netlify/
+
+public/uploads_backup/
