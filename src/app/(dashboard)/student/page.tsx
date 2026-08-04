@@ -64,37 +64,8 @@ export default function StudentDashboardPage() {
     );
   }
 
-  if (!sessionUser) {
+  if (!sessionUser || sessionUser.role !== "STUDENT") {
     return <StudentLoginForm />;
-  }
-
-  const handleLogoutFromPortal = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {}
-    setSessionUser(null);
-  };
-
-  if (sessionUser.role === "ADMIN" || sessionUser.role === "SUPER_ADMIN") {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-center">
-        <div className="glass-card p-8 rounded-3xl border border-slate-700 max-w-md w-full space-y-5">
-          <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mx-auto">
-            <GraduationCap className="w-7 h-7" />
-          </div>
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-white">Access Restricted</h2>
-            <p className="text-sm text-slate-400">This portal is available only for Student accounts.</p>
-          </div>
-          <button
-            onClick={handleLogoutFromPortal}
-            className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition"
-          >
-            Log Out
-          </button>
-        </div>
-      </div>
-    );
   }
 
   if (!student) {
