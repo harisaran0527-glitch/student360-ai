@@ -71,7 +71,11 @@ export async function POST(req: Request) {
       },
     }, "Login successful");
   } catch (error: any) {
-    console.error("Student Login API Error:", error);
+    console.error("[AUTH_API_ERROR] Route: POST /api/auth/student-login | Status: 500", {
+      code: error?.code || "UNKNOWN_ERROR",
+      name: error?.name || "Error",
+      message: error?.message || "An unexpected error occurred",
+    });
     return apiError("Internal server error during authentication", 500);
   }
 }

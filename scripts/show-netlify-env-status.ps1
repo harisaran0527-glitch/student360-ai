@@ -6,6 +6,7 @@ $envFilePath = Join-Path $PSScriptRoot "..\.env"
 $keysToCheck = @(
     "NODE_ENV",
     "DATABASE_URL",
+    "DIRECT_URL",
     "JWT_SECRET",
     "ADMIN_JWT_SECRET",
     "CLOUD_STORAGE_PROVIDER",
@@ -54,6 +55,7 @@ foreach ($key in $keysToCheck) {
     $reqStr = switch ($key) {
         "NODE_ENV" { "REQUIRED" }
         "DATABASE_URL" { "REQUIRED" }
+        "DIRECT_URL" { "REQUIRED" }
         "JWT_SECRET" { "REQUIRED" }
         "CLOUD_STORAGE_PROVIDER" { "REQUIRED" }
         "SUPABASE_URL" { "REQUIRED" }
