@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DeleteManagementPanel } from "@/components/ui/DeleteManagementPanel";
+import { useAcademicOptions } from "@/hooks/useAcademicOptions";
 import {
   UserCheck,
   Calendar,
@@ -13,6 +14,7 @@ import {
   XCircle,
   Clock,
   Briefcase,
+  RefreshCw,
   AlertCircle,
   Save,
   Edit3,
@@ -25,13 +27,21 @@ import {
 type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE";
 
 export default function AdminTakeAttendancePage() {
-  const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [batches, setBatches] = useState<any[]>([]);
+  const {
+    academicYears,
+    batches,
+    selectedAcademicYear,
+    setSelectedAcademicYear,
+    selectedBatchId,
+    setSelectedBatchId,
+    loading: optionsLoading,
+    error: optionsError,
+    refresh: refreshOptions,
+  } = useAcademicOptions();
+
   const [courses, setCourses] = useState<any[]>([]);
 
   // Selection state
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
-  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -44,40 +54,6 @@ export default function AdminTakeAttendancePage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
-
-  // Fetch initial options
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/academic-years").then((res) => res.json()),
-      fetch("/api/batches").then((res) => res.json()),
-    ])
-      .then(([ayData, batchData]) => {
-        const years = ayData.academicYears || [];
-        setAcademicYears(years);
-
-        const savedAY = localStorage.getItem("selected_academic_year");
-        if (savedAY && years.some((y: any) => y.yearCode === savedAY)) {
-          setSelectedAcademicYear(savedAY);
-        } else if (ayData.currentYearCode) {
-          setSelectedAcademicYear(ayData.currentYearCode);
-        }
-
-        const bList = batchData.batches || [];
-        setBatches(bList);
-        if (bList.length > 0) {
-          setSelectedBatchId(bList[0].id);
-        }
-      })
-      .catch((err) => console.error(err));
-
-    const handleAYChange = (e: any) => {
-      if (e.detail?.academicYear) {
-        setSelectedAcademicYear(e.detail.academicYear);
-      }
-    };
-    window.addEventListener("academicYearChanged", handleAYChange);
-    return () => window.removeEventListener("academicYearChanged", handleAYChange);
-  }, []);
 
   // Fetch students and existing attendance when filters change
   const loadStudentsAndAttendance = async () => {
@@ -260,43 +236,65 @@ export default function AdminTakeAttendancePage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Academic Year *
-              </label>
-              <select
-                value={selectedAcademicYear}
-                onChange={(e) => {
-                  setSelectedAcademicYear(e.target.value);
-                  localStorage.setItem("selected_academic_year", e.target.value);
-                }}
-                className="ui-input w-full p-2 font-bold text-indigo-600"
+          {optionsError ? (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400 flex items-center justify-between">
+              <span>Unable to load Academic Year and Batch.</span>
+              <button
+                onClick={refreshOptions}
+                className="px-2.5 py-1 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-500 transition flex items-center gap-1"
               >
-                {academicYears.map((ay) => (
-                  <option key={ay.id} value={ay.yearCode}>
-                    {ay.yearCode} {ay.isCurrent ? "(Current)" : ""}
-                  </option>
-                ))}
-              </select>
+                <RefreshCw className="w-3 h-3" /> Retry
+              </button>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Academic Year *
+                </label>
+                <select
+                  value={selectedAcademicYear}
+                  onChange={(e) => setSelectedAcademicYear(e.target.value)}
+                  disabled={optionsLoading}
+                  className="ui-input w-full p-2 font-bold text-indigo-600 disabled:opacity-50"
+                >
+                  {optionsLoading ? (
+                    <option value="">Loading academic options...</option>
+                  ) : academicYears.length === 0 ? (
+                    <option value="">No Academic Years have been configured.</option>
+                  ) : (
+                    academicYears.map((ay) => (
+                      <option key={ay.id} value={ay.yearCode}>
+                        {ay.yearCode} {ay.isCurrent ? "(Active)" : ""}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
 
-            <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Batch *
-              </label>
-              <select
-                value={selectedBatchId}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                {batches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    Batch {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Batch *
+                </label>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  disabled={optionsLoading}
+                  className="ui-input w-full p-2 disabled:opacity-50"
+                >
+                  {optionsLoading ? (
+                    <option value="">Loading academic options...</option>
+                  ) : batches.length === 0 ? (
+                    <option value="">No Batches are available.</option>
+                  ) : (
+                    batches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        Batch {b.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
 
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
@@ -329,8 +327,9 @@ export default function AdminTakeAttendancePage() {
                   ))
                 )}
               </select>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Status Message */}

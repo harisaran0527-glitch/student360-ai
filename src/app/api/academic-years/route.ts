@@ -14,10 +14,20 @@ export async function GET() {
 
     const currentYear = academicYears.find((y) => y.isCurrent) || academicYears[0];
 
-    return NextResponse.json({
-      academicYears,
-      currentYearCode: currentYear?.yearCode || "2025-2026",
-    });
+    return NextResponse.json(
+      {
+        academicYears,
+        currentYearCode: currentYear?.yearCode || "2025-2026",
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

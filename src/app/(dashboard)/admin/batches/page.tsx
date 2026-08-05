@@ -21,13 +21,12 @@ import {
   Trash2,
 } from "lucide-react";
 
-export default function BatchesPage() {
-  const [batches, setBatches] = useState<any[]>([]);
-  const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+import { useAcademicOptions } from "@/hooks/useAcademicOptions";
 
-  // Selected Batch for viewing students
-  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
+export default function BatchesPage() {
+  const { academicYears, batches, loading: optionsLoading, refresh: refreshOptions } = useAcademicOptions();
+  const [loading, setLoading] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const [batchStudents, setBatchStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
@@ -43,22 +42,7 @@ export default function BatchesPage() {
   const [admissionQuota, setAdmissionQuota] = useState("GQ");
 
   const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [bRes, ayRes] = await Promise.all([
-        fetch("/api/batches"),
-        fetch("/api/academic-years"),
-      ]);
-      const bData = await bRes.json();
-      const ayData = await ayRes.json();
-
-      setBatches(bData.batches || []);
-      setAcademicYears(ayData.academicYears || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    refreshOptions();
   };
 
   const fetchStudentsForBatch = async (batch: any) => {

@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 
     const batches = await prisma.batch.findMany({
       where: {
-        departmentId: dept.id,
+        isArchived: false,
       },
       include: {
         department: true,
@@ -52,7 +52,17 @@ export async function GET(req: Request) {
       admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 1}`,
     }));
 
-    return NextResponse.json({ batches: enrichedBatches });
+    return NextResponse.json(
+      { batches: enrichedBatches },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

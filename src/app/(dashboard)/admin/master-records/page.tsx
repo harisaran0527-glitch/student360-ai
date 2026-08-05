@@ -31,11 +31,21 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useAcademicOptions } from "@/hooks/useAcademicOptions";
 
 export default function MasterRecordsPage() {
+  const {
+    academicYears,
+    batches,
+    selectedAcademicYear: selectedYear,
+    setSelectedAcademicYear: setSelectedYear,
+    loading: optionsLoading,
+    error: optionsError,
+    refresh: refreshOptions,
+  } = useAcademicOptions();
+
   const [students, setStudents] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
-  const [batches, setBatches] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +53,6 @@ export default function MasterRecordsPage() {
   const [search, setSearch] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2025-2026");
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedQuota, setSelectedQuota] = useState("ALL");
@@ -140,20 +149,15 @@ export default function MasterRecordsPage() {
 
   const fetchMetadata = async () => {
     try {
-      const [deptRes, batchRes] = await Promise.all([
-        fetch("/api/departments"),
-        fetch("/api/batches"),
-      ]);
+      const deptRes = await fetch("/api/departments");
       const deptData = await deptRes.json();
-      const batchData = await batchRes.json();
       setDepartments(deptData.departments || []);
-      setBatches(batchData.batches || []);
 
       if (deptData.departments?.length > 0) {
         setFormData((prev: any) => ({ ...prev, departmentId: deptData.departments[0].id }));
       }
-      if (batchData.batches?.length > 0) {
-        setFormData((prev: any) => ({ ...prev, batchId: batchData.batches[0].id }));
+      if (batches.length > 0) {
+        setFormData((prev: any) => ({ ...prev, batchId: batches[0].id }));
       }
     } catch (err) {
       console.error("Failed to fetch metadata", err);

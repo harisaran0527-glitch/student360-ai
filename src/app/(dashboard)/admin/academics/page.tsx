@@ -20,9 +20,16 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { useAcademicOptions } from "@/hooks/useAcademicOptions";
+
 export default function AdminSyllabusPage() {
-  const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
+  const {
+    academicYears,
+    selectedAcademicYear,
+    setSelectedAcademicYear,
+    loading: optionsLoading,
+  } = useAcademicOptions();
+
   const [selectedSemester, setSelectedSemester] = useState<string>("");
 
   const [courses, setCourses] = useState<any[]>([]);
@@ -60,22 +67,7 @@ export default function AdminSyllabusPage() {
     }
   };
 
-  useEffect(() => {
-    fetch("/api/academic-years")
-      .then((res) => res.json())
-      .then((data) => {
-        const years = data.data?.academicYears || data.academicYears || [];
-        setAcademicYears(years);
-        const saved = localStorage.getItem("selected_academic_year");
-        if (saved) setSelectedAcademicYear(saved);
-      });
 
-    const handleAYChange = (e: any) => {
-      if (e.detail?.academicYear) setSelectedAcademicYear(e.detail.academicYear);
-    };
-    window.addEventListener("academicYearChanged", handleAYChange);
-    return () => window.removeEventListener("academicYearChanged", handleAYChange);
-  }, []);
 
   useEffect(() => {
     fetchSyllabus();
