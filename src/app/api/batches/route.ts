@@ -3,58 +3,82 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const session = await getSession(req);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        {
+          status: 401,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        }
+      );
+    }
 
-    const dept = await getOrCreateDefaultDepartment();
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
-    // Current admission year (if before June, admission year was previous calendar year)
-    const activeAdmissionYear = currentMonth < 6 ? currentYear - 1 : currentYear;
+    try {
+      const dept = await getOrCreateDefaultDepartment();
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const activeAdmissionYear = currentMonth < 6 ? currentYear - 1 : currentYear;
 
-    // Idempotently create batches for admission years starting 2025 up to activeAdmissionYear + 1
-    const baseAdmissionYear = 2025;
-    const targetMaxYear = Math.max(activeAdmissionYear + 1, 2026);
+      const baseAdmissionYear = 2025;
+      const targetMaxYear = Math.max(activeAdmissionYear + 1, 2026);
 
-    for (let yr = baseAdmissionYear; yr <= targetMaxYear; yr++) {
-      const batchName = `${yr}-${yr + 4}`;
-      const existing = await prisma.batch.findUnique({ where: { name: batchName } });
-      if (!existing) {
-        await prisma.batch.create({
-          data: {
-            name: batchName,
-            admissionYear: yr,
-            expectedGraduationYear: yr + 4,
-            departmentId: dept.id,
-            totalSemesters: 8,
-            currentSemester: Math.min(Math.max((activeAdmissionYear - yr) * 2 + 1, 1), 8),
-            status: "ACTIVE",
-          },
-        });
+      for (let yr = baseAdmissionYear; yr <= targetMaxYear; yr++) {
+        const batchName = `${yr}-${yr + 4}`;
+        const existing = await prisma.batch.findUnique({ where: { name: batchName } });
+        if (!existing) {
+          await prisma.batch.create({
+            data: {
+              name: batchName,
+              admissionYear: yr,
+              expectedGraduationYear: yr + 4,
+              departmentId: dept.id,
+              totalSemesters: 8,
+              currentSemester: Math.min(Math.max((activeAdmissionYear - yr) * 2 + 1, 1), 8),
+              status: "ACTIVE",
+            },
+          });
+        }
       }
+    } catch (e) {
+      console.warn("Batch auto-init non-fatal warning:", e);
     }
 
     const batches = await prisma.batch.findMany({
-      where: {
-        departmentId: dept.id,
-      },
+      where: { isArchived: false },
       include: {
         department: true,
         _count: { select: { students: true } },
       },
-      orderBy: { admissionYear: "desc" },
+      orderBy: [{ admissionYear: "desc" }, { name: "desc" }],
     });
 
     const enrichedBatches = batches.map((b) => ({
       ...b,
+      graduationYear: b.expectedGraduationYear,
       admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 1}`,
+      studentCount: b._count?.students || 0,
     }));
 
-    return NextResponse.json({ batches: enrichedBatches });
+    return NextResponse.json(
+      { batches: enrichedBatches },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[BATCHES_API_ERROR]", error);
+    return NextResponse.json({ error: error.message || "Failed to load batches" }, { status: 500 });
   }
 }
 

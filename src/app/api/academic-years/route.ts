@@ -3,23 +3,63 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { ensureCurrentAcademicYear } from "@/lib/academicYearEngine";
 
-export async function GET() {
-  try {
-    // Ensure current academic year is initialized
-    await ensureCurrentAcademicYear();
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-    const academicYears = await prisma.academicYear.findMany({
-      orderBy: { yearCode: "desc" },
+export async function GET(req: Request) {
+  try {
+    const session = await getSession(req);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        {
+          status: 401,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        }
+      );
+    }
+
+    // Ensure current academic year is initialized
+    try {
+      await ensureCurrentAcademicYear();
+    } catch (e) {
+      console.warn("ensureCurrentAcademicYear non-fatal error:", e);
+    }
+
+    const rawYears = await prisma.academicYear.findMany({
+      orderBy: [{ isCurrent: "desc" }, { yearCode: "desc" }],
+    });
+
+    const academicYears = rawYears.map((ay) => {
+      const normalizedCode = (ay.yearCode || "").replace(/[\u2013\u2014]/g, "-").trim();
+      return {
+        id: ay.id,
+        yearCode: normalizedCode,
+        name: ay.name || `Academic Year ${normalizedCode}`,
+        status: ay.status || "ACTIVE",
+        isCurrent: Boolean(ay.isCurrent),
+      };
     });
 
     const currentYear = academicYears.find((y) => y.isCurrent) || academicYears[0];
 
-    return NextResponse.json({
-      academicYears,
-      currentYearCode: currentYear?.yearCode || "2025-2026",
-    });
+    return NextResponse.json(
+      {
+        academicYears,
+        currentYearCode: currentYear?.yearCode || "2025-2026",
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[ACADEMIC_YEARS_API_ERROR]", error);
+    return NextResponse.json({ error: error.message || "Failed to load academic years" }, { status: 500 });
   }
 }
 
