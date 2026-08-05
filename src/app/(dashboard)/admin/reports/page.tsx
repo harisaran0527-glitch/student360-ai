@@ -23,19 +23,8 @@ import {
   Layers,
   Sparkles,
 } from "lucide-react";
-import { useAcademicOptions } from "@/hooks/useAcademicOptions";
 
 export default function AdminReportingCenterPage() {
-  const {
-    academicYears,
-    batches,
-    selectedAcademicYear: academicYear,
-    setSelectedAcademicYear: setAcademicYear,
-    loading: optionsLoading,
-    error: optionsError,
-    refresh: refreshOptions,
-  } = useAcademicOptions();
-
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory>("STUDENT_MASTER");
   const [selectedReportId, setSelectedReportId] = useState<string>("STUDENT_MASTER_FULL");
 
@@ -44,13 +33,29 @@ export default function AdminReportingCenterPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Primary Academic Year Filter
+  const [academicYear, setAcademicYear] = useState<string>("2025-2026");
   const [batchId, setBatchId] = useState("");
   const [semester, setSemester] = useState("");
+
+  const [batches, setBatches] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
 
   const currentReportDef = REPORT_CATALOG.find((r) => r.id === selectedReportId) || REPORT_CATALOG[0];
 
   const fetchOptions = async () => {
-    refreshOptions();
+    try {
+      const ayRes = await fetch("/api/academic-years");
+      const ayData = await ayRes.json();
+      setAcademicYears(ayData.academicYears || []);
+      const savedAY = localStorage.getItem("selected_academic_year");
+      if (savedAY) setAcademicYear(savedAY);
+
+      const batchRes = await fetch("/api/batches");
+      const batchData = await batchRes.json();
+      setBatches(batchData.batches || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchReport = async () => {

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StudentSupportMLDatasetSchema",
+  "type": "object",
+  "properties": {
+    "student_id": { "type": "string" },
+    "academic_year": { "type": "string" },
+    "semester": { "type": "integer" },
+    "features": {
+      "type": "object",
+      "properties": {
+        "overall_attendance_percentage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "subject_shortages_count": { "type": "integer", "minimum": 0 },
+        "cgpa": { "type": "number", "minimum": 0, "maximum": 10 },
+        "sgpa_trend": { "type": "number" },
+        "current_semester": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "semester_internship_required": { "type": "integer", "enum": [0, 1] },
+        "internship_completed": { "type": "integer", "enum": [0, 1] },
+        "pending_compliance_docs": { "type": "integer", "minimum": 0 },
+        "verified_skills_count": { "type": "integer", "minimum": 0 },
+        "verified_projects_count": { "type": "integer", "minimum": 0 },
+        "verified_certificates_count": { "type": "integer", "minimum": 0 }
+      },
+      "required": [
+        "overall_attendance_percentage",
+        "subject_shortages_count",
+        "cgpa",
+        "current_semester",
+        "semester_internship_required",
+        "internship_completed",
+        "pending_compliance_docs"
+      ]
+    },
+    "target_label": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "1 if student required academic intervention, 0 otherwise"
+    }
+  },
+  "required": ["student_id", "academic_year", "semester", "features", "target_label"]
+}
