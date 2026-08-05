@@ -14,6 +14,6 @@ export default async function HomePage() {
   if (session.role === "SUPER_ADMIN" || session.role === "ADMIN") {
     redirect("/admin");
   } else {
-    redirect("/student");
+    redirect("/student/profile");
   }
 }

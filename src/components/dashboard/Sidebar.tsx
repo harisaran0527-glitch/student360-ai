@@ -65,14 +65,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const studentNav = [
-    { name: "Dashboard", href: "/student", icon: LayoutDashboard },
     { name: "My Profile", href: "/student/profile", icon: Users },
-    { name: "My Attendance", href: "/student/attendance", icon: UserCheck },
-    { name: "Subjects & Syllabus", href: "/student/academics", icon: GraduationCap },
-    { name: "My Internships", href: "/student/internships", icon: Briefcase },
-    { name: "My Certificates", href: "/student/certificates", icon: FileCheck },
-    { name: "My Projects", href: "/student/projects", icon: FolderGit2 },
-    { name: "My Placement", href: "/student/placements", icon: Layers },
+    { name: "Attendance", href: "/student/attendance", icon: UserCheck },
+    { name: "Academics / Syllabus", href: "/student/academics", icon: GraduationCap },
+    { name: "Internships", href: "/student/internships", icon: Briefcase },
+    { name: "Certificates", href: "/student/certificates", icon: FileCheck },
+    { name: "Projects", href: "/student/projects", icon: FolderGit2 },
+    { name: "Placements", href: "/student/placements", icon: Layers },
     { name: "Notifications", href: "/student/notifications", icon: MessageSquareText },
   ];
 

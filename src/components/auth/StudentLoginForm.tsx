@@ -28,7 +28,7 @@ export function StudentLoginForm() {
       }
 
       setPassword("");
-      window.location.href = "/student/dashboard";
+      window.location.href = "/student/profile";
     } catch (err: any) {
       setError(err.message || "Invalid email or password.");
       setPassword("");
