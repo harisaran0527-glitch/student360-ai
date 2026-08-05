@@ -7,23 +7,17 @@ import {
   LayoutDashboard,
   Users,
   Building2,
-  CalendarDays,
   GraduationCap,
   Briefcase,
-  Award,
   FileCheck,
   FileText,
-  Code2,
   FolderGit2,
   Sparkles,
-  Archive,
   ShieldAlert,
-  BarChart3,
   LogOut,
   Layers,
   MessageSquareText,
   UserCheck,
-  Smartphone,
   KeyRound,
   X,
 } from "lucide-react";
@@ -57,11 +51,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: "Certificates", href: "/admin/certificates", icon: FileCheck },
     { name: "Projects", href: "/admin/projects", icon: FolderGit2 },
     { name: "Placement", href: "/admin/placement", icon: Briefcase },
-    { name: "Alumni Directory", href: "/admin/alumni", icon: GraduationCap },
-    { name: "Notifications & Alerts", href: "/admin/notifications", icon: MessageSquareText },
+    { name: "Alumni", href: "/admin/alumni", icon: GraduationCap },
+    { name: "Notifications", href: "/admin/notifications", icon: MessageSquareText },
     { name: "Department Setup", href: "/admin/departments", icon: Building2 },
     { name: "Account Settings", href: "/admin/settings", icon: KeyRound },
-    { name: "System Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
+    { name: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
   ];
 
   const studentNav = [
@@ -75,11 +69,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: "Notifications", href: "/student/notifications", icon: MessageSquareText },
   ];
 
-  const navItems = userRole === "STUDENT" ? studentNav : adminNav;
+  const isStudentUser = userRole === "STUDENT";
+  const navItems = isStudentUser ? studentNav : adminNav;
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = userRole === "STUDENT" ? "/student" : "/admin";
+    window.location.href = isStudentUser ? "/student" : "/admin";
   };
 
   return (
@@ -93,13 +88,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between h-screen fixed lg:sticky top-0 left-0 z-40 transition-transform duration-300 ${
+        className={`w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen fixed lg:sticky top-0 left-0 z-40 transition-transform duration-300 ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <div>
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Brand Header */}
-          <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
                 <Sparkles className="w-5 h-5" />
@@ -109,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   Student360 <span className="text-indigo-600 dark:text-indigo-400">AI</span>
                 </h1>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                  {userRole === "STUDENT" ? "Student Portal" : "Admin Panel"}
+                  {isStudentUser ? "Student Portal" : "Admin Panel"}
                 </p>
               </div>
             </div>
@@ -123,21 +118,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* User Role Badge */}
-          <div className="px-3 py-2.5 mx-3 my-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/40">
+          {/* User Role Badge Card */}
+          <div className="px-3 py-2.5 mx-3 my-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/40 flex-shrink-0">
             <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               {userRole.replace("_", " ")}
             </div>
             <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-              {userName}
+              {userName || "User"}
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{userEmail}</div>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="px-3 space-y-1 max-h-[calc(100vh-270px)] overflow-y-auto">
+          {/* Navigation Links List */}
+          <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/admin" && item.href !== "/student" && pathname?.startsWith(item.href));
               const Icon = item.icon;
               return (
                 <Link
@@ -156,17 +153,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
           </nav>
-        </div>
 
-        {/* Sign Out */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 transition"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
+          {/* Sign Out Button */}
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 transition"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>
