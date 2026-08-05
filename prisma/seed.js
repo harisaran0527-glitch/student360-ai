@@ -16,7 +16,7 @@ async function main() {
     create: {
       email: 'admin@student360.edu',
       passwordHash: hashedPassword,
-      fullName: 'Dr. Arthur Pendelton (Super Admin)',
+      fullName: 'Priyadharshini',
       role: 'SUPER_ADMIN',
       isActive: true,
     },
