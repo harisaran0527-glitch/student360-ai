@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { ShieldAlert, User, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AuditLogsPage() {
   const auditLogs = await prisma.auditLog.findMany({
     take: 50,

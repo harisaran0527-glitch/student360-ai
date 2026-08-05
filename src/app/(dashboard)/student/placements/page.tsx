@@ -5,6 +5,9 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Briefcase, Building, DollarSign, CheckCircle2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function StudentPlacementsPage() {
   const session = await getSession();
   const student = await prisma.studentProfile.findFirst({
