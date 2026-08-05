@@ -44,17 +44,27 @@ export default function AdminReportingCenterPage() {
 
   const fetchOptions = async () => {
     try {
-      const ayRes = await fetch("/api/academic-years");
+      const [ayRes, batchRes] = await Promise.all([
+        fetch("/api/academic-years", { credentials: "include", cache: "no-store" }),
+        fetch("/api/batches", { credentials: "include", cache: "no-store" }),
+      ]);
       const ayData = await ayRes.json();
-      setAcademicYears(ayData.academicYears || []);
-      const savedAY = localStorage.getItem("selected_academic_year");
-      if (savedAY) setAcademicYear(savedAY);
-
-      const batchRes = await fetch("/api/batches");
       const batchData = await batchRes.json();
+
+      const years = ayData.academicYears || [];
+      setAcademicYears(years);
+      const savedAY = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") : null;
+      if (savedAY && years.some((y: any) => y.yearCode === savedAY)) {
+        setAcademicYear(savedAY);
+      } else if (ayData.currentYearCode && years.some((y: any) => y.yearCode === ayData.currentYearCode)) {
+        setAcademicYear(ayData.currentYearCode);
+      } else if (years.length > 0) {
+        setAcademicYear(years[0].yearCode);
+      }
+
       setBatches(batchData.batches || []);
     } catch (err) {
-      console.error(err);
+      console.error("[Reports Fetch Options Error]", err);
     }
   };
 

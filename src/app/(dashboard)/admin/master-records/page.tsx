@@ -141,8 +141,8 @@ export default function MasterRecordsPage() {
   const fetchMetadata = async () => {
     try {
       const [deptRes, batchRes] = await Promise.all([
-        fetch("/api/departments"),
-        fetch("/api/batches"),
+        fetch("/api/departments", { credentials: "include", cache: "no-store" }),
+        fetch("/api/batches", { credentials: "include", cache: "no-store" }),
       ]);
       const deptData = await deptRes.json();
       const batchData = await batchRes.json();

@@ -49,12 +49,13 @@ export default function AdminNotificationsPage() {
   useEffect(() => {
     fetchData();
 
-    fetch("/api/academic-years")
+    fetch("/api/academic-years", { credentials: "include", cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         const years = data.data?.academicYears || data.academicYears || [];
         setAcademicYears(years);
-      });
+      })
+      .catch((e) => console.error(e));
   }, []);
 
   const handleRunManualCheck = async () => {

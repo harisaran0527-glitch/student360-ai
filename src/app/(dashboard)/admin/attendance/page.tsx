@@ -48,8 +48,20 @@ export default function AdminTakeAttendancePage() {
   // Fetch initial options
   useEffect(() => {
     Promise.all([
-      fetch("/api/academic-years").then((res) => res.json()),
-      fetch("/api/batches").then((res) => res.json()),
+      fetch("/api/academic-years", { credentials: "include", cache: "no-store" }).then(async (res) => {
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          throw new Error(e.error || `Academic Years HTTP ${res.status}`);
+        }
+        return res.json();
+      }),
+      fetch("/api/batches", { credentials: "include", cache: "no-store" }).then(async (res) => {
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          throw new Error(e.error || `Batches HTTP ${res.status}`);
+        }
+        return res.json();
+      }),
     ])
       .then(([ayData, batchData]) => {
         const years = ayData.academicYears || [];
@@ -58,8 +70,10 @@ export default function AdminTakeAttendancePage() {
         const savedAY = localStorage.getItem("selected_academic_year");
         if (savedAY && years.some((y: any) => y.yearCode === savedAY)) {
           setSelectedAcademicYear(savedAY);
-        } else if (ayData.currentYearCode) {
+        } else if (ayData.currentYearCode && years.some((y: any) => y.yearCode === ayData.currentYearCode)) {
           setSelectedAcademicYear(ayData.currentYearCode);
+        } else if (years.length > 0) {
+          setSelectedAcademicYear(years[0].yearCode);
         }
 
         const bList = batchData.batches || [];
@@ -68,7 +82,10 @@ export default function AdminTakeAttendancePage() {
           setSelectedBatchId(bList[0].id);
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error("[Attendance Options Error]", err);
+        setMessage({ text: `Failed to load options: ${err.message}`, type: "error" });
+      });
 
     const handleAYChange = (e: any) => {
       if (e.detail?.academicYear) {

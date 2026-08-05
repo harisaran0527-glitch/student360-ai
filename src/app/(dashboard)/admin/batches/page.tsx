@@ -46,16 +46,26 @@ export default function BatchesPage() {
     setLoading(true);
     try {
       const [bRes, ayRes] = await Promise.all([
-        fetch("/api/batches"),
-        fetch("/api/academic-years"),
+        fetch("/api/batches", { credentials: "include", cache: "no-store" }),
+        fetch("/api/academic-years", { credentials: "include", cache: "no-store" }),
       ]);
+
+      if (!bRes.ok) {
+        const err = await bRes.json().catch(() => ({}));
+        throw new Error(err.error || `Batches HTTP ${bRes.status}`);
+      }
+      if (!ayRes.ok) {
+        const err = await ayRes.json().catch(() => ({}));
+        throw new Error(err.error || `Academic Years HTTP ${ayRes.status}`);
+      }
+
       const bData = await bRes.json();
       const ayData = await ayRes.json();
 
       setBatches(bData.batches || []);
       setAcademicYears(ayData.academicYears || []);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("[Batches Fetch Error]", err);
     } finally {
       setLoading(false);
     }

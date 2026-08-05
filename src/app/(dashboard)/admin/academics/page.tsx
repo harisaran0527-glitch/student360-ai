@@ -61,14 +61,21 @@ export default function AdminSyllabusPage() {
   };
 
   useEffect(() => {
-    fetch("/api/academic-years")
+    fetch("/api/academic-years", { credentials: "include", cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         const years = data.data?.academicYears || data.academicYears || [];
         setAcademicYears(years);
-        const saved = localStorage.getItem("selected_academic_year");
-        if (saved) setSelectedAcademicYear(saved);
-      });
+        const saved = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") : null;
+        if (saved && years.some((y: any) => y.yearCode === saved)) {
+          setSelectedAcademicYear(saved);
+        } else if (data.currentYearCode && years.some((y: any) => y.yearCode === data.currentYearCode)) {
+          setSelectedAcademicYear(data.currentYearCode);
+        } else if (years.length > 0) {
+          setSelectedAcademicYear(years[0].yearCode);
+        }
+      })
+      .catch((e) => console.error(e));
 
     const handleAYChange = (e: any) => {
       if (e.detail?.academicYear) setSelectedAcademicYear(e.detail.academicYear);

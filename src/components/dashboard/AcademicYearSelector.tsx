@@ -1,22 +1,33 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, AlertTriangle } from "lucide-react";
 
 export function AcademicYearSelector() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>("2025-2026");
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/academic-years")
-      .then((res) => res.json())
+    fetch("/api/academic-years", {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
+        setFetchError(null);
         const years = data.academicYears || [];
         setAcademicYears(years);
-        const saved = localStorage.getItem("selected_academic_year");
+        const saved = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") : null;
         if (saved && years.some((y: any) => y.yearCode === saved)) {
           setSelectedYear(saved);
-        } else if (data.currentYearCode) {
+        } else if (data.currentYearCode && years.some((y: any) => y.yearCode === data.currentYearCode)) {
           setSelectedYear(data.currentYearCode);
           localStorage.setItem("selected_academic_year", data.currentYearCode);
           document.cookie = `selected_academic_year=${data.currentYearCode}; path=/; max-age=31536000`;
@@ -24,7 +35,10 @@ export function AcademicYearSelector() {
           setSelectedYear(years[0].yearCode);
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error("[AcademicYearSelector Error]", err);
+        setFetchError(err.message);
+      });
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -36,6 +50,15 @@ export function AcademicYearSelector() {
     // Dispatch global event so active Admin page re-queries data
     window.dispatchEvent(new CustomEvent("academicYearChanged", { detail: { academicYear: val } }));
   };
+
+  if (fetchError) {
+    return (
+      <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl px-2.5 py-1 text-xs text-rose-600 dark:text-rose-300">
+        <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+        <span className="font-bold">Year: {selectedYear}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl px-2.5 py-1 text-xs print:hidden">
