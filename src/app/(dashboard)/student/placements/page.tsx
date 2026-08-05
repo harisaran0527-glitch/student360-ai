@@ -3,17 +3,27 @@ import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Briefcase, Building, DollarSign, CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function StudentPlacementsPage() {
   const session = await getSession();
-  const student = await prisma.studentProfile.findFirst({
-    where: { userId: session?.id },
-    include: { placementRecords: true },
-  });
+
+  let student: any = null;
+  if (session?.id) {
+    try {
+      student = await prisma.studentProfile.findFirst({
+        where: { userId: session.id },
+        include: { placementRecords: true },
+      });
+    } catch (err) {
+      console.error("[STUDENT_PLACEMENTS_DB_ERROR]", err);
+    }
+  }
+
+  const placementRecords = student?.placementRecords || [];
+  const cgpaDisplay = student?.cgpa ? `${student.cgpa}` : "0.00";
 
   return (
     <div className="flex-1 flex flex-col">
@@ -26,7 +36,7 @@ export default async function StudentPlacementsPage() {
         <div className="glass-card p-6 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 to-slate-900 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">Campus Placement Status</h2>
-            <p className="text-xs text-slate-300 mt-1">Current CGPA ({student?.cgpa}) satisfies 95%+ corporate placement eligibility criteria.</p>
+            <p className="text-xs text-slate-300 mt-1">Current CGPA ({cgpaDisplay}) satisfies corporate placement eligibility criteria.</p>
           </div>
           <Badge variant="success">Placement Eligible</Badge>
         </div>
@@ -46,14 +56,14 @@ export default async function StudentPlacementsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {student?.placementRecords.length === 0 ? (
+                {placementRecords.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-500">
                       No job offers recorded yet for current placement cycle.
                     </td>
                   </tr>
                 ) : (
-                  student?.placementRecords.map((p) => (
+                  placementRecords.map((p: any) => (
                     <tr key={p.id} className="hover:bg-slate-800/40">
                       <td className="py-3 font-bold text-white">{p.companyName}</td>
                       <td className="py-3 font-semibold text-indigo-300">{p.jobTitle}</td>

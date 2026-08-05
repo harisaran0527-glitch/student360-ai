@@ -3,28 +3,45 @@ import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { GraduationCap, BookOpen, Download, FileText } from "lucide-react";
+import { GraduationCap, BookOpen, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function StudentAcademicsPage() {
   const session = await getSession();
-  const student = await prisma.studentProfile.findFirst({
-    where: { userId: session?.id },
-    include: {
-      department: true,
-      academicRecords: {
-        include: { course: true },
-        orderBy: { semester: "asc" },
-      },
-    },
-  });
 
-  const departmentCourses = await prisma.course.findMany({
-    where: { departmentId: student?.departmentId, isActive: true },
-    orderBy: [{ semester: "asc" }, { code: "asc" }],
-  });
+  let student: any = null;
+  let departmentCourses: any[] = [];
+
+  if (session?.id) {
+    try {
+      student = await prisma.studentProfile.findFirst({
+        where: { userId: session.id },
+        include: {
+          department: true,
+          academicRecords: {
+            include: { course: true },
+            orderBy: { semester: "asc" },
+          },
+        },
+      });
+
+      if (student?.departmentId) {
+        departmentCourses = await prisma.course.findMany({
+          where: { departmentId: student.departmentId, isActive: true },
+          orderBy: [{ semester: "asc" }, { code: "asc" }],
+        });
+      }
+    } catch (err) {
+      console.error("[STUDENT_ACADEMICS_DB_ERROR]", err);
+    }
+  }
+
+  const academicRecords = student?.academicRecords || [];
+  const fullName = student?.fullName || session?.fullName || "Student";
+  const cgpaDisplay = student?.cgpa ? `${student.cgpa} / 10.0` : "0.00 / 10.0";
+  const deptCode = student?.department?.code || "AI & ML";
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
@@ -38,9 +55,9 @@ export default async function StudentAcademicsPage() {
         <div className="ui-card p-6 border-l-4 border-l-emerald-600 bg-gradient-to-r from-emerald-50/50 dark:from-emerald-950/30 to-slate-50 dark:to-slate-900 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white">Cumulative Grade Point Average (CGPA)</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Calculated across all completed credit courses for {student?.fullName}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Calculated across all completed credit courses for {fullName}</p>
           </div>
-          <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{student?.cgpa || "0.00"} / 10.0</div>
+          <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{cgpaDisplay}</div>
         </div>
 
         {/* Subjects & Syllabus Master Directory */}
@@ -50,7 +67,7 @@ export default async function StudentAcademicsPage() {
               <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Department Subjects & Official Syllabus Documents</span>
             </h3>
-            <Badge variant="purple">Department: AI & ML</Badge>
+            <Badge variant="purple">Department: {deptCode}</Badge>
           </div>
 
           <div className="overflow-x-auto">
@@ -128,14 +145,14 @@ export default async function StudentAcademicsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {student?.academicRecords.length === 0 ? (
+                {academicRecords.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-6 text-center text-slate-500">
                       No official semester examination marks logged yet.
                     </td>
                   </tr>
                 ) : (
-                  student?.academicRecords.map((rec) => (
+                  academicRecords.map((rec: any) => (
                     <tr key={rec.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                       <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400">Sem {rec.semester}</td>
                       <td className="p-3 font-semibold text-slate-900 dark:text-white">{rec.course?.code}: {rec.course?.title}</td>
