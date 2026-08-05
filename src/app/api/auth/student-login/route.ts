@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     logApiPerf("POST /api/auth/student-login", startTime);
-    return apiSuccess({
+    const response = apiSuccess({
       user: {
         id: user.id,
         email: user.email,
@@ -70,6 +70,9 @@ export async function POST(req: Request) {
         role: user.role,
       },
     }, "Login successful");
+
+    await setSessionCookie(token, response);
+    return response;
   } catch (error: any) {
     console.error("[AUTH_API_ERROR] Route: POST /api/auth/student-login | Status: 500", {
       code: error?.code || "UNKNOWN_ERROR",

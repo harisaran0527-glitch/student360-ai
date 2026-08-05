@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 export type Role = "SUPER_ADMIN" | "ADMIN" | "FACULTY" | "STUDENT";
 
@@ -55,27 +56,58 @@ export async function verifySessionToken(token: string): Promise<UserSession | n
   }
 }
 
-export async function getSession(): Promise<UserSession | null> {
-  const cookieStore = cookies();
-  const token = cookieStore.get("student360_session")?.value;
+export async function getSession(req?: Request): Promise<UserSession | null> {
+  let token: string | undefined;
+
+  // 1. Try Next.js cookies() API
+  try {
+    const cookieStore = cookies();
+    token = cookieStore.get("student360_session")?.value;
+  } catch {}
+
+  // 2. Fallback: Parse Cookie header directly from incoming Request if passed
+  if (!token && req) {
+    const cookieHeader = req.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(/student360_session=([^;]+)/);
+      if (match) {
+        token = match[1];
+      }
+    }
+  }
+
   if (!token) return null;
   return verifySessionToken(token);
 }
 
-export async function setSessionCookie(token: string) {
-  const cookieStore = cookies();
-  cookieStore.set("student360_session", token, {
+export async function setSessionCookie(token: string, res?: NextResponse) {
+  const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24, // 24 hours
-    sameSite: "lax",
-  });
+    sameSite: "lax" as const,
+  };
+
+  try {
+    const cookieStore = cookies();
+    cookieStore.set("student360_session", token, options);
+  } catch {}
+
+  if (res) {
+    res.cookies.set("student360_session", token, options);
+  }
 }
 
-export async function clearSessionCookie() {
-  const cookieStore = cookies();
-  cookieStore.delete("student360_session");
+export async function clearSessionCookie(res?: NextResponse) {
+  try {
+    const cookieStore = cookies();
+    cookieStore.delete("student360_session");
+  } catch {}
+
+  if (res) {
+    res.cookies.delete("student360_session");
+  }
 }
 
 /**
