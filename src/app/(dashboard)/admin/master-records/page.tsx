@@ -22,6 +22,7 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ArrowUpDown,
   Upload,
   AlertCircle,
@@ -31,6 +32,278 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+
+const INDIAN_STATES_AND_CITIES: Record<string, string[]> = {
+  "Tamil Nadu": [
+    "Chennai",
+    "Coimbatore",
+    "Madurai",
+    "Salem",
+    "Tiruchirappalli",
+    "Tiruppur",
+    "Erode",
+    "Vellore",
+    "Thanjavur",
+    "Dindigul",
+    "Thoothukudi",
+    "Tirunelveli",
+    "Karur",
+    "Namakkal",
+    "Dharmapuri",
+    "Krishnagiri",
+    "Hosur",
+    "Cuddalore",
+    "Kanchipuram",
+    "Chengalpattu",
+    "Tiruvannamalai",
+    "Villupuram",
+    "Nagapattinam",
+    "Mayiladuthurai",
+    "Sivagangai",
+    "Virudhunagar",
+    "Ramanathapuram",
+    "Theni",
+    "Nilgiris",
+    "Ariyalur",
+    "Perambalur",
+    "Tenkasi",
+    "Ranipet",
+    "Tirupattur",
+    "Kallakurichi",
+  ],
+  "Kerala": [
+    "Thiruvananthapuram",
+    "Kochi",
+    "Kozhikode",
+    "Thrissur",
+    "Kollam",
+    "Palakkad",
+    "Kannur",
+    "Kottayam",
+    "Alappuzha",
+    "Malappuram",
+    "Pathanamthitta",
+    "Idukki",
+    "Wayanad",
+    "Kasaragod",
+  ],
+  "Karnataka": [
+    "Bengaluru",
+    "Mysuru",
+    "Mangaluru",
+    "Hubballi",
+    "Belagavi",
+    "Kalaburagi",
+    "Davangere",
+    "Ballari",
+    "Vijayapura",
+    "Shivamogga",
+    "Tumakuru",
+    "Udupi",
+    "Hassan",
+  ],
+  "Andhra Pradesh": [
+    "Visakhapatnam",
+    "Vijayawada",
+    "Guntur",
+    "Nellore",
+    "Kurnool",
+    "Kakinada",
+    "Rajahmundry",
+    "Tirupati",
+    "Anantapur",
+    "Kadapa",
+    "Eluru",
+    "Ongole",
+  ],
+  "Telangana": [
+    "Hyderabad",
+    "Warangal",
+    "Nizamabad",
+    "Karimnagar",
+    "Khammam",
+    "Ramagundam",
+    "Mahbubnagar",
+    "Nalgonda",
+    "Adilabad",
+  ],
+  "Maharashtra": [
+    "Mumbai",
+    "Pune",
+    "Nagpur",
+    "Thane",
+    "Pimpri-Chinchwad",
+    "Nashik",
+    "Kalyan-Dombivli",
+    "Vasai-Virar",
+    "Chhatrapati Sambhajinagar",
+    "Navi Mumbai",
+    "Solapur",
+    "Mira-Bhayandar",
+    "Bhiwandi",
+    "Amravati",
+    "Nanded",
+    "Kolhapur",
+  ],
+  "Puducherry": [
+    "Puducherry",
+    "Karaikal",
+    "Mahe",
+    "Yanam",
+  ],
+  "Delhi": [
+    "New Delhi",
+    "North Delhi",
+    "South Delhi",
+    "East Delhi",
+    "West Delhi",
+    "Central Delhi",
+  ],
+  "Gujarat": [
+    "Ahmedabad",
+    "Surat",
+    "Vadodara",
+    "Rajkot",
+    "Bhavnagar",
+    "Jamnagar",
+    "Junagadh",
+    "Gandhinagar",
+    "Anand",
+    "Navsari",
+  ],
+  "Uttar Pradesh": [
+    "Lucknow",
+    "Kanpur",
+    "Ghaziabad",
+    "Agra",
+    "Varanasi",
+    "Meerut",
+    "Prayagraj",
+    "Bareilly",
+    "Aligarh",
+    "Noida",
+  ],
+  "West Bengal": [
+    "Kolkata",
+    "Howrah",
+    "Durgapur",
+    "Asansol",
+    "Siliguri",
+    "Bardhaman",
+    "Kharagpur",
+  ],
+};
+
+const ALL_INDIAN_STATES = Object.keys(INDIAN_STATES_AND_CITIES);
+
+function SearchableAutocomplete({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  placeholder: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+  const filteredOptions = React.useMemo(() => {
+    if (!value || value.trim() === "") return options;
+    const query = value.toLowerCase().trim();
+    return options.filter((opt) => opt.toLowerCase().includes(query));
+  }, [value, options]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+    } else if (e.key === "Enter") {
+      if (highlightIndex >= 0 && highlightIndex < filteredOptions.length) {
+        e.preventDefault();
+        onChange(filteredOptions[highlightIndex]);
+        setIsOpen(false);
+        setHighlightIndex(-1);
+      }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+      setHighlightIndex(-1);
+    }
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">{label}</label>
+      <div className="relative">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setIsOpen(true);
+            setHighlightIndex(-1);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="ui-input w-full p-2 pr-8"
+        />
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+          <ChevronDown className="w-4 h-4" />
+        </div>
+      </div>
+
+      {isOpen && filteredOptions.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-1 shadow-lg text-xs">
+          {filteredOptions.map((opt, idx) => (
+            <li
+              key={opt}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(opt);
+                setIsOpen(false);
+                setHighlightIndex(-1);
+              }}
+              onMouseEnter={() => setHighlightIndex(idx)}
+              className={`cursor-pointer px-3 py-2 transition-colors ${
+                idx === highlightIndex || opt.toLowerCase() === value.toLowerCase()
+                  ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-semibold"
+                  : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
+              }`}
+            >
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function MasterRecordsPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -116,6 +389,20 @@ export default function MasterRecordsPage() {
   };
 
   const [formData, setFormData] = useState<any>(emptyFormData);
+
+  const availableCities = React.useMemo(() => {
+    const selectedState = formData.state;
+    if (selectedState && INDIAN_STATES_AND_CITIES[selectedState]) {
+      return INDIAN_STATES_AND_CITIES[selectedState];
+    }
+    const matchedKey = Object.keys(INDIAN_STATES_AND_CITIES).find(
+      (k) => k.toLowerCase() === (selectedState || "").toLowerCase()
+    );
+    if (matchedKey) {
+      return INDIAN_STATES_AND_CITIES[matchedKey];
+    }
+    return INDIAN_STATES_AND_CITIES["Tamil Nadu"];
+  }, [formData.state]);
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -964,7 +1251,7 @@ export default function MasterRecordsPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="md:col-span-2">
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Address Line 1</label>
                 <input
@@ -975,16 +1262,20 @@ export default function MasterRecordsPage() {
                   placeholder="Enter Address"
                 />
               </div>
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">City & State</label>
-                <input
-                  type="text"
-                  value={formData.city || ""}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="ui-input w-full p-2"
-                  placeholder="Enter City"
-                />
-              </div>
+              <SearchableAutocomplete
+                label="State"
+                value={formData.state || ""}
+                onChange={(val) => setFormData({ ...formData, state: val })}
+                options={ALL_INDIAN_STATES}
+                placeholder="Select or type State"
+              />
+              <SearchableAutocomplete
+                label="City"
+                value={formData.city || ""}
+                onChange={(val) => setFormData({ ...formData, city: val })}
+                options={availableCities}
+                placeholder="Select or type City"
+              />
             </div>
           </div>
 
