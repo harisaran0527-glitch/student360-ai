@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { ensureCurrentAcademicYear } from "@/lib/academicYearEngine";
 import { ACADEMIC_YEAR_OPTIONS, isSelectableAcademicYear, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export const dynamic = "force-dynamic";
@@ -20,35 +19,51 @@ export async function GET(req: Request) {
       );
     }
 
-    // Ensure current academic year is initialized
-    try {
-      await ensureCurrentAcademicYear();
+    // Fast Single-Query Fetch with minimal field selection
+    let rawYears = await prisma.academicYear.findMany({
+      select: {
+        id: true,
+        yearCode: true,
+        name: true,
+        isCurrent: true,
+        status: true,
+      },
+      orderBy: [{ isCurrent: "desc" }, { yearCode: "asc" }],
+    });
 
-      // Ensure all 10 standard 4-year Academic Years exist
-      for (const yearCode of ACADEMIC_YEAR_OPTIONS) {
-        const startYr = parseInt(yearCode.split("-")[0], 10);
-        const endYr = parseInt(yearCode.split("-")[1], 10);
-        const existing = await prisma.academicYear.findUnique({ where: { yearCode } });
-        if (!existing) {
-          await prisma.academicYear.create({
-            data: {
+    // Auto-populate initial 10 academic years ONLY if table is empty
+    if (rawYears.length === 0) {
+      try {
+        await prisma.academicYear.createMany({
+          data: ACADEMIC_YEAR_OPTIONS.map((yearCode) => {
+            const startYr = parseInt(yearCode.split("-")[0], 10);
+            const endYr = parseInt(yearCode.split("-")[1], 10);
+            return {
               yearCode,
               name: `Academic Year ${yearCode}`,
               startDate: `${startYr}-06-01`,
               endDate: `${endYr}-05-31`,
               status: "ACTIVE",
               isCurrent: yearCode === DEFAULT_ACADEMIC_YEAR,
-            },
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("ensureCurrentAcademicYear non-fatal error:", e);
-    }
+            };
+          }),
+          skipDuplicates: true,
+        });
 
-    const rawYears = await prisma.academicYear.findMany({
-      orderBy: [{ isCurrent: "desc" }, { yearCode: "asc" }],
-    });
+        rawYears = await prisma.academicYear.findMany({
+          select: {
+            id: true,
+            yearCode: true,
+            name: true,
+            isCurrent: true,
+            status: true,
+          },
+          orderBy: [{ isCurrent: "desc" }, { yearCode: "asc" }],
+        });
+      } catch (e) {
+        console.warn("AcademicYear initial populate warning:", e);
+      }
+    }
 
     const academicYears = rawYears
       .map((ay) => {
@@ -73,9 +88,7 @@ export async function GET(req: Request) {
       {
         status: 200,
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
+          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
         },
       }
     );
@@ -187,7 +200,6 @@ export async function DELETE(req: Request) {
     const acadYear = await prisma.academicYear.findUnique({ where: { id } });
     if (!acadYear) return NextResponse.json({ error: "Academic Year not found" }, { status: 404 });
 
-    // Block deletion if related student records exist!
     const studentCount = await prisma.studentProfile.count({
       where: {
         OR: [{ academicYear: acadYear.yearCode }, { admissionAcademicYearId: acadYear.id }],

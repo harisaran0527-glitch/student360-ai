@@ -20,54 +20,78 @@ export async function GET(req: Request) {
       );
     }
 
-    try {
-      const dept = await getOrCreateDefaultDepartment();
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth() + 1;
-      const activeAdmissionYear = currentMonth < 6 ? currentYear - 1 : currentYear;
+    // Fast Single-Query Fetch with explicit SELECT payload
+    let batches = await prisma.batch.findMany({
+      where: {
+        isArchived: false,
+        admissionYear: { gte: 2025 },
+      },
+      select: {
+        id: true,
+        name: true,
+        admissionYear: true,
+        expectedGraduationYear: true,
+        departmentId: true,
+        _count: { select: { students: true } },
+      },
+      orderBy: [{ admissionYear: "asc" }, { name: "asc" }],
+    });
 
-      // Auto-ensure batches from 2025 to 2034 (10 batch options: 2025-2026 to 2034-2035)
-      for (const batchOpt of BATCH_OPTIONS) {
-        const yr = parseInt(batchOpt.split("-")[0], 10);
-        const batchName = `${yr}-${yr + 1}`;
-        const existing = await prisma.batch.findUnique({ where: { name: batchName } });
-        if (!existing) {
-          await prisma.batch.create({
-            data: {
-              name: batchName,
+    // Auto-populate initial 10 batch options ONLY if table is empty
+    if (batches.length === 0) {
+      try {
+        const dept = await getOrCreateDefaultDepartment();
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+        const activeAdmissionYear = currentMonth < 6 ? currentYear - 1 : currentYear;
+
+        await prisma.batch.createMany({
+          data: BATCH_OPTIONS.map((batchOpt) => {
+            const yr = parseInt(batchOpt.split("-")[0], 10);
+            return {
+              name: `${yr}-${yr + 1}`,
               admissionYear: yr,
               expectedGraduationYear: yr + 1,
               departmentId: dept.id,
               totalSemesters: 8,
               currentSemester: Math.min(Math.max((activeAdmissionYear - yr) * 2 + 1, 1), 8),
               status: "ACTIVE",
-            },
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("Batch auto-init non-fatal warning:", e);
-    }
+            };
+          }),
+          skipDuplicates: true,
+        });
 
-    const batches = await prisma.batch.findMany({
-      where: {
-        isArchived: false,
-        admissionYear: { gte: 2025 },
-      },
-      include: {
-        department: true,
-        _count: { select: { students: true } },
-      },
-      orderBy: [{ admissionYear: "asc" }, { name: "asc" }],
-    });
+        batches = await prisma.batch.findMany({
+          where: {
+            isArchived: false,
+            admissionYear: { gte: 2025 },
+          },
+          select: {
+            id: true,
+            name: true,
+            admissionYear: true,
+            expectedGraduationYear: true,
+            departmentId: true,
+            _count: { select: { students: true } },
+          },
+          orderBy: [{ admissionYear: "asc" }, { name: "asc" }],
+        });
+      } catch (e) {
+        console.warn("Batch initial populate warning:", e);
+      }
+    }
 
     const enrichedBatches = batches
       .filter((b) => isSelectableBatch(b.name))
       .map((b) => ({
-        ...b,
+        id: b.id,
+        name: b.name,
+        admissionYear: b.admissionYear,
+        expectedGraduationYear: b.expectedGraduationYear,
         graduationYear: b.expectedGraduationYear,
         admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 4}`,
         studentCount: b._count?.students || 0,
+        departmentId: b.departmentId,
       }));
 
     return NextResponse.json(
@@ -75,9 +99,7 @@ export async function GET(req: Request) {
       {
         status: 200,
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
+          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
         },
       }
     );
@@ -119,7 +141,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create 8 default SemesterConfigs
     for (let sem = 1; sem <= 8; sem++) {
       const ayStart = startYr + Math.floor((sem - 1) / 2);
       await prisma.semesterConfig.create({

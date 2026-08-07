@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 
 export default function AdminReportingCenterPage() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory>("STUDENT_MASTER");
@@ -46,25 +47,19 @@ export default function AdminReportingCenterPage() {
 
   const fetchOptions = async () => {
     try {
-      const [ayRes, batchRes] = await Promise.all([
-        fetch("/api/academic-years", { credentials: "include", cache: "no-store" }),
-        fetch("/api/batches", { credentials: "include", cache: "no-store" }),
-      ]);
-      const ayData = await ayRes.json();
-      const batchData = await batchRes.json();
-
-      const years = ayData.academicYears || [];
+      const opts = await getAcademicOptions();
+      const years = opts.academicYears || [];
       setAcademicYears(years);
+      setBatches(opts.batches || []);
+
       const savedAY = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") : null;
       if (savedAY && years.some((y: any) => y.yearCode === savedAY)) {
         setAcademicYear(savedAY);
-      } else if (ayData.currentYearCode && years.some((y: any) => y.yearCode === ayData.currentYearCode)) {
-        setAcademicYear(ayData.currentYearCode);
+      } else if (opts.currentYearCode && years.some((y: any) => y.yearCode === opts.currentYearCode)) {
+        setAcademicYear(opts.currentYearCode);
       } else if (years.length > 0) {
         setAcademicYear(years[0].yearCode);
       }
-
-      setBatches(batchData.batches || []);
     } catch (err) {
       console.error("[Reports Fetch Options Error]", err);
     }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -432,17 +433,10 @@ export default function MasterRecordsPage() {
 
   const fetchMetadata = async () => {
     try {
-      const [deptRes, batchRes, ayRes] = await Promise.all([
-        fetch("/api/departments", { credentials: "include", cache: "no-store" }),
-        fetch("/api/batches", { credentials: "include", cache: "no-store" }),
-        fetch("/api/academic-years", { credentials: "include", cache: "no-store" }),
-      ]);
-      const deptData = await deptRes.json();
-      const batchData = await batchRes.json();
-      const ayData = await ayRes.json();
-      setDepartments(deptData.departments || []);
-      setBatches(batchData.batches || []);
-      setAcademicYears(ayData.academicYears || []);
+      const opts = await getAcademicOptions();
+      setDepartments(opts.departments || []);
+      setBatches(opts.batches || []);
+      setAcademicYears(opts.academicYears || []);
     } catch (err) {
       console.error("Failed to fetch metadata", err);
     }

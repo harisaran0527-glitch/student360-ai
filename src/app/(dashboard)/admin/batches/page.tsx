@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -46,25 +47,9 @@ export default function BatchesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bRes, ayRes] = await Promise.all([
-        fetch("/api/batches", { credentials: "include", cache: "no-store" }),
-        fetch("/api/academic-years", { credentials: "include", cache: "no-store" }),
-      ]);
-
-      if (!bRes.ok) {
-        const err = await bRes.json().catch(() => ({}));
-        throw new Error(err.error || `Batches HTTP ${bRes.status}`);
-      }
-      if (!ayRes.ok) {
-        const err = await ayRes.json().catch(() => ({}));
-        throw new Error(err.error || `Academic Years HTTP ${ayRes.status}`);
-      }
-
-      const bData = await bRes.json();
-      const ayData = await ayRes.json();
-
-      setBatches(bData.batches || []);
-      setAcademicYears(ayData.academicYears || []);
+      const opts = await getAcademicOptions();
+      setBatches(opts.batches || []);
+      setAcademicYears(opts.academicYears || []);
     } catch (err: any) {
       console.error("[Batches Fetch Error]", err);
     } finally {

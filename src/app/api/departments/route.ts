@@ -2,20 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const departments = await prisma.department.findMany({
-      include: {
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        hodName: true,
         _count: { select: { students: true, courses: true } },
-        sections: true,
       },
       orderBy: { code: "asc" },
     });
 
-    return NextResponse.json({ departments });
+    return NextResponse.json(
+      { departments },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

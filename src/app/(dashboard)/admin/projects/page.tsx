@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -64,16 +65,15 @@ export default function AdminProjectsPage() {
   };
 
   useEffect(() => {
-    fetch("/api/academic-years", { credentials: "include", cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        const years = data.data?.academicYears || data.academicYears || [];
+    getAcademicOptions()
+      .then((opts) => {
+        const years = opts.academicYears || [];
         setAcademicYears(years);
         const saved = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") : null;
         if (saved && years.some((y: any) => y.yearCode === saved)) {
           setSelectedAcademicYear(saved);
-        } else if (data.currentYearCode && years.some((y: any) => y.yearCode === data.currentYearCode)) {
-          setSelectedAcademicYear(data.currentYearCode);
+        } else if (opts.currentYearCode && years.some((y: any) => y.yearCode === opts.currentYearCode)) {
+          setSelectedAcademicYear(opts.currentYearCode);
         } else if (years.length > 0) {
           setSelectedAcademicYear(years[0].yearCode);
         }

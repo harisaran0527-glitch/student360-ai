@@ -60,22 +60,30 @@ export async function GET(req: Request) {
           )
         : 0;
 
-    return NextResponse.json({
-      stats: {
-        currentAcademicYear: currentAcademicYearObj?.yearCode || DEFAULT_ACADEMIC_YEAR,
-        totalStudents,
-        activeStudents,
-        graduatingStudents,
-        graduatedCount,
-        alumniCount,
-        archivedCount,
-        activeBatchesCount,
-        upcomingBatchesCount,
-        totalDepartments,
-        avgAttendance,
+    return NextResponse.json(
+      {
+        stats: {
+          currentAcademicYear: currentAcademicYearObj?.yearCode || DEFAULT_ACADEMIC_YEAR,
+          totalStudents,
+          activeStudents,
+          graduatingStudents,
+          graduatedCount,
+          alumniCount,
+          archivedCount,
+          activeBatchesCount,
+          upcomingBatchesCount,
+          totalDepartments,
+          avgAttendance,
+        },
+        recentAuditLogs,
       },
-      recentAuditLogs,
-    });
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

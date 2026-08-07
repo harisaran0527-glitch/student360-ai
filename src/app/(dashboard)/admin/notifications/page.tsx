@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -50,11 +51,9 @@ export default function AdminNotificationsPage() {
   useEffect(() => {
     fetchData();
 
-    fetch("/api/academic-years", { credentials: "include", cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        const years = data.data?.academicYears || data.academicYears || [];
-        setAcademicYears(years);
+    getAcademicOptions()
+      .then((opts) => {
+        setAcademicYears(opts.academicYears || []);
       })
       .catch((e) => console.error(e));
   }, []);

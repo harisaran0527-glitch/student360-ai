@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 
 export default function AdminVerificationCenterPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -55,21 +56,20 @@ export default function AdminVerificationCenterPage() {
   };
 
   useEffect(() => {
-    fetch("/api/academic-years", { credentials: "include", cache: "no-store" })
-      .then((res) => res.json())
-      .then((resData) => {
-        const years = resData.data?.academicYears || resData.academicYears || [];
+    getAcademicOptions()
+      .then((opts) => {
+        const years = opts.academicYears || [];
         setAcademicYears(years);
-        const saved = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") : null;
-        if (saved && years.some((y: any) => y.yearCode === saved)) {
-          setSelectedAcademicYear(saved);
-        } else if (resData.currentYearCode && years.some((y: any) => y.yearCode === resData.currentYearCode)) {
-          setSelectedAcademicYear(resData.currentYearCode);
+        const savedAY = localStorage.getItem("selected_academic_year");
+        if (savedAY && years.some((y: any) => y.yearCode === savedAY)) {
+          setSelectedAcademicYear(savedAY);
+        } else if (opts.currentYearCode && years.some((y: any) => y.yearCode === opts.currentYearCode)) {
+          setSelectedAcademicYear(opts.currentYearCode);
         } else if (years.length > 0) {
           setSelectedAcademicYear(years[0].yearCode);
         }
       })
-      .catch((e) => console.error(e));
+      .catch((err) => console.error(err));
 
     const handleAYChange = (e: any) => {
       if (e.detail?.academicYear) setSelectedAcademicYear(e.detail.academicYear);

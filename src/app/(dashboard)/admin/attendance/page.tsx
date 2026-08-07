@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getAcademicOptions } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -48,36 +49,21 @@ export default function AdminTakeAttendancePage() {
 
   // Fetch initial options
   useEffect(() => {
-    Promise.all([
-      fetch("/api/academic-years", { credentials: "include", cache: "no-store" }).then(async (res) => {
-        if (!res.ok) {
-          const e = await res.json().catch(() => ({}));
-          throw new Error(e.error || `Academic Years HTTP ${res.status}`);
-        }
-        return res.json();
-      }),
-      fetch("/api/batches", { credentials: "include", cache: "no-store" }).then(async (res) => {
-        if (!res.ok) {
-          const e = await res.json().catch(() => ({}));
-          throw new Error(e.error || `Batches HTTP ${res.status}`);
-        }
-        return res.json();
-      }),
-    ])
-      .then(([ayData, batchData]) => {
-        const years = ayData.academicYears || [];
+    getAcademicOptions()
+      .then((opts) => {
+        const years = opts.academicYears || [];
         setAcademicYears(years);
 
         const savedAY = localStorage.getItem("selected_academic_year");
         if (savedAY && years.some((y: any) => y.yearCode === savedAY)) {
           setSelectedAcademicYear(savedAY);
-        } else if (ayData.currentYearCode && years.some((y: any) => y.yearCode === ayData.currentYearCode)) {
-          setSelectedAcademicYear(ayData.currentYearCode);
+        } else if (opts.currentYearCode && years.some((y: any) => y.yearCode === opts.currentYearCode)) {
+          setSelectedAcademicYear(opts.currentYearCode);
         } else if (years.length > 0) {
           setSelectedAcademicYear(years[0].yearCode);
         }
 
-        const bList = batchData.batches || [];
+        const bList = opts.batches || [];
         setBatches(bList);
         if (bList.length > 0) {
           setSelectedBatchId(bList[0].id);
