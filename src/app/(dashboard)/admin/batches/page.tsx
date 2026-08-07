@@ -40,7 +40,7 @@ export default function BatchesPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [admissionQuota, setAdmissionQuota] = useState("GQ");
+  const [admissionQuota, setAdmissionQuota] = useState("");
 
   const fetchData = async () => {
     setLoading(true);
@@ -138,8 +138,9 @@ export default function BatchesPage() {
       setRegisterNo("");
       setFullName("");
       setEmail("");
-      setPassword("Student@360");
-      setAdmissionQuota("GQ");
+      setPassword("");
+      setConfirmPassword("");
+      setAdmissionQuota("");
       fetchStudentsForBatch(selectedBatch);
       fetchData();
     } catch (err: any) {

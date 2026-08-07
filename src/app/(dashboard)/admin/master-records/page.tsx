@@ -80,18 +80,19 @@ export default function MasterRecordsPage() {
   const [importTab, setImportTab] = useState("valid");
   const [selectedRowIndices, setSelectedRowIndices] = useState<number[]>([]);
 
-  // Add / Edit Form State
-  const [formData, setFormData] = useState<any>({
+  // Empty Form State Definition (No prefilled default values)
+  const emptyFormData = {
     registerNo: "",
     rollNo: "",
     admissionNo: "",
     fullName: "",
-    gender: "Male",
-    dob: "2005-06-15",
-    bloodGroup: "O+",
+    gender: "",
+    dob: "",
+    bloodGroup: "",
     email: "",
-    password: "Student@360",
-    phone: "9876543210",
+    password: "",
+    confirmPassword: "",
+    phone: "",
     aadharNo: "",
     fatherName: "",
     motherName: "",
@@ -99,20 +100,22 @@ export default function MasterRecordsPage() {
     emergencyPhone: "",
     addressLine1: "",
     addressLine2: "",
-    city: "Chennai",
-    state: "Tamil Nadu",
-    pincode: "600001",
+    city: "",
+    state: "",
+    pincode: "",
     departmentId: "",
     batchId: "",
     sectionId: "",
-    academicYear: "2025-2029",
-    currentSemester: 1,
-    entryType: "REGULAR",
-    admissionQuota: "GQ",
-    residenceType: "DAY_SCHOLAR",
-    admissionDate: new Date().toISOString().split("T")[0],
-    academicStatus: "PURSUING",
-  });
+    academicYear: "",
+    currentSemester: "",
+    entryType: "",
+    admissionQuota: "",
+    residenceType: "",
+    admissionDate: "",
+    academicStatus: "",
+  };
+
+  const [formData, setFormData] = useState<any>(emptyFormData);
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -148,13 +151,6 @@ export default function MasterRecordsPage() {
       const batchData = await batchRes.json();
       setDepartments(deptData.departments || []);
       setBatches(batchData.batches || []);
-
-      if (deptData.departments?.length > 0) {
-        setFormData((prev: any) => ({ ...prev, departmentId: deptData.departments[0].id }));
-      }
-      if (batchData.batches?.length > 0) {
-        setFormData((prev: any) => ({ ...prev, batchId: batchData.batches[0].id }));
-      }
     } catch (err) {
       console.error("Failed to fetch metadata", err);
     }
@@ -175,6 +171,23 @@ export default function MasterRecordsPage() {
   // Handle Add Student
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (
+      !formData.registerNo ||
+      !formData.rollNo ||
+      !formData.admissionNo ||
+      !formData.fullName ||
+      !formData.email ||
+      !formData.password ||
+      !formData.departmentId ||
+      !formData.batchId ||
+      !formData.academicYear ||
+      !formData.currentSemester ||
+      !formData.admissionQuota
+    ) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/students", {
         method: "POST",
@@ -185,6 +198,7 @@ export default function MasterRecordsPage() {
       if (!res.ok) throw new Error(data.error || "Failed to create student profile");
 
       setIsAddModalOpen(false);
+      setFormData(emptyFormData);
       fetchStudents();
     } catch (err: any) {
       alert(err.message);
@@ -219,9 +233,9 @@ export default function MasterRecordsPage() {
       rollNo: st.rollNo || "",
       admissionNo: st.admissionNo || "",
       fullName: st.fullName || "",
-      gender: st.gender || "Male",
-      dob: st.dob || "2004-06-15",
-      bloodGroup: st.bloodGroup || "O+",
+      gender: st.gender || "",
+      dob: st.dob || "",
+      bloodGroup: st.bloodGroup || "",
       email: st.email || "",
       phone: st.phone || "",
       aadharNo: st.aadharNo || "",
@@ -231,19 +245,19 @@ export default function MasterRecordsPage() {
       emergencyPhone: st.emergencyPhone || "",
       addressLine1: st.addressLine1 || "",
       addressLine2: st.addressLine2 || "",
-      city: st.city || "Chennai",
-      state: st.state || "Tamil Nadu",
-      pincode: st.pincode || "600001",
+      city: st.city || "",
+      state: st.state || "",
+      pincode: st.pincode || "",
       departmentId: st.departmentId || "",
       batchId: st.batchId || "",
       sectionId: st.sectionId || "",
-      academicYear: st.academicYear || "2025-2026",
-      currentSemester: st.currentSemester || 1,
-      entryType: st.entryType || "REGULAR",
-      admissionQuota: st.admissionQuota || "GOVERNMENT",
-      residenceType: st.residenceType || "DAY_SCHOLAR",
-      admissionDate: st.admissionDate || new Date().toISOString().split("T")[0],
-      academicStatus: st.academicStatus || "PURSUING",
+      academicYear: st.academicYear || "",
+      currentSemester: st.currentSemester || "",
+      entryType: st.entryType || "",
+      admissionQuota: st.admissionQuota || "",
+      residenceType: st.residenceType || "",
+      admissionDate: st.admissionDate || "",
+      academicStatus: st.academicStatus || "",
     });
   };
 
@@ -416,7 +430,11 @@ export default function MasterRecordsPage() {
               </button>
 
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  setEditStudent(null);
+                  setFormData(emptyFormData);
+                  setIsAddModalOpen(true);
+                }}
                 className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
@@ -773,10 +791,10 @@ export default function MasterRecordsPage() {
                 <input
                   type="text"
                   required
-                  value={formData.registerNo}
+                  value={formData.registerNo || ""}
                   onChange={(e) => setFormData({ ...formData, registerNo: e.target.value })}
                   className="ui-input w-full p-2 font-mono"
-                  placeholder="7376221CS101"
+                  placeholder="Enter Register No (e.g. 7376221CS101)"
                 />
               </div>
               <div>
@@ -784,10 +802,10 @@ export default function MasterRecordsPage() {
                 <input
                   type="text"
                   required
-                  value={formData.rollNo}
+                  value={formData.rollNo || ""}
                   onChange={(e) => setFormData({ ...formData, rollNo: e.target.value })}
                   className="ui-input w-full p-2 font-mono"
-                  placeholder="22CS101"
+                  placeholder="Enter Roll No (e.g. 22CS101)"
                 />
               </div>
               <div>
@@ -795,10 +813,10 @@ export default function MasterRecordsPage() {
                 <input
                   type="text"
                   required
-                  value={formData.admissionNo}
+                  value={formData.admissionNo || ""}
                   onChange={(e) => setFormData({ ...formData, admissionNo: e.target.value })}
                   className="ui-input w-full p-2 font-mono"
-                  placeholder="ADM2022CS01"
+                  placeholder="Enter Admission No (e.g. ADM2022CS01)"
                 />
               </div>
             </div>
@@ -815,9 +833,10 @@ export default function MasterRecordsPage() {
                 <input
                   type="text"
                   required
-                  value={formData.fullName}
+                  value={formData.fullName || ""}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Full Name"
                 />
               </div>
               <div>
@@ -825,18 +844,20 @@ export default function MasterRecordsPage() {
                 <input
                   type="email"
                   required
-                  value={formData.email}
+                  value={formData.email || ""}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Institutional Email"
                 />
               </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Phone Number</label>
                 <input
                   type="text"
-                  value={formData.phone}
+                  value={formData.phone || ""}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Phone Number"
                 />
               </div>
             </div>
@@ -864,10 +885,11 @@ export default function MasterRecordsPage() {
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Gender</label>
                 <select
-                  value={formData.gender}
+                  value={formData.gender || ""}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                   className="ui-input w-full p-2"
                 >
+                  <option value="" disabled>Select Gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
@@ -877,7 +899,7 @@ export default function MasterRecordsPage() {
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Date of Birth</label>
                 <input
                   type="date"
-                  value={formData.dob}
+                  value={formData.dob || ""}
                   onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
                   className="ui-input w-full p-2"
                 />
@@ -886,19 +908,20 @@ export default function MasterRecordsPage() {
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Blood Group</label>
                 <input
                   type="text"
-                  value={formData.bloodGroup}
+                  value={formData.bloodGroup || ""}
                   onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
                   className="ui-input w-full p-2"
-                  placeholder="O+"
+                  placeholder="e.g. O+"
                 />
               </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Aadhar Number</label>
                 <input
                   type="text"
-                  value={formData.aadharNo}
+                  value={formData.aadharNo || ""}
                   onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Aadhar Number"
                 />
               </div>
             </div>
@@ -914,27 +937,30 @@ export default function MasterRecordsPage() {
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Father&apos;s Name</label>
                 <input
                   type="text"
-                  value={formData.fatherName}
+                  value={formData.fatherName || ""}
                   onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Father's Name"
                 />
               </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Mother&apos;s Name</label>
                 <input
                   type="text"
-                  value={formData.motherName}
+                  value={formData.motherName || ""}
                   onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Mother's Name"
                 />
               </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Emergency Phone</label>
                 <input
                   type="text"
-                  value={formData.emergencyPhone}
+                  value={formData.emergencyPhone || ""}
                   onChange={(e) => setFormData({ ...formData, emergencyPhone: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Emergency Phone"
                 />
               </div>
             </div>
@@ -943,18 +969,20 @@ export default function MasterRecordsPage() {
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Address Line 1</label>
                 <input
                   type="text"
-                  value={formData.addressLine1}
+                  value={formData.addressLine1 || ""}
                   onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter Address"
                 />
               </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">City & State</label>
                 <input
                   type="text"
-                  value={formData.city}
+                  value={formData.city || ""}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   className="ui-input w-full p-2"
+                  placeholder="Enter City"
                 />
               </div>
             </div>
@@ -967,12 +995,14 @@ export default function MasterRecordsPage() {
             </span>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Department</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Department *</label>
                 <select
-                  value={formData.departmentId}
+                  required
+                  value={formData.departmentId || ""}
                   onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
                   className="ui-input w-full p-2"
                 >
+                  <option value="" disabled>Select Department</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.code} - {d.name}
@@ -981,26 +1011,45 @@ export default function MasterRecordsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Batch</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Batch *</label>
                 <select
-                  value={formData.batchId}
+                  required
+                  value={formData.batchId || ""}
                   onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
                   className="ui-input w-full p-2"
                 >
+                  <option value="" disabled>Select Batch</option>
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name}
+                      Batch {b.name}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Semester</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Academic Year *</label>
                 <select
-                  value={formData.currentSemester}
-                  onChange={(e) => setFormData({ ...formData, currentSemester: parseInt(e.target.value, 10) })}
+                  required
+                  value={formData.academicYear || ""}
+                  onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
                   className="ui-input w-full p-2"
                 >
+                  <option value="" disabled>Select Academic Year</option>
+                  <option value="2025-2029">2025-2029</option>
+                  <option value="2026-2030">2026-2030</option>
+                  <option value="2027-2031">2027-2031</option>
+                  <option value="2028-2032">2028-2032</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Semester *</label>
+                <select
+                  required
+                  value={formData.currentSemester || ""}
+                  onChange={(e) => setFormData({ ...formData, currentSemester: e.target.value ? parseInt(e.target.value, 10) : "" })}
+                  className="ui-input w-full p-2"
+                >
+                  <option value="" disabled>Select Semester</option>
                   {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
                     <option key={s} value={s}>
                       Semester {s}
@@ -1008,13 +1057,55 @@ export default function MasterRecordsPage() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Admission Quota *</label>
+                <select
+                  required
+                  value={formData.admissionQuota || ""}
+                  onChange={(e) => setFormData({ ...formData, admissionQuota: e.target.value })}
+                  className="ui-input w-full p-2 font-bold text-indigo-600 dark:text-indigo-400"
+                >
+                  <option value="" disabled>Select Quota</option>
+                  <option value="GQ">Government Quota (GQ)</option>
+                  <option value="MQ">Management Quota (MQ)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Entry Type</label>
+                <select
+                  value={formData.entryType || ""}
+                  onChange={(e) => setFormData({ ...formData, entryType: e.target.value })}
+                  className="ui-input w-full p-2"
+                >
+                  <option value="" disabled>Select Entry Type</option>
+                  <option value="REGULAR">Regular</option>
+                  <option value="LATERAL">Lateral Entry</option>
+                  <option value="TRANSFER">Transfer</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Residence Type</label>
+                <select
+                  value={formData.residenceType || ""}
+                  onChange={(e) => setFormData({ ...formData, residenceType: e.target.value })}
+                  className="ui-input w-full p-2"
+                >
+                  <option value="" disabled>Select Residence Type</option>
+                  <option value="DAY_SCHOLAR">Day Scholar</option>
+                  <option value="HOSTELLER">Hosteller</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Academic Status</label>
                 <select
-                  value={formData.academicStatus}
+                  value={formData.academicStatus || ""}
                   onChange={(e) => setFormData({ ...formData, academicStatus: e.target.value })}
                   className="ui-input w-full p-2"
                 >
+                  <option value="" disabled>Select Academic Status</option>
                   <option value="PURSUING">Pursuing</option>
                   <option value="GRADUATED">Graduated</option>
                   <option value="ALUMNI">Alumni</option>
