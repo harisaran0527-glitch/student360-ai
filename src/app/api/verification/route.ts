@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export async function GET(req: Request) {
   const startTime = Date.now();
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const academicYear = searchParams.get("academicYear") || "2025-2026";
+    const academicYear = searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
     const status = searchParams.get("status") || "PENDING";
 
     const dept = await getOrCreateDefaultDepartment();

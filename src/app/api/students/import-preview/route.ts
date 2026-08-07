@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { apiSuccess, apiError } from "@/lib/apiResponse";
 
 export async function POST(req: Request) {
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
       const deptCode = String(row["Department Code"] || row["Department"] || "").trim();
       const batchName = String(row["Batch Name"] || row["Batch"] || "").trim();
       const sectionName = String(row["Section Name"] || row["Section"] || "").trim();
-      const academicYear = String(row["Academic Year"] || "2025-2026").trim();
+      const academicYear = String(row["Academic Year"] || DEFAULT_ACADEMIC_YEAR).trim();
       const currentSemester = parseInt(row["Current Semester"] || row["Semester"] || "1", 10);
       const entryType = String(row["Entry Type"] || "REGULAR").trim();
       const residenceType = String(row["Residence Type"] || "DAY_SCHOLAR").trim();

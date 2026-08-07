@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -501,7 +502,7 @@ export default function BatchesPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Batch Student Delete & Archive Management — Dedicated Selector"
         moduleName="Student"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         batches={batches.map((b) => b.name)}
         reasons={["Duplicate Record", "Discontinued", "Transfer", "Wrong Entry", "Other"]}
         records={allStudents.map((st) => ({

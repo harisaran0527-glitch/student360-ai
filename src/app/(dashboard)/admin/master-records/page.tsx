@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -317,7 +318,7 @@ export default function MasterRecordsPage() {
   const [search, setSearch] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2025-2029");
+  const [selectedYear, setSelectedYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedQuota, setSelectedQuota] = useState("ALL");
@@ -784,9 +785,11 @@ export default function MasterRecordsPage() {
               ))}
               {academicYears.length === 0 && (
                 <>
-                  <option value="2025-2029">2025-2029</option>
-                  <option value="2026-2030">2026-2030</option>
-                  <option value="2027-2031">2027-2031</option>
+                  {ACADEMIC_YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
                 </>
               )}
             </select>
@@ -1340,10 +1343,11 @@ export default function MasterRecordsPage() {
                   className="ui-input w-full p-2"
                 >
                   <option value="" disabled>Select Academic Year</option>
-                  <option value="2025-2029">2025-2029</option>
-                  <option value="2026-2030">2026-2030</option>
-                  <option value="2027-2031">2027-2031</option>
-                  <option value="2028-2032">2028-2032</option>
+                  {ACADEMIC_YEAR_OPTIONS.map((ayOpt) => (
+                    <option key={ayOpt} value={ayOpt}>
+                      {ayOpt}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -1650,7 +1654,7 @@ export default function MasterRecordsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Student Delete & Archive Management — Dedicated Selector"
         moduleName="Student"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Duplicate Record", "Discontinued", "Transfer", "Wrong Entry", "Other"]}
         records={students.map((st) => ({
           id: st.id,

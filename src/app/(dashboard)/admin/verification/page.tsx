@@ -17,9 +17,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+
 export default function AdminVerificationCenterPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
   const [activeTab, setActiveTab] = useState<"CERTIFICATES" | "INTERNSHIPS" | "PROJECTS">("CERTIFICATES");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
 

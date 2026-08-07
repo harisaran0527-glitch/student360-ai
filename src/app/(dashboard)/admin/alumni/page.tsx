@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { DEFAULT_BATCH } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -257,7 +258,7 @@ export default function AlumniDirectoryPage() {
                   </div>
 
                   <div className="text-xs space-y-1 text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <div>Batch: <strong className="text-slate-800 dark:text-slate-200">Batch {st.batch?.name || "2025-2029"}</strong></div>
+                    <div>Batch: <strong className="text-slate-800 dark:text-slate-200">Batch {st.batch?.name || DEFAULT_BATCH}</strong></div>
                     <div>Graduation Year: <strong className="text-emerald-600 font-bold">{st.alumniRecord?.graduationYear || 2029}</strong></div>
                     <div>Company / Role: <strong className="text-indigo-600 dark:text-indigo-400">{st.alumniRecord?.currentCompany || "Placed"} ({st.alumniRecord?.currentRole || "AI Engineer"})</strong></div>
                   </div>

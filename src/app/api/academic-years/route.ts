@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { ensureCurrentAcademicYear } from "@/lib/academicYearEngine";
+import { ACADEMIC_YEAR_OPTIONS, isSelectableAcademicYear, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,31 +23,52 @@ export async function GET(req: Request) {
     // Ensure current academic year is initialized
     try {
       await ensureCurrentAcademicYear();
+
+      // Ensure all 10 standard 4-year Academic Years exist
+      for (const yearCode of ACADEMIC_YEAR_OPTIONS) {
+        const startYr = parseInt(yearCode.split("-")[0], 10);
+        const endYr = parseInt(yearCode.split("-")[1], 10);
+        const existing = await prisma.academicYear.findUnique({ where: { yearCode } });
+        if (!existing) {
+          await prisma.academicYear.create({
+            data: {
+              yearCode,
+              name: `Academic Year ${yearCode}`,
+              startDate: `${startYr}-06-01`,
+              endDate: `${endYr}-05-31`,
+              status: "ACTIVE",
+              isCurrent: yearCode === DEFAULT_ACADEMIC_YEAR,
+            },
+          });
+        }
+      }
     } catch (e) {
       console.warn("ensureCurrentAcademicYear non-fatal error:", e);
     }
 
     const rawYears = await prisma.academicYear.findMany({
-      orderBy: [{ isCurrent: "desc" }, { yearCode: "desc" }],
+      orderBy: [{ isCurrent: "desc" }, { yearCode: "asc" }],
     });
 
-    const academicYears = rawYears.map((ay) => {
-      const normalizedCode = (ay.yearCode || "").replace(/[\u2013\u2014]/g, "-").trim();
-      return {
-        id: ay.id,
-        yearCode: normalizedCode,
-        name: ay.name || `Academic Year ${normalizedCode}`,
-        status: ay.status || "ACTIVE",
-        isCurrent: Boolean(ay.isCurrent),
-      };
-    });
+    const academicYears = rawYears
+      .map((ay) => {
+        const normalizedCode = (ay.yearCode || "").replace(/[\u2013\u2014]/g, "-").trim();
+        return {
+          id: ay.id,
+          yearCode: normalizedCode,
+          name: ay.name || `Academic Year ${normalizedCode}`,
+          status: ay.status || "ACTIVE",
+          isCurrent: Boolean(ay.isCurrent),
+        };
+      })
+      .filter((ay) => isSelectableAcademicYear(ay.yearCode));
 
     const currentYear = academicYears.find((y) => y.isCurrent) || academicYears[0];
 
     return NextResponse.json(
       {
         academicYears,
-        currentYearCode: currentYear?.yearCode || "2025-2029",
+        currentYearCode: currentYear?.yearCode || DEFAULT_ACADEMIC_YEAR,
       },
       {
         status: 200,
@@ -74,7 +96,7 @@ export async function POST(req: Request) {
     const { yearCode, name, startDate, endDate, notes, isCurrent } = body;
 
     if (!yearCode) {
-      return NextResponse.json({ error: "Academic Year code (e.g. 2026-2027) required" }, { status: 400 });
+      return NextResponse.json({ error: "Academic Year code (e.g. 2026-2030) required" }, { status: 400 });
     }
 
     const existing = await prisma.academicYear.findUnique({ where: { yearCode } });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { computeAttendanceStats, getAttendancePolicy } from "@/lib/attendance";
 
 export async function GET(req: Request) {
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
         data: {
           courseId,
           sectionId,
-          academicYearCode: academicYearCode || "2025-2026",
+          academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
           semester: semester || 1,
           date,
           period: period || 1,
@@ -213,7 +214,7 @@ export async function POST(req: Request) {
             studentId: item.studentId,
             courseId,
             sessionId: attSession.id,
-            academicYearCode: academicYearCode || "2025-2026",
+            academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
             semester: semester || 1,
             date,
             session: `Period_${period || 1}`,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { getAcademicYearFromRequest } from "@/lib/academicYearEngine";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 
@@ -125,7 +126,7 @@ export async function POST(req: Request) {
         issueDate: issueDate || new Date().toISOString().split("T")[0],
         startDate,
         endDate,
-        academicYearCode: academicYearCode || "2025-2026",
+        academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
         semester: semester || 1,
         mode: mode || "ONLINE",
         location,

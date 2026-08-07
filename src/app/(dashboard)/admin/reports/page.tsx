@@ -24,6 +24,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+
 export default function AdminReportingCenterPage() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory>("STUDENT_MASTER");
   const [selectedReportId, setSelectedReportId] = useState<string>("STUDENT_MASTER_FULL");
@@ -33,7 +35,7 @@ export default function AdminReportingCenterPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Primary Academic Year Filter
-  const [academicYear, setAcademicYear] = useState<string>("2025-2029");
+  const [academicYear, setAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
   const [batchId, setBatchId] = useState("");
   const [semester, setSemester] = useState("");
 

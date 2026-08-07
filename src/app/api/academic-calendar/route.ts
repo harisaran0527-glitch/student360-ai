@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export async function GET(req: Request) {
   try {
@@ -35,13 +36,13 @@ export async function POST(req: Request) {
       update: {
         dayType,
         description,
-        academicYearCode: academicYearCode || "2025-2026",
+        academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
       },
       create: {
         date,
         dayType,
         description,
-        academicYearCode: academicYearCode || "2025-2026",
+        academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
       },
     });
 

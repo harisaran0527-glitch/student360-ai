@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { CalendarDays, AlertTriangle } from "lucide-react";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export function AcademicYearSelector() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string>("2025-2029");
+  const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {

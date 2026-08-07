@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -21,7 +22,7 @@ import {
 
 export default function AdminProjectsPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
 
   const [projects, setProjects] = useState<any[]>([]);
   const [yearStudents, setYearStudents] = useState<any[]>([]);
@@ -454,7 +455,7 @@ export default function AdminProjectsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Project Delete & Archive Management — Dedicated Selector"
         moduleName="Project"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Project Abandoned", "Duplicate Submission", "Invalid Links", "Wrong Student Link", "Other"]}
         records={projects.map((item) => ({
           id: item.id,

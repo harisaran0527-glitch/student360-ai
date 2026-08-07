@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -21,7 +22,7 @@ import {
 
 export default function AdminInternshipsPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
 
   const [internships, setInternships] = useState<any[]>([]);
   const [yearStudents, setYearStudents] = useState<any[]>([]);
@@ -404,7 +405,7 @@ export default function AdminInternshipsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Internship Delete & Archive Management — Dedicated Selector"
         moduleName="Internship"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Offer Cancelled", "Duplicate Submission", "Student Opted Out", "Wrong Dates Entry", "Other"]}
         records={internships.map((item) => ({
           id: item.id,

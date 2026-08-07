@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -59,7 +60,7 @@ export default function AdminDashboardPage() {
   };
 
   const fetchDashboardData = () => {
-    const selectedYear = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") || "2025-2026" : "2025-2026";
+    const selectedYear = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") || DEFAULT_ACADEMIC_YEAR : DEFAULT_ACADEMIC_YEAR;
     setLoading(true);
     Promise.all([
       fetch(`/api/admin/stats?academicYear=${selectedYear}`).then((res) => res.json()),
@@ -119,7 +120,7 @@ export default function AdminDashboardPage() {
     <div className="flex-1 flex flex-col min-w-0">
       <Header
         title="AI & ML Department Executive Dashboard"
-        subtitle={`Department: AI & ML | Current Selected Academic Year: ${stats.currentAcademicYear || "2025-2026"}`}
+        subtitle={`Department: AI & ML | Current Selected Academic Year: ${stats.currentAcademicYear || DEFAULT_ACADEMIC_YEAR}`}
       />
 
       <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
@@ -134,7 +135,7 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Academic Year"
-              value={stats.currentAcademicYear || "2025-2026"}
+              value={stats.currentAcademicYear || DEFAULT_ACADEMIC_YEAR}
               subtitle="Active Context"
               icon={CalendarDays}
               color="indigo"

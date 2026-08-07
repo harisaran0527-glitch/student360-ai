@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 
 export async function GET(req: Request) {
@@ -171,7 +172,7 @@ export async function POST(req: Request) {
     }
 
     const dept = await getOrCreateDefaultDepartment();
-    const targetYearCode = academicYear || "2025-2026";
+    const targetYearCode = academicYear || DEFAULT_ACADEMIC_YEAR;
 
     let acadYearObj = await prisma.academicYear.findUnique({ where: { yearCode: targetYearCode } });
     if (!acadYearObj) {

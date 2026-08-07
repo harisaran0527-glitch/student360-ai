@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getAcademicYearFromRequest } from "@/lib/academicYearEngine";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export async function GET(req: Request) {
   const startTime = Date.now();
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
     const internship = await prisma.internship.create({
       data: {
         studentId,
-        academicYearCode: academicYearCode || studentProfile.academicYear || "2025-2026",
+        academicYearCode: academicYearCode || studentProfile.academicYear || DEFAULT_ACADEMIC_YEAR,
         batchId: studentProfile.batchId,
         departmentId: studentProfile.departmentId,
         semester: semester || studentProfile.currentSemester || 1,

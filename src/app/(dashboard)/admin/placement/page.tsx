@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
@@ -12,7 +13,7 @@ import { Briefcase, Plus, DollarSign, Building, Trash2, Archive } from "lucide-r
 
 export default function AdminPlacementPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
 
   const [placements, setPlacements] = useState<any[]>([]);
   const [yearStudents, setYearStudents] = useState<any[]>([]);
@@ -378,7 +379,7 @@ export default function AdminPlacementPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Placement Delete & Archive Management — Dedicated Selector"
         moduleName="Placement Record"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Offer Rescinded", "Duplicate Entry", "Candidate Declined", "Wrong Company Assignment", "Other"]}
         records={placements.map((item) => {
           const isHighStatus = item.status === "SELECTED" || item.status === "OFFER_RECEIVED" || item.status === "JOINED";

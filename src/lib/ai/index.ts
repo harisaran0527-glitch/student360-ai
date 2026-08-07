@@ -1,4 +1,5 @@
 import { evaluateStudentSupportAttention } from "./supportEngine";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { evaluateSkillGapAnalysis } from "./skillGapEngine";
 
 export * from "./engineConfig";
@@ -19,7 +20,7 @@ export function calculateStudentRiskScore(student: {
     attendancePercentage: student.attendancePercentage,
     cgpa: student.cgpa,
     currentSemester: 1,
-    academicYear: "2025-2026",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
   });
   return {
     studentId: "",

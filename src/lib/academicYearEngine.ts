@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 export interface AcademicYearConfig {
-  yearCode: string; // e.g. "2025-2026"
+  yearCode: string; // e.g. "2025-2029"
   name: string;
   startDate: string; // "2025-06-01"
   endDate: string;   // "2026-05-31"

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,7 +31,7 @@ export default function AdminTakeAttendancePage() {
   const [courses, setCourses] = useState<any[]>([]);
 
   // Selection state
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
@@ -550,7 +551,7 @@ export default function AdminTakeAttendancePage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Delete Attendance Session — Session Cancellation"
         moduleName="Attendance Session"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Class Cancelled", "Duplicate Session", "Faculty Leave", "Schedule Shift", "Wrong Date Entry"]}
         records={attendanceSessions.map((sess) => ({
           id: sess.id,

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
+import { ACADEMIC_YEAR_OPTIONS, BATCH_OPTIONS } from "@/lib/academicYearConstants";
 import {
   Trash2,
   Archive,
@@ -48,8 +49,8 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
   title,
   moduleName,
   records,
-  academicYears = ["2025-2029", "2026-2030", "2027-2031"],
-  batches = [],
+  academicYears = [...ACADEMIC_YEAR_OPTIONS],
+  batches = [...BATCH_OPTIONS],
   reasons = ["Duplicate Record", "Discontinued", "Transfer", "Wrong Entry", "Other"],
   onConfirmArchive,
   onConfirmRestore,

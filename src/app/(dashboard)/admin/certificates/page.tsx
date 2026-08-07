@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -27,7 +28,7 @@ import {
 
 export default function AdminCertificatesPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
 
   const [certificates, setCertificates] = useState<any[]>([]);
   const [yearStudents, setYearStudents] = useState<any[]>([]);
@@ -796,7 +797,7 @@ export default function AdminCertificatesPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Certificate Delete & Archive Management — Dedicated Selector"
         moduleName="Certificate"
-        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Invalid Certificate File", "Duplicate Submission", "Wrong Student Assignment", "Expired Document", "Other"]}
         records={certificates.map((cert) => ({
           id: cert.id,

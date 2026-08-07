@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 
 export async function GET(req: Request) {
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
     if (!session) return apiError("Unauthorized", 401);
 
     const { searchParams } = new URL(req.url);
-    const academicYearParam = searchParams.get("academicYear") || "2025-2026";
+    const academicYearParam = searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
     const batchId = searchParams.get("batchId") || "";
     const courseId = searchParams.get("courseId") || "";
     const date = searchParams.get("date") || new Date().toISOString().split("T")[0];

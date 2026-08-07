@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
           departmentId: row.departmentId,
           batchId: row.batchId,
           sectionId,
-          academicYear: row.academicYear || "2025-2026",
+          academicYear: row.academicYear || DEFAULT_ACADEMIC_YEAR,
           currentSemester: row.currentSemester || 1,
           entryType: row.entryType || "REGULAR",
           admissionQuota: row.admissionQuota || "GOVERNMENT",

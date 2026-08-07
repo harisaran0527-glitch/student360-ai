@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 
 export async function GET(req: Request) {
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
         code,
         title,
         semester: parseInt(semester, 10),
-        academicYearCode: academicYearCode || "2025-2026",
+        academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
         credits: parseInt(credits, 10) || 3,
         subjectType: subjectType || "CORE",
         departmentId: dept.id,

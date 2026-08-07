@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -27,7 +28,7 @@ export default function AdminNotificationsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [targetAY, setTargetAY] = useState("2025-2029");
+  const [targetAY, setTargetAY] = useState(DEFAULT_ACADEMIC_YEAR);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState("HIGH");
@@ -366,7 +367,7 @@ export default function AdminNotificationsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Notification Delete & Archive Management — Dedicated Selector"
         moduleName="Notification"
-        academicYears={["2025-2029", "2026-2030"]}
+        academicYears={[...ACADEMIC_YEAR_OPTIONS]}
         reasons={["Outdated Alert", "Duplicate Notification", "Draft Cancelled", "Wrong Audience Target", "Other"]}
         records={notifications.map((item) => {
           const isSent = item.emailStatus === "SENT";
@@ -375,7 +376,7 @@ export default function AdminNotificationsPage() {
             name: item.title || "Notification Alert",
             identifier: item.id.slice(0, 8),
             subtext: `Audience: ${item.type || "STUDENT"} | Date: ${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "N/A"} | Email Status: ${item.emailStatus || "NOT_REQUIRED"}`,
-            academicYear: item.academicYear || "2025-2029",
+            academicYear: item.academicYear || DEFAULT_ACADEMIC_YEAR,
             status: item.emailStatus || "SENT",
             badge: item.priority || "NORMAL",
             isArchived: item.isArchived,

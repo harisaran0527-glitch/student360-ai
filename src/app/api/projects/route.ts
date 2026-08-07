@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { getAcademicYearFromRequest } from "@/lib/academicYearEngine";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
         description,
         detailedDescription,
         projectType: pType,
-        academicYearCode: academicYearCode || "2025-2026",
+        academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
         semester: semester || 1,
         category: category || (pType === "HARDWARE" ? "Embedded & IoT" : "Software Engineering"),
         techStack,

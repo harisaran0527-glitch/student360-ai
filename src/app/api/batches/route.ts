@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
+import { BATCH_OPTIONS, isSelectableBatch } from "@/lib/academicYearConstants";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,10 +26,9 @@ export async function GET(req: Request) {
       const currentMonth = new Date().getMonth() + 1;
       const activeAdmissionYear = currentMonth < 6 ? currentYear - 1 : currentYear;
 
-      const baseAdmissionYear = 2025;
-      const targetMaxYear = Math.max(activeAdmissionYear + 1, 2026);
-
-      for (let yr = baseAdmissionYear; yr <= targetMaxYear; yr++) {
+      // Auto-ensure batches from 2025 to 2034 (10 batch options: 2025-2026 to 2034-2035)
+      for (const batchOpt of BATCH_OPTIONS) {
+        const yr = parseInt(batchOpt.split("-")[0], 10);
         const batchName = `${yr}-${yr + 1}`;
         const existing = await prisma.batch.findUnique({ where: { name: batchName } });
         if (!existing) {
@@ -50,20 +50,25 @@ export async function GET(req: Request) {
     }
 
     const batches = await prisma.batch.findMany({
-      where: { isArchived: false },
+      where: {
+        isArchived: false,
+        admissionYear: { gte: 2025 },
+      },
       include: {
         department: true,
         _count: { select: { students: true } },
       },
-      orderBy: [{ admissionYear: "desc" }, { name: "desc" }],
+      orderBy: [{ admissionYear: "asc" }, { name: "asc" }],
     });
 
-    const enrichedBatches = batches.map((b) => ({
-      ...b,
-      graduationYear: b.expectedGraduationYear,
-      admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 4}`,
-      studentCount: b._count?.students || 0,
-    }));
+    const enrichedBatches = batches
+      .filter((b) => isSelectableBatch(b.name))
+      .map((b) => ({
+        ...b,
+        graduationYear: b.expectedGraduationYear,
+        admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 4}`,
+        studentCount: b._count?.students || 0,
+      }));
 
     return NextResponse.json(
       { batches: enrichedBatches },
@@ -91,7 +96,7 @@ export async function POST(req: Request) {
 
     const { admissionYear } = await req.json();
 
-    const startYr = parseInt(admissionYear, 10) || 2025;
+    const startYr = Math.max(parseInt(admissionYear, 10) || 2025, 2025);
     const name = `${startYr}-${startYr + 1}`;
 
     const existing = await prisma.batch.findUnique({ where: { name } });
@@ -116,13 +121,12 @@ export async function POST(req: Request) {
 
     // Create 8 default SemesterConfigs
     for (let sem = 1; sem <= 8; sem++) {
+      const ayStart = startYr + Math.floor((sem - 1) / 2);
       await prisma.semesterConfig.create({
         data: {
           batchId: batch.id,
           semesterNumber: sem,
-          academicYearCode: `${startYr + Math.floor((sem - 1) / 2)}-${
-            startYr + Math.floor((sem - 1) / 2) + 1
-          }`,
+          academicYearCode: `${ayStart}-${ayStart + 4}`,
           status: sem === 1 ? "CURRENT" : "UPCOMING",
           internshipRequired: sem === 5 || sem === 6,
         },

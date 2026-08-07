@@ -52,7 +52,7 @@ export function generateStudentTemplateExcel(): Buffer {
     "Tamil Nadu",
     "600001",
     "CSE",
-    "2022-2026",
+    "2025-2026",
     "Section A",
     "5",
     "REGULAR",
