@@ -43,7 +43,7 @@ export default function MasterRecordsPage() {
   const [search, setSearch] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2025-2026");
+  const [selectedYear, setSelectedYear] = useState("2025-2029");
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedQuota, setSelectedQuota] = useState("ALL");
@@ -105,7 +105,7 @@ export default function MasterRecordsPage() {
     departmentId: "",
     batchId: "",
     sectionId: "",
-    academicYear: "2025-2026",
+    academicYear: "2025-2029",
     currentSemester: 1,
     entryType: "REGULAR",
     admissionQuota: "GQ",
@@ -245,6 +245,25 @@ export default function MasterRecordsPage() {
       admissionDate: st.admissionDate || new Date().toISOString().split("T")[0],
       academicStatus: st.academicStatus || "PURSUING",
     });
+  };
+
+  // Permanent Delete Student
+  const handlePermanentDeleteStudent = async (studentId: string, studentName?: string) => {
+    const confirmationText = "Are you sure you want to permanently delete this student? This action cannot be undone.";
+    if (!confirm(studentName ? `${confirmationText}\n\nStudent: ${studentName}` : confirmationText)) return;
+    try {
+      const res = await fetch(`/api/students/${studentId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Permanent deletion failed");
+      alert("Student profile and user account permanently deleted!");
+      setQuickViewStudent(null);
+      fetchStudents();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   // Archive Student
@@ -620,23 +639,13 @@ export default function MasterRecordsPage() {
                           <Edit className="w-4 h-4" />
                         </button>
 
-                        {st.isArchived ? (
-                          <button
-                            onClick={() => handleRestoreStudent(st.id)}
-                            className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition"
-                            title="Restore Student Profile"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleArchiveStudent(st.id)}
-                            className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition"
-                            title="Soft Archive Student"
-                          >
-                            <Archive className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handlePermanentDeleteStudent(st.id, st.fullName)}
+                          className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition"
+                          title="Permanently Delete Student Profile"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
 
                         <Link
                           href={`/admin/students/${st.id}`}
@@ -1245,7 +1254,7 @@ export default function MasterRecordsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Student Delete & Archive Management — Dedicated Selector"
         moduleName="Student"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         reasons={["Duplicate Record", "Discontinued", "Transfer", "Wrong Entry", "Other"]}
         records={students.map((st) => ({
           id: st.id,
@@ -1263,6 +1272,9 @@ export default function MasterRecordsPage() {
         }}
         onConfirmRestore={async (studentId) => {
           await handleRestoreStudent(studentId);
+        }}
+        onConfirmDelete={async (studentId) => {
+          await handlePermanentDeleteStudent(studentId);
         }}
       />
     </div>

@@ -22,7 +22,7 @@ import {
 
 export default function AdminSyllabusPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
   const [selectedSemester, setSelectedSemester] = useState<string>("");
 
   const [courses, setCourses] = useState<any[]>([]);

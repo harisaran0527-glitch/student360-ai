@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         academicYears,
-        currentYearCode: currentYear?.yearCode || "2025-2026",
+        currentYearCode: currentYear?.yearCode || "2025-2029",
       },
       {
         status: 200,

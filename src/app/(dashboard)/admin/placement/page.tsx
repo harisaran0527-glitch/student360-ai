@@ -12,7 +12,7 @@ import { Briefcase, Plus, DollarSign, Building, Trash2, Archive } from "lucide-r
 
 export default function AdminPlacementPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
 
   const [placements, setPlacements] = useState<any[]>([]);
   const [yearStudents, setYearStudents] = useState<any[]>([]);

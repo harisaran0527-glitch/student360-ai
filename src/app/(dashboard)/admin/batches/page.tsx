@@ -110,7 +110,7 @@ export default function BatchesPage() {
 
     setAddingStudent(true);
     try {
-      const admissionAY = `${selectedBatch.admissionYear}-${selectedBatch.admissionYear + 1}`;
+      const admissionAY = `${selectedBatch.admissionYear}-${selectedBatch.admissionYear + 4}`;
 
       const res = await fetch("/api/students", {
         method: "POST",
@@ -149,13 +149,16 @@ export default function BatchesPage() {
     }
   };
 
-  const handleArchiveStudent = async (studentId: string) => {
-    if (!confirm("Are you sure you want to archive this student profile?")) return;
+  const handlePermanentDeleteStudent = async (studentId: string, studentName?: string) => {
+    const confirmationText = "Are you sure you want to permanently delete this student? This action cannot be undone.";
+    if (!confirm(studentName ? `${confirmationText}\n\nStudent: ${studentName}` : confirmationText)) return;
     try {
       const res = await fetch(`/api/students/${studentId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to archive student");
-      alert("Student archived successfully.");
+      const data = await res.json();
+      if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Permanent deletion failed");
+      alert("Student profile and user account permanently deleted!");
       if (selectedBatch) fetchStudentsForBatch(selectedBatch);
+      fetchData();
     } catch (err: any) {
       alert(err.message);
     }
@@ -347,11 +350,11 @@ export default function BatchesPage() {
                         </td>
                         <td className="p-3.5 flex items-center gap-2">
                           <button
-                            onClick={() => handleArchiveStudent(st.id)}
+                            onClick={() => handlePermanentDeleteStudent(st.id, st.fullName)}
                             className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                            title="Archive Student"
+                            title="Permanently Delete Student"
                           >
-                            <Archive className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4 text-rose-600" />
                           </button>
                         </td>
                       </tr>
@@ -497,7 +500,7 @@ export default function BatchesPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Batch Student Delete & Archive Management — Dedicated Selector"
         moduleName="Student"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         batches={batches.map((b) => b.name)}
         reasons={["Duplicate Record", "Discontinued", "Transfer", "Wrong Entry", "Other"]}
         records={allStudents.map((st) => ({
@@ -529,6 +532,9 @@ export default function BatchesPage() {
           const d = await res.json();
           if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Restore failed");
           if (selectedBatch) fetchStudentsForBatch(selectedBatch);
+        }}
+        onConfirmDelete={async (studentId) => {
+          await handlePermanentDeleteStudent(studentId);
         }}
       />
     </div>

@@ -29,14 +29,14 @@ export async function GET(req: Request) {
       const targetMaxYear = Math.max(activeAdmissionYear + 1, 2026);
 
       for (let yr = baseAdmissionYear; yr <= targetMaxYear; yr++) {
-        const batchName = `${yr}-${yr + 4}`;
+        const batchName = `${yr}-${yr + 1}`;
         const existing = await prisma.batch.findUnique({ where: { name: batchName } });
         if (!existing) {
           await prisma.batch.create({
             data: {
               name: batchName,
               admissionYear: yr,
-              expectedGraduationYear: yr + 4,
+              expectedGraduationYear: yr + 1,
               departmentId: dept.id,
               totalSemesters: 8,
               currentSemester: Math.min(Math.max((activeAdmissionYear - yr) * 2 + 1, 1), 8),
@@ -61,7 +61,7 @@ export async function GET(req: Request) {
     const enrichedBatches = batches.map((b) => ({
       ...b,
       graduationYear: b.expectedGraduationYear,
-      admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 1}`,
+      admissionAcademicYear: `${b.admissionYear}-${b.admissionYear + 4}`,
       studentCount: b._count?.students || 0,
     }));
 
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     const { admissionYear } = await req.json();
 
     const startYr = parseInt(admissionYear, 10) || 2025;
-    const name = `${startYr}-${startYr + 4}`;
+    const name = `${startYr}-${startYr + 1}`;
 
     const existing = await prisma.batch.findUnique({ where: { name } });
     if (existing) {
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
       data: {
         name,
         admissionYear: startYr,
-        expectedGraduationYear: startYr + 4,
+        expectedGraduationYear: startYr + 1,
         departmentId: dept.id,
         courseTitle: "B.E. Artificial Intelligence & Machine Learning",
         totalSemesters: 8,

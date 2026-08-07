@@ -30,7 +30,7 @@ export default function AdminTakeAttendancePage() {
   const [courses, setCourses] = useState<any[]>([]);
 
   // Selection state
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]

@@ -5,7 +5,7 @@ import { CalendarDays, AlertTriangle } from "lucide-react";
 
 export function AcademicYearSelector() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string>("2025-2026");
+  const [selectedYear, setSelectedYear] = useState<string>("2025-2029");
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {

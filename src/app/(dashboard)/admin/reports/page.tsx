@@ -33,7 +33,7 @@ export default function AdminReportingCenterPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Primary Academic Year Filter
-  const [academicYear, setAcademicYear] = useState<string>("2025-2026");
+  const [academicYear, setAcademicYear] = useState<string>("2025-2029");
   const [batchId, setBatchId] = useState("");
   const [semester, setSemester] = useState("");
 

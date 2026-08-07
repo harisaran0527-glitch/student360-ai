@@ -39,6 +39,7 @@ export interface DeleteManagementPanelProps {
   reasons?: string[];
   onConfirmArchive: (recordId: string, reason: string, notes?: string) => Promise<void>;
   onConfirmRestore?: (recordId: string) => Promise<void>;
+  onConfirmDelete?: (recordId: string) => Promise<void>;
 }
 
 export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
@@ -47,11 +48,12 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
   title,
   moduleName,
   records,
-  academicYears = ["2025-2026", "2024-2025", "2023-2024"],
+  academicYears = ["2025-2029", "2026-2030", "2027-2031"],
   batches = [],
   reasons = ["Duplicate Record", "Discontinued", "Transfer", "Wrong Entry", "Other"],
   onConfirmArchive,
   onConfirmRestore,
+  onConfirmDelete,
 }) => {
   const [search, setSearch] = useState("");
   const [selectedAY, setSelectedAY] = useState("");
@@ -103,6 +105,25 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
       setSelectedRecordId("");
     } catch (err: any) {
       setFeedback({ type: "error", text: err.message || "Failed to restore record." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedRecord || !onConfirmDelete) return;
+    const confirmMessage = moduleName === "Student"
+      ? "Are you sure you want to permanently delete this student? This action cannot be undone."
+      : `Are you sure you want to delete this ${moduleName}?`;
+    if (!confirm(confirmMessage)) return;
+    setSubmitting(true);
+    setFeedback(null);
+    try {
+      await onConfirmDelete(selectedRecord.id);
+      setFeedback({ type: "success", text: `${moduleName} '${selectedRecord.name}' permanently deleted.` });
+      setSelectedRecordId("");
+    } catch (err: any) {
+      setFeedback({ type: "error", text: err.message || "Failed to delete record." });
     } finally {
       setSubmitting(false);
     }
@@ -322,7 +343,19 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
             Cancel
           </button>
 
-          {selectedRecord && !selectedRecord.isArchived && (
+          {selectedRecord && onConfirmDelete && (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={handleDelete}
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4 text-white" />
+              <span>{moduleName === "Student" ? "Permanently Delete Student" : `Delete ${moduleName}`}</span>
+            </button>
+          )}
+
+          {selectedRecord && !selectedRecord.isArchived && !onConfirmDelete && (
             <button
               type="button"
               disabled={submitting}

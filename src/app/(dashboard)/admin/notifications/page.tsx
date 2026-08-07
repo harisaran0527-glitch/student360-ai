@@ -27,7 +27,7 @@ export default function AdminNotificationsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [targetAY, setTargetAY] = useState("2025-2026");
+  const [targetAY, setTargetAY] = useState("2025-2029");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState("HIGH");
@@ -366,7 +366,7 @@ export default function AdminNotificationsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Notification Delete & Archive Management — Dedicated Selector"
         moduleName="Notification"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030"]}
         reasons={["Outdated Alert", "Duplicate Notification", "Draft Cancelled", "Wrong Audience Target", "Other"]}
         records={notifications.map((item) => {
           const isSent = item.emailStatus === "SENT";
@@ -375,7 +375,7 @@ export default function AdminNotificationsPage() {
             name: item.title || "Notification Alert",
             identifier: item.id.slice(0, 8),
             subtext: `Audience: ${item.type || "STUDENT"} | Date: ${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "N/A"} | Email Status: ${item.emailStatus || "NOT_REQUIRED"}`,
-            academicYear: item.academicYear || "2025-2026",
+            academicYear: item.academicYear || "2025-2029",
             status: item.emailStatus || "SENT",
             badge: item.priority || "NORMAL",
             isArchived: item.isArchived,

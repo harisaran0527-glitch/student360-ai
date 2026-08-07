@@ -147,22 +147,16 @@ export async function DELETE(
   const startTime = Date.now();
   try {
     const session = await getSession();
-    if (!session || session.role !== "SUPER_ADMIN") {
-      return apiError("Forbidden: Permanent student deletion is reserved strictly for SUPER_ADMIN. Normal Admins can only archive records.", 403);
+    if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+      return apiError("Forbidden: Student deletion is restricted to ADMIN and SUPER_ADMIN.", 403);
     }
 
     const studentId = params.id;
-    const { confirmText, reason } = await req.json().catch(() => ({ confirmText: "", reason: "SUPER_ADMIN Erase" }));
 
     const student = await prisma.studentProfile.findUnique({
       where: { id: studentId },
       include: {
         user: true,
-        attendances: true,
-        certificates: true,
-        internships: true,
-        projects: true,
-        placementRecords: true,
       },
     });
 
@@ -170,47 +164,33 @@ export async function DELETE(
       return apiError("Student profile record not found", 404);
     }
 
-    const requiredConfirmString = `PERMANENTLY_DELETE_${student.registerNo.toUpperCase()}`;
-    if (confirmText !== requiredConfirmString) {
-      return apiError(`Confirmation string mismatch. You must type exact string '${requiredConfirmString}' to proceed.`, 400);
-    }
-
-    const impact = {
-      attendanceCount: student.attendances.length,
-      certificateCount: student.certificates.length,
-      internshipCount: student.internships.length,
-      projectCount: student.projects.length,
-      placementCount: student.placementRecords.length,
-    };
-
-    // Permanently delete student and linked user account
-    await prisma.studentProfile.delete({ where: { id: studentId } });
-    if (student.userId) {
-      await prisma.user.delete({ where: { id: student.userId } }).catch(() => {});
-    }
-
-    // Write Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.id,
-        userEmail: session.email,
-        userRole: session.role,
-        action: "PERMANENT_DELETE_STUDENT",
-        entityType: "StudentProfile",
-        entityId: studentId,
-        details: JSON.stringify({
-          registerNo: student.registerNo,
-          fullName: student.fullName,
-          email: student.email,
-          reason,
-          deletedBy: session.email,
-          impact,
-        }),
-      },
+    // Permanently delete student profile and linked user account inside transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.studentProfile.delete({ where: { id: studentId } });
+      if (student.userId) {
+        await tx.user.delete({ where: { id: student.userId } }).catch(() => {});
+      }
+      await tx.auditLog.create({
+        data: {
+          userId: session.id,
+          userEmail: session.email,
+          userRole: session.role,
+          action: "PERMANENT_DELETE_STUDENT",
+          entityType: "StudentProfile",
+          entityId: studentId,
+          details: JSON.stringify({
+            registerNo: student.registerNo,
+            fullName: student.fullName,
+            email: student.email,
+            deletedBy: session.email,
+            timestamp: new Date().toISOString(),
+          }),
+        },
+      });
     });
 
     logApiPerf("DELETE /api/students/[id]", startTime);
-    return apiSuccess({ id: studentId, impact }, "Student profile permanently deleted by SUPER_ADMIN.", 200);
+    return apiSuccess({ id: studentId }, "Student profile and user account permanently deleted successfully.", 200);
   } catch (error: any) {
     return apiError(error.message || "Failed to permanently delete student profile", 500);
   }

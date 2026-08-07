@@ -13,20 +13,19 @@ export function calculateAcademicYearForDate(targetDate: Date = new Date()): { y
   const year = targetDate.getFullYear();
   const month = targetDate.getMonth() + 1; // 1 to 12
 
-  // Standard Indian Institutional Academic Year starting in June (Month 6)
+  // Academic Year starts in June (Month 6) with 4-year range (endYear = startYear + 4)
   let startYear = year;
-  let endYear = year + 1;
+  let endYear = year + 4;
 
   if (month < 6) {
-    // January to May belongs to previous year's session (e.g. May 2026 is part of 2025-2026)
     startYear = year - 1;
-    endYear = year;
+    endYear = startYear + 4;
   }
 
-  // Base year safeguard: Academic Year must be at least 2025-2026
+  // Base year safeguard: Academic Year must be at least 2025-2029
   if (startYear < 2025) {
     startYear = 2025;
-    endYear = 2026;
+    endYear = 2029;
   }
 
   const yearCode = `${startYear}-${endYear}`;

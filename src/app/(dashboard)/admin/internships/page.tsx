@@ -21,7 +21,7 @@ import {
 
 export default function AdminInternshipsPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
 
   const [internships, setInternships] = useState<any[]>([]);
   const [yearStudents, setYearStudents] = useState<any[]>([]);

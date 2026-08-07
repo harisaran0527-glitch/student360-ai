@@ -19,7 +19,7 @@ import {
 
 export default function AdminVerificationCenterPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2026");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2025-2029");
   const [activeTab, setActiveTab] = useState<"CERTIFICATES" | "INTERNSHIPS" | "PROJECTS">("CERTIFICATES");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
 

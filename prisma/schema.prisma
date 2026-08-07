@@ -134,7 +134,7 @@ model Course {
   semester         Int
   departmentId     String
   facultyId        String?
-  academicYearCode String     @default("2025-2026")
+  academicYearCode String     @default("2025-2029")
   subjectType      String     @default("CORE")
   isActive         Boolean    @default(true)
   isArchived       Boolean    @default(false)
@@ -153,7 +153,7 @@ model Course {
 
 model AttendanceSession {
   id               String       @id @default(uuid())
-  academicYearCode String       @default("2025-2026")
+  academicYearCode String       @default("2025-2029")
   semester         Int          @default(1)
   courseId         String
   sectionId        String?
@@ -211,7 +211,7 @@ model StudentProfile {
   departmentId         String
   batchId              String
   sectionId            String?
-  academicYear         String        @default("2025-2026")
+  academicYear         String        @default("2025-2029")
   currentSemester      Int           @default(1)
   entryType            String        @default("REGULAR")
   admissionQuota       String?
@@ -276,7 +276,7 @@ model Attendance {
   studentId        String
   sessionId        String?
   courseId         String
-  academicYearCode String             @default("2025-2026")
+  academicYearCode String             @default("2025-2029")
   semester         Int                @default(1)
   date             String             
   session          String             @default("FN")
@@ -339,7 +339,7 @@ model AcademicCalendar {
   date             String   @unique
   dayType          String   @default("WORKING_DAY")
   description      String?
-  academicYearCode String   @default("2025-2026")
+  academicYearCode String   @default("2025-2029")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -381,7 +381,7 @@ model AcademicRecord {
 model Internship {
   id                   String           @id @default(uuid())
   studentId            String
-  academicYearCode     String           @default("2025-2026")
+  academicYearCode     String           @default("2025-2029")
   batchId              String?
   departmentId         String?
   semester             Int              @default(1)
@@ -489,7 +489,7 @@ model Certificate {
   issueDate          String
   startDate          String?
   endDate            String?
-  academicYearCode   String             @default("2025-2026")
+  academicYearCode   String             @default("2025-2029")
   semester           Int                @default(1)
   mode               String             @default("ONLINE")
   location           String?
@@ -533,7 +533,7 @@ model Achievement {
   organizer          String
   position           String             @default("Participant")
   date               String
-  academicYearCode   String             @default("2025-2026")
+  academicYearCode   String             @default("2025-2029")
   semester           Int                @default(1)
   documentUrl        String?
   verificationStatus String             @default("PENDING")
@@ -555,7 +555,7 @@ model Project {
   description        String
   detailedDescription String?
   projectType        String             @default("MINI_PROJECT") // MINI_PROJECT, COURSE_PROJECT, HACKATHON_PROJECT, INTERNSHIP_PROJECT, RESEARCH_PROJECT, FINAL_YEAR_PROJECT, PERSONAL_PROJECT, OTHER
-  academicYearCode   String             @default("2025-2026")
+  academicYearCode   String             @default("2025-2029")
   semester           Int                @default(1)
   category           String             @default("Web Development")
   techStack          String
@@ -767,7 +767,7 @@ model Notification {
 model StudentComplianceReport {
   id                  String         @id @default(uuid())
   studentId           String
-  academicYear        String         @default("2025-2026")
+  academicYear        String         @default("2025-2029")
   semester            Int            @default(1)
   reportType          String         @default("INTERNSHIP_NON_COMPLETION")
   generatedDate       String         
@@ -873,7 +873,7 @@ model StudentCareerPreference {
 model StudentRiskSnapshot {
   id              String         @id @default(uuid())
   studentId       String
-  academicYear    String         @default("2025-2026")
+  academicYear    String         @default("2025-2029")
   semester        Int            @default(1)
   attentionLevel  String         @default("LOW_ATTENTION")
   factors         String         
@@ -890,7 +890,7 @@ model StudentRiskSnapshot {
 model AIInsightSnapshot {
   id            String          @id @default(uuid())
   studentId     String?
-  academicYear  String          @default("2025-2026")
+  academicYear  String          @default("2025-2029")
   semester      Int             @default(1)
   insightType   String          
   result        String          
