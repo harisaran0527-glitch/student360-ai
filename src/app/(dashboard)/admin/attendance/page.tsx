@@ -550,7 +550,7 @@ export default function AdminTakeAttendancePage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Delete Attendance Session — Session Cancellation"
         moduleName="Attendance Session"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         reasons={["Class Cancelled", "Duplicate Session", "Faculty Leave", "Schedule Shift", "Wrong Date Entry"]}
         records={attendanceSessions.map((sess) => ({
           id: sess.id,

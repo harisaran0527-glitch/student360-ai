@@ -310,6 +310,7 @@ export default function MasterRecordsPage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -430,14 +431,17 @@ export default function MasterRecordsPage() {
 
   const fetchMetadata = async () => {
     try {
-      const [deptRes, batchRes] = await Promise.all([
+      const [deptRes, batchRes, ayRes] = await Promise.all([
         fetch("/api/departments", { credentials: "include", cache: "no-store" }),
         fetch("/api/batches", { credentials: "include", cache: "no-store" }),
+        fetch("/api/academic-years", { credentials: "include", cache: "no-store" }),
       ]);
       const deptData = await deptRes.json();
       const batchData = await batchRes.json();
+      const ayData = await ayRes.json();
       setDepartments(deptData.departments || []);
       setBatches(batchData.batches || []);
+      setAcademicYears(ayData.academicYears || []);
     } catch (err) {
       console.error("Failed to fetch metadata", err);
     }
@@ -773,8 +777,18 @@ export default function MasterRecordsPage() {
               className="ui-input px-2.5 py-1.5"
             >
               <option value="">All Academic Years</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2024-2025">2024-2025</option>
+              {academicYears.map((ay) => (
+                <option key={ay.id} value={ay.yearCode}>
+                  {ay.yearCode} {ay.isCurrent ? "(Current)" : ""}
+                </option>
+              ))}
+              {academicYears.length === 0 && (
+                <>
+                  <option value="2025-2029">2025-2029</option>
+                  <option value="2026-2030">2026-2030</option>
+                  <option value="2027-2031">2027-2031</option>
+                </>
+              )}
             </select>
 
             <select

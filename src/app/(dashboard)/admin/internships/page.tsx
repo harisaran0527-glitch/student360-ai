@@ -404,7 +404,7 @@ export default function AdminInternshipsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Internship Delete & Archive Management — Dedicated Selector"
         moduleName="Internship"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         reasons={["Offer Cancelled", "Duplicate Submission", "Student Opted Out", "Wrong Dates Entry", "Other"]}
         records={internships.map((item) => ({
           id: item.id,

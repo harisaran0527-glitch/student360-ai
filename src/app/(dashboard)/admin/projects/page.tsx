@@ -454,7 +454,7 @@ export default function AdminProjectsPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Project Delete & Archive Management — Dedicated Selector"
         moduleName="Project"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         reasons={["Project Abandoned", "Duplicate Submission", "Invalid Links", "Wrong Student Link", "Other"]}
         records={projects.map((item) => ({
           id: item.id,

@@ -443,7 +443,7 @@ export default function AdminSyllabusPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Semester Subject Delete & Archive Management — Dedicated Selector"
         moduleName="Subject"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         reasons={["Curriculum Revised", "Subject Deprecated", "Duplicate Code", "Wrong Semester", "Other"]}
         records={courses.map((c) => ({
           id: c.id,

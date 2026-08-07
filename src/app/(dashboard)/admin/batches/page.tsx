@@ -180,7 +180,7 @@ export default function BatchesPage() {
     <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950">
       <Header
         title="Batches & Progression — Department of AI & ML"
-        subtitle="4-Year Incoming Batches (2025–2029, 2026–2030...), Batch Enrollment & Add Student Workflow"
+        subtitle="Academic Batches (1-Year Range: 2025–2026, 2026–2027...), Batch Enrollment & Add Student Workflow"
         action={
           <div className="flex items-center gap-2">
             <button
@@ -221,7 +221,7 @@ export default function BatchesPage() {
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">AI & ML Academic Batches</h2>
             <p className="text-xs text-slate-500">
-              Each batch covers 4 academic years. Students added under a batch/year remain permanently linked.
+              Each batch uses 1-year ranges (2025–2026, 2026–2027...). Students added under a batch/year remain permanently linked.
             </p>
           </div>
           <Badge variant="purple">Fixed Scope: AI & ML</Badge>

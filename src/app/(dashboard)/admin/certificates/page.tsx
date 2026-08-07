@@ -796,7 +796,7 @@ export default function AdminCertificatesPage() {
         onClose={() => setIsDeletePanelOpen(false)}
         title="Certificate Delete & Archive Management — Dedicated Selector"
         moduleName="Certificate"
-        academicYears={["2025-2026", "2024-2025"]}
+        academicYears={["2025-2029", "2026-2030", "2027-2031"]}
         reasons={["Invalid Certificate File", "Duplicate Submission", "Wrong Student Assignment", "Expired Document", "Other"]}
         records={certificates.map((cert) => ({
           id: cert.id,
