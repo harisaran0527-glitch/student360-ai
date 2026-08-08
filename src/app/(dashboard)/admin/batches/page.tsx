@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS } from "@/lib/academicYearConstants";
-import { getAcademicOptions } from "@/lib/clientOptionsCache";
+import { getAcademicOptions, invalidateOptionsCache } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -146,6 +146,7 @@ export default function BatchesPage() {
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Permanent deletion failed");
       alert("Student profile and user account permanently deleted!");
+      invalidateOptionsCache();
       if (selectedBatch) fetchStudentsForBatch(selectedBatch);
       fetchData();
     } catch (err: any) {
@@ -160,6 +161,7 @@ export default function BatchesPage() {
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Batch deletion failed");
       alert(`Batch '${batchName}' permanently deleted.`);
+      invalidateOptionsCache();
       fetchData();
     } catch (err: any) {
       alert(err.message);

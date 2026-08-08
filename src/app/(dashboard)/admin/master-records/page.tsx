@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
-import { getAcademicOptions } from "@/lib/clientOptionsCache";
+import { getAcademicOptions, invalidateOptionsCache } from "@/lib/clientOptionsCache";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -561,6 +561,7 @@ export default function MasterRecordsPage() {
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Permanent deletion failed");
       alert("Student profile and user account permanently deleted!");
+      invalidateOptionsCache();
       setQuickViewStudent(null);
       fetchStudents();
     } catch (err: any) {

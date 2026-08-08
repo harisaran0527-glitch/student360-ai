@@ -100,7 +100,7 @@ export async function GET(req: Request) {
       {
         status: 200,
         headers: {
-          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
+          "Cache-Control": "no-store, max-age=0, must-revalidate",
         },
       }
     );
