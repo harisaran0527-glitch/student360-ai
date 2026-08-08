@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "node node_modules/prisma/build/index.js generate",
     "db:push": "prisma db push",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "backup:data": "node scripts/backupData.js",
+    "restore:data": "node scripts/restoreData.js"
   },
   "dependencies": {
     "@netlify/plugin-nextjs": "^5.15.13",

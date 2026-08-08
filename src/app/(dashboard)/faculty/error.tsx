@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
 
-export default function GlobalError({
+export default function FacultyError({
   error,
   reset,
 }: {
@@ -11,19 +11,19 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Global Application Error:", error);
+    console.error("Faculty Portal Error:", error);
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-center">
-      <div className="glass-card p-8 rounded-3xl border border-rose-500/30 max-w-md w-full space-y-5">
-        <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60vh]">
+      <div className="glass-card p-8 rounded-3xl border border-indigo-500/30 max-w-md w-full space-y-5">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
           <AlertCircle className="w-7 h-7" />
         </div>
 
         <div className="space-y-1">
           <h2 className="text-xl font-bold text-white">Something went wrong. Please try again.</h2>
-          <p className="text-xs text-slate-400">An unexpected system error occurred while rendering the page.</p>
+          <p className="text-xs text-slate-400">A faculty portal error occurred. You can retry or go back.</p>
         </div>
 
         <div className="flex items-center justify-center gap-3 pt-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { ShieldAlert, RefreshCw, LogIn } from "lucide-react";
+import { ShieldAlert, RefreshCw, ArrowLeft } from "lucide-react";
 
 export default function AdminError({
   error,
@@ -22,8 +22,8 @@ export default function AdminError({
         </div>
 
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-white">Unable to load Admin Panel feature</h2>
-          <p className="text-xs text-slate-400">An admin module error occurred. Retry or return to Admin Login.</p>
+          <h2 className="text-xl font-bold text-white">Something went wrong. Please try again.</h2>
+          <p className="text-xs text-slate-400">An admin module error occurred. You can retry or go back.</p>
         </div>
 
         <div className="flex items-center justify-center gap-3 pt-2">
@@ -35,11 +35,11 @@ export default function AdminError({
             <span>Retry</span>
           </button>
           <button
-            onClick={() => (window.location.href = "/admin")}
+            onClick={() => window.history.back()}
             className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition flex items-center gap-2"
           >
-            <LogIn className="w-4 h-4" />
-            <span>Go to Admin Login</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Go Back</span>
           </button>
         </div>
       </div>

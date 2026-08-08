@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { AlertCircle, RefreshCw, LogIn } from "lucide-react";
+import { AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
 
 export default function StudentError({
   error,
@@ -22,8 +22,8 @@ export default function StudentError({
         </div>
 
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-white">Unable to load Student Portal page</h2>
-          <p className="text-xs text-slate-400">A student portal error occurred. Retry or return to Student Login.</p>
+          <h2 className="text-xl font-bold text-white">Something went wrong. Please try again.</h2>
+          <p className="text-xs text-slate-400">A student portal error occurred. You can retry or go back.</p>
         </div>
 
         <div className="flex items-center justify-center gap-3 pt-2">
@@ -35,11 +35,11 @@ export default function StudentError({
             <span>Retry</span>
           </button>
           <button
-            onClick={() => (window.location.href = "/student")}
+            onClick={() => window.history.back()}
             className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition flex items-center gap-2"
           >
-            <LogIn className="w-4 h-4" />
-            <span>Go to Student Login</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Go Back</span>
           </button>
         </div>
       </div>

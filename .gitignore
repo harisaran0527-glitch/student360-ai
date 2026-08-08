@@ -53,3 +53,4 @@ coverage/
 .netlify/
 
 public/uploads_backup/
+backups/
