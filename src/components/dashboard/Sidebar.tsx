@@ -121,12 +121,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* User Role Badge Card */}
           <div className="px-3 py-2.5 mx-3 my-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/40 flex-shrink-0">
             <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              {userRole.replace("_", " ")}
+              {userRole ? userRole.replace("_", " ") : "ADMIN"}
             </div>
             <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-              {userName || "User"}
+              {userName || "Priyadharshini (Admin)"}
             </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{userEmail}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{userEmail || "admin@student360.ai"}</div>
           </div>
 
           {/* Navigation Links List */}

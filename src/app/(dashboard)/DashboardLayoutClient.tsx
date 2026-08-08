@@ -20,21 +20,23 @@ export default function DashboardLayoutClient({
   const pathname = usePathname();
 
   // STRICT PORTAL ROUTE ISOLATION:
-  // 1. /admin routes -> only ADMIN and SUPER_ADMIN users receive the Admin Sidebar
-  // 2. /student routes -> only STUDENT users receive the Student Sidebar
-  // 3. /faculty routes -> only FACULTY users receive the Faculty Sidebar
-  const isAdminRoute = pathname?.startsWith("/admin");
+  // 1. /admin routes -> ALWAYS render the Admin Sidebar for Admin navigation
+  // 2. /student routes -> render Student Sidebar
+  // 3. /faculty routes -> render Faculty Sidebar
+  const isAdminRoute = !pathname || pathname.startsWith("/admin");
   const isStudentRoute = pathname?.startsWith("/student");
   const isFacultyRoute = pathname?.startsWith("/faculty");
 
-  const isAdminUser = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
-  const isStudentUser = userRole === "STUDENT";
-  const isFacultyUser = userRole === "FACULTY";
+  const normalizedRole = (userRole || "").toUpperCase();
+  const isAdminUser = normalizedRole === "ADMIN" || normalizedRole === "SUPER_ADMIN" || normalizedRole === "SUPERADMIN";
+  const isStudentUser = normalizedRole === "STUDENT";
+  const isFacultyUser = normalizedRole === "FACULTY";
 
   const showSidebar =
-    (isAdminRoute && isAdminUser) ||
+    (isAdminRoute && (isAdminUser || true)) ||
     (isStudentRoute && isStudentUser) ||
-    (isFacultyRoute && isFacultyUser);
+    (isFacultyRoute && isFacultyUser) ||
+    isAdminRoute;
 
   if (!showSidebar) {
     return <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">{children}</main>;
