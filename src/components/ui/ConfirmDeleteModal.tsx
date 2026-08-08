@@ -96,10 +96,12 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-900 space-y-2 text-xs">
             <div className="flex items-center gap-2 font-bold text-rose-700 dark:text-rose-400">
               <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
-              <span>SUPER_ADMIN PERMANENT DELETE WARNING</span>
+              <span>PERMANENT DELETE WARNING</span>
             </div>
             <div>
-              This action is <strong>irreversible</strong>. The database record and any associated cloud files will be permanently erased.
+              <strong>Are you sure you want to permanently delete this record?</strong>
+              <br />
+              This action cannot be undone. The database record and any associated data will be permanently erased.
             </div>
             {impactPreview && (
               <div className="pt-2 border-t border-rose-200 dark:border-rose-900/60 font-semibold space-y-1 text-[11px]">

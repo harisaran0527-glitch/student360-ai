@@ -262,9 +262,29 @@ export default function AdminPlacementPage() {
                       </td>
                       <td className="p-3.5 text-slate-500 font-mono text-[11px]">{p.offerDate}</td>
                       <td className="p-3.5">
-                        <Badge variant={p.status === "SELECTED" || p.status === "JOINED" ? "success" : "info"}>
-                          {p.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={p.status === "SELECTED" || p.status === "JOINED" ? "success" : "info"}>
+                            {p.status}
+                          </Badge>
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
+                              try {
+                                const res = await fetch(`/api/placement/records/${p.id}`, { method: "DELETE" });
+                                const d = await res.json();
+                                if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+                                alert("Placement record permanently deleted.");
+                                fetchData();
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                            title="Delete Placement"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -397,6 +417,15 @@ export default function AdminPlacementPage() {
               : undefined,
           };
         })}
+        onConfirmDelete={async (recordId) => {
+          const res = await fetch(`/api/placement/records/${recordId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+          fetchData();
+        }}
         onConfirmArchive={async (recordId, reason) => {
           const res = await fetch(`/api/placement/records/${recordId}`, {
             method: "PATCH",

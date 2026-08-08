@@ -94,13 +94,35 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id");
     if (!id) return apiError("Course ID required", 400);
 
-    await prisma.course.update({
+    const course = await prisma.course.findUnique({
       where: { id },
-      data: { isActive: false },
+      include: {
+        _count: { select: { attendances: true, academicRecords: true } },
+      },
+    });
+
+    if (!course) return apiError("Course record not found", 404);
+
+    if (course._count.attendances > 0 || course._count.academicRecords > 0) {
+      return apiError(`Cannot delete course '${course.code}': linked student attendance or academic records exist. Archive the subject instead.`, 400);
+    }
+
+    await prisma.course.delete({ where: { id } });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userEmail: session.email,
+        userRole: session.role,
+        action: "PERMANENT_DELETE_SUBJECT",
+        entityType: "Course",
+        entityId: id,
+        details: JSON.stringify({ code: course.code, title: course.title, deletedBy: session.email }),
+      },
     });
 
     logApiPerf("DELETE /api/academics/syllabus", startTime);
-    return apiSuccess({ id }, "Syllabus record removed successfully.");
+    return apiSuccess({ id }, "Syllabus record permanently deleted successfully.");
   } catch (error: any) {
     return apiError(error.message || "Failed to delete syllabus record", 500);
   }

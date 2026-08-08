@@ -136,15 +136,30 @@ export default function BatchesPage() {
     }
   };
 
-  const handlePermanentDeleteStudent = async (studentId: string, studentName?: string) => {
-    const confirmationText = "Are you sure you want to permanently delete this student? This action cannot be undone.";
-    if (!confirm(studentName ? `${confirmationText}\n\nStudent: ${studentName}` : confirmationText)) return;
+  const handlePermanentDeleteStudent = async (studentId: string, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmationText = "Are you sure you want to permanently delete this record?\nThis action cannot be undone.";
+      if (!confirm(confirmationText)) return;
+    }
     try {
       const res = await fetch(`/api/students/${studentId}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Permanent deletion failed");
       alert("Student profile and user account permanently deleted!");
       if (selectedBatch) fetchStudentsForBatch(selectedBatch);
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteBatch = async (batchId: string, batchName: string) => {
+    if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/batches/${batchId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Batch deletion failed");
+      alert(`Batch '${batchName}' permanently deleted.`);
       fetchData();
     } catch (err: any) {
       alert(err.message);
@@ -521,7 +536,7 @@ export default function BatchesPage() {
           if (selectedBatch) fetchStudentsForBatch(selectedBatch);
         }}
         onConfirmDelete={async (studentId) => {
-          await handlePermanentDeleteStudent(studentId);
+          await handlePermanentDeleteStudent(studentId, true);
         }}
       />
     </div>

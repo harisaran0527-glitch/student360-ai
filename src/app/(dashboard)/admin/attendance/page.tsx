@@ -551,6 +551,16 @@ export default function AdminTakeAttendancePage() {
           isArchived: sess.isArchived,
           warningMsg: "Deleting an attendance session automatically recalculates affected student overall percentages across Central Reports.",
         }))}
+        onConfirmDelete={async (sessionId) => {
+          const res = await fetch(`/api/attendance/sessions/${sessionId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Failed to delete attendance session");
+          loadStudentsAndAttendance();
+          fetchAttendanceSessions();
+        }}
         onConfirmArchive={async (sessionId, reason, notes) => {
           const res = await fetch(`/api/attendance/sessions/${sessionId}`, {
             method: "DELETE",

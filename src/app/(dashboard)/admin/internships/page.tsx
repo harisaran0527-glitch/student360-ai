@@ -264,9 +264,29 @@ export default function AdminInternshipsPage() {
                         {int.startDate} to {int.endDate}
                       </td>
                       <td className="p-3.5">
-                        <Badge variant={int.status === "COMPLETED" ? "success" : "info"}>
-                          {int.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={int.status === "COMPLETED" ? "success" : "info"}>
+                            {int.status}
+                          </Badge>
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
+                              try {
+                                const res = await fetch(`/api/internships/${int.id}`, { method: "DELETE" });
+                                const d = await res.json();
+                                if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+                                alert("Internship record permanently deleted.");
+                                fetchData();
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                            title="Delete Internship"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -418,6 +438,15 @@ export default function AdminInternshipsPage() {
           isArchived: item.isArchived,
           warningMsg: item.verificationStatus === "APPROVED" ? "This internship record has been VERIFIED. Archiving will hide it from the active roster while preserving proof documents." : undefined,
         }))}
+        onConfirmDelete={async (internshipId) => {
+          const res = await fetch(`/api/internships/${internshipId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+          fetchData();
+        }}
         onConfirmArchive={async (internshipId, reason) => {
           const res = await fetch(`/api/internships/${internshipId}`, {
             method: "PATCH",

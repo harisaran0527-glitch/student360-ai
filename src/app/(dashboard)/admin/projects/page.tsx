@@ -288,7 +288,27 @@ export default function AdminProjectsPage() {
                         {proj.completionDate || "N/A"}
                       </td>
                       <td className="p-3.5">
-                        <Badge variant="success">{proj.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="success">{proj.status}</Badge>
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
+                              try {
+                                const res = await fetch(`/api/projects/${proj.id}`, { method: "DELETE" });
+                                const d = await res.json();
+                                if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+                                alert("Project record permanently deleted.");
+                                fetchData();
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -468,6 +488,15 @@ export default function AdminProjectsPage() {
           isArchived: item.isArchived,
           warningMsg: "Soft archiving hides this project from active showcases while preserving repository links, demo URLs, screenshots, and skill evidence.",
         }))}
+        onConfirmDelete={async (projectId) => {
+          const res = await fetch(`/api/projects/${projectId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+          fetchData();
+        }}
         onConfirmArchive={async (projectId, reason) => {
           const res = await fetch(`/api/projects/${projectId}`, {
             method: "PATCH",

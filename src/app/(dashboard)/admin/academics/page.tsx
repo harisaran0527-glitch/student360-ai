@@ -128,7 +128,7 @@ export default function AdminSyllabusPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this syllabus record?")) return;
+    if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
     try {
       const res = await fetch(`/api/academics/syllabus?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to remove syllabus record");
@@ -331,6 +331,30 @@ export default function AdminSyllabusPage() {
                           >
                             <Archive className="w-3.5 h-3.5" /> Archive
                           </button>
+
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
+                              try {
+                                const res = await fetch(`/api/courses/${c.id}`, {
+                                  method: "DELETE",
+                                  headers: { "Content-Type": "application/json" },
+                                });
+                                const data = await res.json();
+                                if (!res.ok || data.success === false) {
+                                  throw new Error(data.message || data.error || "Delete failed");
+                                }
+                                alert("Subject permanently deleted.");
+                                fetchSyllabus();
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition flex items-center gap-1 text-[11px] font-bold"
+                            title="Delete Subject"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -457,6 +481,15 @@ export default function AdminSyllabusPage() {
           isArchived: c.isArchived,
           warningMsg: "If attendance records are linked to this subject, permanent delete is blocked and only Archive Subject is permitted.",
         }))}
+        onConfirmDelete={async (courseId) => {
+          const res = await fetch(`/api/courses/${courseId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+          fetchSyllabus();
+        }}
         onConfirmArchive={async (courseId, reason) => {
           const res = await fetch(`/api/courses/${courseId}`, {
             method: "PATCH",

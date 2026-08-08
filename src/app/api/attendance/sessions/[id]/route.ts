@@ -29,19 +29,13 @@ export async function DELETE(
     // Get list of student IDs affected by this session
     const affectedStudentIds = Array.from(new Set(attSession.attendances.map((a) => a.studentId)));
 
-    // Soft delete/archive session & its individual attendance records
+    // Permanently delete session & its individual attendance records
     await prisma.$transaction([
-      prisma.attendanceSession.update({
-        where: { id: sessionId },
-        data: {
-          isArchived: true,
-          archivedAt: new Date(),
-          archivedReason: reason,
-          archivedBy: session.email,
-        },
-      }),
       prisma.attendance.deleteMany({
         where: { sessionId: sessionId },
+      }),
+      prisma.attendanceSession.delete({
+        where: { id: sessionId },
       }),
     ]);
 
@@ -64,7 +58,7 @@ export async function DELETE(
         userId: session.id,
         userEmail: session.email,
         userRole: session.role,
-        action: "ARCHIVE_ATTENDANCE_SESSION",
+        action: "PERMANENT_DELETE_ATTENDANCE_SESSION",
         entityType: "AttendanceSession",
         entityId: sessionId,
         details: JSON.stringify({
@@ -74,14 +68,14 @@ export async function DELETE(
           reason,
           notes,
           affectedStudentsCount: affectedStudentIds.length,
-          cancelledBy: session.email,
+          deletedBy: session.email,
         }),
       },
     });
 
     logApiPerf("DELETE /api/attendance/sessions/[id]", startTime);
-    return apiSuccess({ sessionId, affectedStudentsCount: affectedStudentIds.length }, "Attendance session archived and student percentages recalculated successfully.", 200);
+    return apiSuccess({ sessionId, affectedStudentsCount: affectedStudentIds.length }, "Attendance session permanently deleted and student percentages recalculated successfully.", 200);
   } catch (error: any) {
-    return apiError(error.message || "Failed to archive attendance session", 500);
+    return apiError(error.message || "Failed to delete attendance session", 500);
   }
 }

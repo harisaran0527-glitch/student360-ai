@@ -62,7 +62,7 @@ export async function DELETE(
   const startTime = Date.now();
   try {
     const session = await getSession();
-    if (!session || session.role !== "SUPER_ADMIN") {
+    if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return apiError("Unauthorized", 403);
     }
 
@@ -77,24 +77,24 @@ export async function DELETE(
 
     if (!course) return apiError("Subject record not found", 404);
 
-    // Rule 3: Block hard deletion if subject has attendance history
-    if (course.attendances.length > 0 || course.sessions.length > 0) {
-      return apiError("This subject has attendance records and can only be archived.", 400);
-    }
-
-    await prisma.course.delete({ where: { id: courseId } });
-
-    await prisma.auditLog.create({
-      data: {
-        userId: session.id,
-        userEmail: session.email,
-        userRole: session.role,
-        action: "PERMANENT_DELETE_SUBJECT",
-        entityType: "Course",
-        entityId: courseId,
-        details: JSON.stringify({ code: course.code, title: course.title, deletedBy: session.email }),
-      },
-    });
+    // Perform safe cascading permanent deletion of dependent records and course
+    await prisma.$transaction([
+      prisma.attendance.deleteMany({ where: { courseId } }),
+      prisma.attendanceSession.deleteMany({ where: { courseId } }),
+      prisma.academicRecord.deleteMany({ where: { courseId } }),
+      prisma.course.delete({ where: { id: courseId } }),
+      prisma.auditLog.create({
+        data: {
+          userId: session.id,
+          userEmail: session.email,
+          userRole: session.role,
+          action: "PERMANENT_DELETE_SUBJECT",
+          entityType: "Course",
+          entityId: courseId,
+          details: JSON.stringify({ code: course.code, title: course.title, deletedBy: session.email }),
+        },
+      }),
+    ]);
 
     logApiPerf("DELETE /api/courses/[id]", startTime);
     return apiSuccess({ id: courseId }, "Subject permanently deleted.", 200);

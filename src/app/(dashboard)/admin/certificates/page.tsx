@@ -261,8 +261,8 @@ export default function AdminCertificatesPage() {
     }
   };
 
-  const handleArchive = async (certId: string) => {
-    if (!confirm("Are you sure you want to archive/delete this certificate record and file?")) return;
+  const handleDeleteCertificate = async (certId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
 
     try {
       const res = await fetch(`/api/certificates/${certId}`, { method: "DELETE" });
@@ -270,7 +270,7 @@ export default function AdminCertificatesPage() {
       if (!res.ok || data.success === false) {
         throw new Error(data.message || data.error || "Failed to delete certificate");
       }
-      alert("Certificate record deleted successfully.");
+      alert("Certificate record permanently deleted.");
       fetchData();
     } catch (err: any) {
       alert(err.message);
@@ -492,9 +492,9 @@ export default function AdminCertificatesPage() {
                             </button>
 
                             <button
-                              onClick={() => handleArchive(cert.id)}
+                              onClick={() => handleDeleteCertificate(cert.id)}
                               className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                              title="Archive Record"
+                              title="Delete Certificate"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -810,6 +810,15 @@ export default function AdminCertificatesPage() {
           isArchived: cert.isArchived,
           warningMsg: "Soft archiving hides this certificate from student & admin active views while preserving the uploaded photo/PDF document securely.",
         }))}
+        onConfirmDelete={async (certId) => {
+          const res = await fetch(`/api/certificates/${certId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+          fetchData();
+        }}
         onConfirmArchive={async (certId, reason) => {
           const res = await fetch(`/api/certificates/${certId}`, {
             method: "PATCH",

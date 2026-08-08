@@ -254,7 +254,27 @@ export default function AlumniDirectoryPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="purple">ALUMNI</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="purple">ALUMNI</Badge>
+                      <button
+                        onClick={async () => {
+                          if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
+                          try {
+                            const res = await fetch(`/api/alumni/${st.alumniRecord?.id || st.id}`, { method: "DELETE" });
+                            const d = await res.json();
+                            if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+                            alert("Alumni record permanently deleted.");
+                            fetchAlumni();
+                          } catch (err: any) {
+                            alert(err.message);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                        title="Delete Alumni Record"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="text-xs space-y-1 text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
@@ -366,6 +386,15 @@ export default function AlumniDirectoryPage() {
           isArchived: item.isArchived,
           warningMsg: "Archiving an alumni record soft-deletes only the AlumniRecord dossier while keeping the student's original master profile & history safe.",
         }))}
+        onConfirmDelete={async (recordId) => {
+          const res = await fetch(`/api/alumni/${recordId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          const d = await res.json();
+          if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Delete failed");
+          fetchAlumni();
+        }}
         onConfirmArchive={async (recordId, reason) => {
           const res = await fetch(`/api/alumni/${recordId}`, {
             method: "PATCH",

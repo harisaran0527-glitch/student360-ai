@@ -59,8 +59,8 @@ export async function DELETE(
   const startTime = Date.now();
   try {
     const session = await getSession();
-    if (!session || session.role !== "SUPER_ADMIN") {
-      return apiError("Forbidden: Permanent delete reserved for SUPER_ADMIN", 403);
+    if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+      return apiError("Forbidden: Unauthorized to delete internship", 403);
     }
 
     const internshipId = params.id;

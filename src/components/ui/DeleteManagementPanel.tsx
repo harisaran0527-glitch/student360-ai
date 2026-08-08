@@ -113,9 +113,7 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
 
   const handleDelete = async () => {
     if (!selectedRecord || !onConfirmDelete) return;
-    const confirmMessage = moduleName === "Student"
-      ? "Are you sure you want to permanently delete this student? This action cannot be undone."
-      : `Are you sure you want to delete this ${moduleName}?`;
+    const confirmMessage = "Are you sure you want to permanently delete this record?\nThis action cannot be undone.";
     if (!confirm(confirmMessage)) return;
     setSubmitting(true);
     setFeedback(null);
@@ -138,9 +136,11 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
           <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
           <div>
             <strong className="block text-rose-700 dark:text-rose-300 font-bold uppercase tracking-wider text-[11px]">
-              Top-Level Delete & Archive Management — {moduleName}
+              Top-Level {onConfirmDelete ? "Permanent Delete" : "Archive"} Management — {moduleName}
             </strong>
-            Select any active {moduleName.toLowerCase()} record to move it to safe institutional archives in Supabase PostgreSQL.
+            {onConfirmDelete
+              ? `Select any active ${moduleName.toLowerCase()} record to permanently delete it from the database.`
+              : `Select any active ${moduleName.toLowerCase()} record to move it to safe institutional archives in Supabase PostgreSQL.`}
           </div>
         </div>
 
@@ -194,7 +194,7 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
         {/* Record Selection Dropdown */}
         <div className="space-y-1">
           <label className="block font-bold text-slate-700 dark:text-slate-300">
-            Select {moduleName} Record to Delete / Archive ({filteredRecords.length} available) *
+            Select {moduleName} Record to {onConfirmDelete ? "Permanently Delete" : "Archive"} ({filteredRecords.length} available) *
           </label>
           <select
             value={selectedRecordId}
@@ -284,7 +284,7 @@ export const DeleteManagementPanel: React.FC<DeleteManagementPanelProps> = ({
               <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Archive Reason *
+                    Reason for {onConfirmDelete ? "Deletion" : "Archiving"} *
                   </label>
                   <select
                     value={selectedReason}

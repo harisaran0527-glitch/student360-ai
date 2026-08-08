@@ -164,12 +164,20 @@ export async function DELETE(
       return apiError("Student profile record not found", 404);
     }
 
-    // Permanently delete student profile and linked user account inside transaction
+    // Permanently delete student profile and linked user account.
+    // All child records (Attendance, Internship, Certificate, Project, etc.)
+    // use onDelete: Cascade in schema, so they auto-delete with StudentProfile.
     await prisma.$transaction(async (tx) => {
+      const userId = student.userId;
+
+      // Delete StudentProfile (cascades all child records automatically)
       await tx.studentProfile.delete({ where: { id: studentId } });
-      if (student.userId) {
-        await tx.user.delete({ where: { id: student.userId } }).catch(() => {});
+
+      // Delete linked User login account (StudentProfile no longer holds userId ref)
+      if (userId) {
+        await tx.user.delete({ where: { id: userId } }).catch(() => {});
       }
+
       await tx.auditLog.create({
         data: {
           userId: session.id,

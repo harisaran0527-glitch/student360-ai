@@ -548,9 +548,11 @@ export default function MasterRecordsPage() {
   };
 
   // Permanent Delete Student
-  const handlePermanentDeleteStudent = async (studentId: string, studentName?: string) => {
-    const confirmationText = "Are you sure you want to permanently delete this student? This action cannot be undone.";
-    if (!confirm(studentName ? `${confirmationText}\n\nStudent: ${studentName}` : confirmationText)) return;
+  const handlePermanentDeleteStudent = async (studentId: string, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmationText = "Are you sure you want to permanently delete this record?\nThis action cannot be undone.";
+      if (!confirm(confirmationText)) return;
+    }
     try {
       const res = await fetch(`/api/students/${studentId}`, {
         method: "DELETE",
@@ -1668,7 +1670,7 @@ export default function MasterRecordsPage() {
           await handleRestoreStudent(studentId);
         }}
         onConfirmDelete={async (studentId) => {
-          await handlePermanentDeleteStudent(studentId);
+          await handlePermanentDeleteStudent(studentId, true);
         }}
       />
     </div>
