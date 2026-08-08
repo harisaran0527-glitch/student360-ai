@@ -14,9 +14,9 @@ export default async function DashboardLayout({
 
   return (
     <DashboardLayoutClient
-      userRole={session?.role || "ADMIN"}
-      userName={session?.fullName || "Priyadharshini"}
-      userEmail={session?.email || "admin@student360.ai"}
+      userRole={session?.role || ""}
+      userName={session?.fullName || ""}
+      userEmail={session?.email || ""}
     >
       {children}
     </DashboardLayoutClient>

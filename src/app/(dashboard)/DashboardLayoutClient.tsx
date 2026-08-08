@@ -33,10 +33,9 @@ export default function DashboardLayoutClient({
   const isFacultyUser = normalizedRole === "FACULTY";
 
   const showSidebar =
-    (isAdminRoute && (isAdminUser || true)) ||
+    (isAdminRoute && isAdminUser) ||
     (isStudentRoute && isStudentUser) ||
-    (isFacultyRoute && isFacultyUser) ||
-    isAdminRoute;
+    (isFacultyRoute && isFacultyUser);
 
   if (!showSidebar) {
     return <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">{children}</main>;
