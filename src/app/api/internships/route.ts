@@ -5,6 +5,8 @@ import { getAcademicYearFromRequest } from "@/lib/academicYearEngine";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
+import { notifyStudentInternshipStatus } from "@/lib/internshipNotifications";
+
 export async function GET(req: Request) {
   const startTime = Date.now();
   try {
@@ -90,6 +92,7 @@ export async function POST(req: Request) {
       finalReportUrl,
       certificateUrl,
       notes,
+      status,
     } = data;
 
     if (!studentId || !companyName || !role || !startDate || !endDate) {
@@ -103,6 +106,8 @@ export async function POST(req: Request) {
     if (!studentProfile) {
       return apiError("Selected student profile not found.", 404);
     }
+
+    const initialStatus = status || "APPROVED";
 
     const internship = await prisma.internship.create({
       data: {
@@ -132,8 +137,17 @@ export async function POST(req: Request) {
         finalReportUrl,
         certificateUrl,
         workSummary: notes || undefined,
-        status: "APPROVED",
+        status: initialStatus,
       },
+    });
+
+    // Notify Student automatically
+    const notifRes = await notifyStudentInternshipStatus({
+      internshipId: internship.id,
+      studentId,
+      companyName,
+      role,
+      newStatus: initialStatus,
     });
 
     // Write Audit Log
@@ -145,12 +159,12 @@ export async function POST(req: Request) {
         action: "SUBMIT_INTERNSHIP",
         entityType: "Internship",
         entityId: internship.id,
-        details: JSON.stringify({ companyName, role, submittedBy: session.email }),
+        details: JSON.stringify({ companyName, role, status: initialStatus, submittedBy: session.email }),
       },
     });
 
     logApiPerf("POST /api/internships", startTime);
-    return apiSuccess({ internship }, "Internship record added successfully.", 201);
+    return apiSuccess({ internship, notification: notifRes }, notifRes.message, 201);
   } catch (error: any) {
     return apiError(error.message || "Failed to add internship record", 500);
   }

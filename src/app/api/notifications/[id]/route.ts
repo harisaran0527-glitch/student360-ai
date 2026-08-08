@@ -10,10 +10,7 @@ export async function PATCH(
   const startTime = Date.now();
   try {
     const session = await getSession();
-    if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
-      return apiError("Unauthorized", 401);
-    }
-
+    if (!session) return apiError("Unauthorized", 401);
     const { action, reason } = await req.json().catch(() => ({ action: "archive", reason: "Admin Archive" }));
     const noteId = params.id;
 
@@ -22,6 +19,21 @@ export async function PATCH(
     });
 
     if (!note) return apiError("Notification not found", 404);
+
+    if (action === "MARK_READ") {
+      if (note.userId !== session.id && session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
+        return apiError("Forbidden: Cannot modify notification belonging to another user", 403);
+      }
+      const updated = await prisma.notification.update({
+        where: { id: noteId },
+        data: { status: "READ", read: true, readAt: new Date() },
+      });
+      return apiSuccess({ notification: updated }, "Notification marked as read.");
+    }
+
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
+      return apiError("Unauthorized", 401);
+    }
 
     const isArchival = action !== "restore";
 

@@ -30,12 +30,30 @@ export default function StudentNotificationsPage() {
 
   const handleMarkAsRead = async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, isRead: true, status: "READ" } : n))
     );
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "MARK_READ" }),
+      });
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, status: "READ" })));
+    try {
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "MARK_ALL_READ" }),
+      });
+    } catch (err) {
+      console.error("Failed to mark all as read", err);
+    }
   };
 
   return (

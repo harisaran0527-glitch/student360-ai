@@ -265,9 +265,39 @@ export default function AdminInternshipsPage() {
                       </td>
                       <td className="p-3.5">
                         <div className="flex items-center gap-2">
-                          <Badge variant={int.status === "COMPLETED" ? "success" : "info"}>
-                            {int.status}
-                          </Badge>
+                          <select
+                            value={int.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value;
+                              try {
+                                const res = await fetch(`/api/internships/${int.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ status: newStatus }),
+                                });
+                                const d = await res.json();
+                                if (!res.ok || d.success === false) throw new Error(d.message || d.error || "Update failed");
+                                alert(d.message || "Internship status updated.");
+                                fetchData();
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="ui-input py-1 px-2 font-bold text-xs rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900"
+                          >
+                            <option value="Not Started">Not Started</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Applied">Applied</option>
+                            <option value="Selected">Selected</option>
+                            <option value="Ongoing">Ongoing</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Not Attending / Not Joined">Not Attending / Not Joined</option>
+                            <option value="Action Required">Action Required</option>
+                            <option value="APPROVED">APPROVED</option>
+                            <option value="VERIFIED">VERIFIED</option>
+                            <option value="NEEDS_CHANGES">NEEDS_CHANGES</option>
+                          </select>
                           <button
                             onClick={async () => {
                               if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
@@ -370,9 +400,16 @@ export default function AdminInternshipsPage() {
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Status</label>
               <select value={status} onChange={(e) => setStatus(e.target.value)} className="ui-input w-full p-2">
-                <option value="COMPLETED">COMPLETED</option>
+                <option value="Not Started">Not Started</option>
+                <option value="Pending">Pending</option>
+                <option value="Applied">Applied</option>
+                <option value="Selected">Selected</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Not Attending / Not Joined">Not Attending / Not Joined</option>
+                <option value="Action Required">Action Required</option>
                 <option value="APPROVED">APPROVED</option>
-                <option value="SUBMITTED_FOR_APPROVAL">SUBMITTED_FOR_APPROVAL</option>
               </select>
             </div>
           </div>

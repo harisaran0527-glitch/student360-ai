@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { notifyStudentInternshipStatus } from "@/lib/internshipNotifications";
 
 export async function POST(req: Request) {
   try {
@@ -94,7 +95,21 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, internship: updatedInternship });
+    // Notify Student automatically
+    const notifRes = await notifyStudentInternshipStatus({
+      internshipId,
+      studentId: existing.studentId,
+      companyName: existing.companyName,
+      role: existing.role,
+      newStatus,
+      oldStatus: existing.status,
+    });
+
+    return NextResponse.json({
+      success: true,
+      internship: updatedInternship,
+      message: notifRes.message,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
