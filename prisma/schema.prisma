@@ -233,6 +233,13 @@ model StudentProfile {
   restoredAt           DateTime?
   restoredBy           String?
 
+  religion             String?
+  community            String?
+  motherTongue         String?
+  degreeLevel          String?
+  reservation75        String?
+  firstGraduate        String?
+
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
@@ -262,6 +269,7 @@ model StudentProfile {
   riskSnapshots        StudentRiskSnapshot[]
   aiInsightSnapshots   AIInsightSnapshot[]
   recommendationHistory RecommendationHistory[]
+  busRecord            BusRecord?
 
   @@index([registerNo])
   @@index([rollNo])
@@ -269,6 +277,19 @@ model StudentProfile {
   @@index([batchId])
   @@index([admissionQuota])
   @@index([academicStatus])
+}
+
+model BusRecord {
+  id            String         @id @default(uuid())
+  studentId     String         @unique
+  resident      String
+  busNo         String
+  route         String
+  boardingPoint String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model Attendance {

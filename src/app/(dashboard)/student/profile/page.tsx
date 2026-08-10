@@ -3,7 +3,7 @@ import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { User, Mail, MapPin, AlertCircle } from "lucide-react";
+import { User, Mail, MapPin, AlertCircle, Bus, BookOpen } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,7 +16,7 @@ export default async function StudentProfilePage() {
     try {
       student = await prisma.studentProfile.findFirst({
         where: { userId: session.id },
-        include: { department: true, batch: true, section: true },
+        include: { department: true, batch: true, section: true, busRecord: true },
       });
     } catch (err) {
       console.error("[STUDENT_PROFILE_DB_ERROR]", err);
@@ -88,6 +88,12 @@ export default async function StudentProfilePage() {
               <div><span className="text-slate-400">Date of Birth:</span> <strong className="text-white">{student?.dob || "N/A"}</strong></div>
               <div><span className="text-slate-400">Blood Group:</span> <strong className="text-white">{student?.bloodGroup || "N/A"}</strong></div>
               <div><span className="text-slate-400">Aadhar No:</span> <strong className="text-white">{student?.aadharNo || "N/A"}</strong></div>
+              <div><span className="text-slate-400">Religion:</span> <strong className="text-white">{student?.religion || "N/A"}</strong></div>
+              <div><span className="text-slate-400">Community:</span> <strong className="text-white">{student?.community || "N/A"}</strong></div>
+              <div><span className="text-slate-400">Mother Tongue:</span> <strong className="text-white">{student?.motherTongue || "N/A"}</strong></div>
+              <div><span className="text-slate-400">Degree Level:</span> <strong className="text-white">{student?.degreeLevel || "N/A"}</strong></div>
+              <div><span className="text-slate-400">7.5% Reservation:</span> <strong className="text-white">{student?.reservation75 || "N/A"}</strong></div>
+              <div><span className="text-slate-400">First Graduate:</span> <strong className="text-white">{student?.firstGraduate || "N/A"}</strong></div>
             </div>
           </div>
 
@@ -106,21 +112,42 @@ export default async function StudentProfilePage() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-3 text-xs">
-          <h3 className="font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2 border-b border-slate-800 pb-2">
-            <MapPin className="w-4 h-4 text-purple-400" />
-            <span>Permanent Residence Address</span>
-          </h3>
-          <p className="text-slate-200">
-            {student?.addressLine1 ? (
-              <>
-                {student.addressLine1}, {student.addressLine2 ? `${student.addressLine2}, ` : ''}
-                {student.city || 'N/A'}, {student.state || 'N/A'} - {student.pincode || 'N/A'}
-              </>
+        {/* Residence Address & BUS DETAILS Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-200">
+          <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-3">
+            <h3 className="font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2 border-b border-slate-800 pb-2">
+              <MapPin className="w-4 h-4 text-purple-400" />
+              <span>Permanent Residence Address</span>
+            </h3>
+            <p className="text-slate-200">
+              {student?.addressLine1 ? (
+                <>
+                  {student.addressLine1}, {student.addressLine2 ? `${student.addressLine2}, ` : ''}
+                  {student.city || 'N/A'}, {student.state || 'N/A'} - {student.pincode || 'N/A'}
+                </>
+              ) : (
+                <span className="text-slate-400 italic">Address Record Pending Completion</span>
+              )}
+            </p>
+          </div>
+
+          <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-3">
+            <h3 className="font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2 border-b border-slate-800 pb-2">
+              <Bus className="w-4 h-4 text-amber-400" />
+              <span>BUS DETAILS</span>
+            </h3>
+            {student?.busRecord ? (
+              <div className="space-y-1.5">
+                <div><span className="text-slate-400">Name:</span> <strong className="text-white">{student.fullName}</strong></div>
+                <div><span className="text-slate-400">Resident:</span> <strong className="text-white">{student.busRecord.resident}</strong></div>
+                <div><span className="text-slate-400">Bus No:</span> <strong className="text-white">{student.busRecord.busNo}</strong></div>
+                <div><span className="text-slate-400">Route:</span> <strong className="text-white">{student.busRecord.route}</strong></div>
+                <div><span className="text-slate-400">Boarding Point:</span> <strong className="text-white">{student.busRecord.boardingPoint}</strong></div>
+              </div>
             ) : (
-              <span className="text-slate-400 italic">Address Record Pending Completion</span>
+              <p className="text-slate-400 italic py-1">No bus details assigned.</p>
             )}
-          </p>
+          </div>
         </div>
       </div>
     </div>

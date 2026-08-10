@@ -32,6 +32,7 @@ export async function GET(
         skills: true,
         placementRecords: true,
         alumniRecord: true,
+        busRecord: true,
       },
     });
 

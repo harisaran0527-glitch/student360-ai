@@ -20,6 +20,7 @@ import {
   UserCheck,
   KeyRound,
   X,
+  Bus,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: "Take Attendance", href: "/admin/attendance", icon: UserCheck },
     { name: "Batches & Progression", href: "/admin/batches", icon: Layers },
     { name: "Student Master Directory", href: "/admin/master-records", icon: Users },
+    { name: "Bus Management", href: "/admin/bus", icon: Bus },
     { name: "Semester Subjects & Syllabus", href: "/admin/academics", icon: GraduationCap },
     { name: "Admin Verification Center", href: "/admin/verification", icon: FileCheck },
     { name: "Internship", href: "/admin/internships", icon: Briefcase },

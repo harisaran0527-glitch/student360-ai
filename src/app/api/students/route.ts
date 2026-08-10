@@ -132,6 +132,12 @@ export async function POST(req: Request) {
       admissionQuota,
       residenceType,
       admissionDate,
+      religion,
+      community,
+      motherTongue,
+      degreeLevel,
+      reservation75,
+      firstGraduate,
     } = data;
 
     if (!registerNo || !fullName || !email) {
@@ -259,6 +265,12 @@ export async function POST(req: Request) {
           residenceType: residenceType || "DAY_SCHOLAR",
           admissionDate: admissionDate || new Date().toISOString().split("T")[0],
           academicStatus: "PURSUING",
+          religion: religion || null,
+          community: community || null,
+          motherTongue: motherTongue || null,
+          degreeLevel: degreeLevel || null,
+          reservation75: reservation75 || null,
+          firstGraduate: firstGraduate || null,
         },
       });
 

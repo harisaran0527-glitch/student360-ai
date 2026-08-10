@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React, { useState, useEffect } from "react";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { Header } from "@/components/dashboard/Header";
@@ -27,6 +29,7 @@ import {
   Building2,
   Eye,
   EyeOff,
+  Bus,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -206,6 +209,42 @@ export default function Student360ProfilePage({ params }: { params: { id: string
                   <div><span className="text-slate-500 dark:text-slate-400">Admission Quota:</span> <strong className="text-indigo-600 dark:text-indigo-400 font-bold">{student.admissionQuota === "GQ" ? "Government Quota (GQ)" : student.admissionQuota === "MQ" ? "Management Quota (MQ)" : "Not Assigned"}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Residence Type:</span> <strong>{student.residenceType}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Admission Date:</span> <strong>{student.admissionDate}</strong></div>
+                </div>
+              </div>
+
+              {/* Demographic & Institutional Quotas + Bus Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white uppercase text-[11px] border-b pb-2 border-slate-200 dark:border-slate-700">
+                    <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Demographic & Category Details</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-slate-500 dark:text-slate-400">Religion:</span> <strong>{student.religion || "N/A"}</strong></div>
+                    <div><span className="text-slate-500 dark:text-slate-400">Community:</span> <strong>{student.community || "N/A"}</strong></div>
+                    <div><span className="text-slate-500 dark:text-slate-400">Mother Tongue:</span> <strong>{student.motherTongue || "N/A"}</strong></div>
+                    <div><span className="text-slate-500 dark:text-slate-400">Degree Level:</span> <strong>{student.degreeLevel || "N/A"}</strong></div>
+                    <div><span className="text-slate-500 dark:text-slate-400">7.5% Reservation:</span> <strong>{student.reservation75 || "N/A"}</strong></div>
+                    <div><span className="text-slate-500 dark:text-slate-400">First Graduate:</span> <strong>{student.firstGraduate || "N/A"}</strong></div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white uppercase text-[11px] border-b pb-2 border-slate-200 dark:border-slate-700">
+                    <Bus className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span>BUS DETAILS</span>
+                  </div>
+                  {student.busRecord ? (
+                    <div className="space-y-1.5 text-xs">
+                      <div><span className="text-slate-500 dark:text-slate-400">Name:</span> <strong>{student.fullName}</strong></div>
+                      <div><span className="text-slate-500 dark:text-slate-400">Resident:</span> <strong>{student.busRecord.resident}</strong></div>
+                      <div><span className="text-slate-500 dark:text-slate-400">Bus No:</span> <strong>{student.busRecord.busNo}</strong></div>
+                      <div><span className="text-slate-500 dark:text-slate-400">Route:</span> <strong>{student.busRecord.route}</strong></div>
+                      <div><span className="text-slate-500 dark:text-slate-400">Boarding Point:</span> <strong>{student.busRecord.boardingPoint}</strong></div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 italic text-xs py-2">No bus details assigned.</p>
+                  )}
                 </div>
               </div>
             </div>

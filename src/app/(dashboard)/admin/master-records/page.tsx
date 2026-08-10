@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
@@ -389,6 +391,12 @@ export default function MasterRecordsPage() {
     residenceType: "",
     admissionDate: "",
     academicStatus: "",
+    religion: "",
+    community: "",
+    motherTongue: "",
+    degreeLevel: "",
+    reservation75: "",
+    firstGraduate: "",
   };
 
   const [formData, setFormData] = useState<any>(emptyFormData);
@@ -544,6 +552,12 @@ export default function MasterRecordsPage() {
       residenceType: st.residenceType || "",
       admissionDate: st.admissionDate || "",
       academicStatus: st.academicStatus || "",
+      religion: st.religion || "",
+      community: st.community || "",
+      motherTongue: st.motherTongue || "",
+      degreeLevel: st.degreeLevel || "",
+      reservation75: st.reservation75 || "",
+      firstGraduate: st.firstGraduate || "",
     });
   };
 
@@ -1417,6 +1431,106 @@ export default function MasterRecordsPage() {
                   <option value="ALUMNI">Alumni</option>
                   <option value="DISCONTINUED">Discontinued</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Additional Institutional Demographic Fields */}
+            <div className="space-y-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                Demographic & Institutional Quotas
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Religion</label>
+                  <select
+                    value={formData.religion || ""}
+                    onChange={(e) => setFormData({ ...formData, religion: e.target.value })}
+                    className="ui-input w-full p-2"
+                  >
+                    <option value="">Select Religion</option>
+                    <option value="Hinduism">Hinduism</option>
+                    <option value="Islam">Islam</option>
+                    <option value="Christianity">Christianity</option>
+                    <option value="Sikhism">Sikhism</option>
+                    <option value="Buddhism">Buddhism</option>
+                    <option value="Jainism">Jainism</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Community</label>
+                  <select
+                    value={formData.community || ""}
+                    onChange={(e) => setFormData({ ...formData, community: e.target.value })}
+                    className="ui-input w-full p-2"
+                  >
+                    <option value="">Select Community</option>
+                    <option value="OC">OC</option>
+                    <option value="BC">BC</option>
+                    <option value="BCM">BCM</option>
+                    <option value="MBC">MBC</option>
+                    <option value="SC">SC</option>
+                    <option value="SCA">SCA</option>
+                    <option value="ST">ST</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Mother Tongue</label>
+                  <select
+                    value={formData.motherTongue || ""}
+                    onChange={(e) => setFormData({ ...formData, motherTongue: e.target.value })}
+                    className="ui-input w-full p-2"
+                  >
+                    <option value="">Select Mother Tongue</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Malayalam">Malayalam</option>
+                    <option value="Telugu">Telugu</option>
+                    <option value="Kannada">Kannada</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="English">English</option>
+                    <option value="Urdu">Urdu</option>
+                    <option value="Gujarati">Gujarati</option>
+                    <option value="Marathi">Marathi</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Degree Level</label>
+                  <select
+                    value={formData.degreeLevel || ""}
+                    onChange={(e) => setFormData({ ...formData, degreeLevel: e.target.value })}
+                    className="ui-input w-full p-2"
+                  >
+                    <option value="">Select Degree Level</option>
+                    <option value="UG">UG</option>
+                    <option value="PG">PG</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">7.5% Reservation</label>
+                  <select
+                    value={formData.reservation75 || ""}
+                    onChange={(e) => setFormData({ ...formData, reservation75: e.target.value })}
+                    className="ui-input w-full p-2"
+                  >
+                    <option value="">Select 7.5% Reservation</option>
+                    <option value="YES">YES</option>
+                    <option value="NO">NO</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">First Graduate</label>
+                  <select
+                    value={formData.firstGraduate || ""}
+                    onChange={(e) => setFormData({ ...formData, firstGraduate: e.target.value })}
+                    className="ui-input w-full p-2"
+                  >
+                    <option value="">Select First Graduate</option>
+                    <option value="YES">YES</option>
+                    <option value="NO">NO</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
