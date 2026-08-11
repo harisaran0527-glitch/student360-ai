@@ -19,7 +19,8 @@ export function AdminLoginForm() {
       const res = await fetch("/api/auth/admin-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await res.json();
@@ -28,7 +29,7 @@ export function AdminLoginForm() {
       }
 
       setPassword("");
-      window.location.href = "/admin/dashboard";
+      window.location.href = "/admin/master-records";
     } catch (err: any) {
       setError(err.message || "Invalid email or password.");
       setPassword("");

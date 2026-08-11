@@ -13,8 +13,15 @@ export async function POST(req: Request) {
       return apiError("Email and password required", 400);
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: cleanEmail,
+          mode: "insensitive",
+        },
+      },
       include: {
         studentProfile: true,
       },
