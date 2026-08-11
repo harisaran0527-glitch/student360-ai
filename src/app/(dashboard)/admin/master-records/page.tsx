@@ -368,6 +368,8 @@ export default function MasterRecordsPage() {
     dob: "",
     bloodGroup: "",
     email: "",
+    personalEmail: "",
+    institutionalEmail: "",
     password: "",
     confirmPassword: "",
     phone: "",
@@ -531,6 +533,8 @@ export default function MasterRecordsPage() {
       dob: st.dob || "",
       bloodGroup: st.bloodGroup || "",
       email: st.email || "",
+      personalEmail: st.personalEmail || "",
+      institutionalEmail: st.institutionalEmail || st.email || "",
       phone: st.phone || "",
       aadharNo: st.aadharNo || "",
       fatherName: st.fatherName || "",
@@ -910,7 +914,10 @@ export default function MasterRecordsPage() {
                             <div className="font-bold text-slate-900 dark:text-white text-xs">
                               {st.fullName}
                             </div>
-                            <div className="text-[11px] text-slate-400">{st.email}</div>
+                            <div className="text-[11px] text-slate-400">
+                              {st.institutionalEmail || st.email}
+                              {st.personalEmail && <span className="block text-[10px] text-slate-400">Pers: {st.personalEmail}</span>}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1065,7 +1072,8 @@ export default function MasterRecordsPage() {
 
             <div className="space-y-2">
               <span className="font-bold text-slate-900 dark:text-white uppercase text-[10px] block border-b pb-1">Personal Details</span>
-              <div>Email: <strong>{quickViewStudent.email}</strong></div>
+              <div>Institutional Email: <strong>{quickViewStudent.institutionalEmail || quickViewStudent.email}</strong></div>
+              <div>Personal Email: <strong>{quickViewStudent.personalEmail || "N/A"}</strong></div>
               <div>Phone: <strong>{quickViewStudent.phone}</strong></div>
               <div>Gender: <strong>{quickViewStudent.gender}</strong></div>
               <div>DOB: <strong>{quickViewStudent.dob}</strong></div>
@@ -1142,7 +1150,7 @@ export default function MasterRecordsPage() {
             <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase text-[10px]">
               2. Personal Profile
             </span>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Full Name *</label>
                 <input
@@ -1155,17 +1163,6 @@ export default function MasterRecordsPage() {
                 />
               </div>
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Institutional Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email || ""}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="ui-input w-full p-2"
-                  placeholder="Enter Institutional Email"
-                />
-              </div>
-              <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Phone Number</label>
                 <input
                   type="text"
@@ -1173,6 +1170,30 @@ export default function MasterRecordsPage() {
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="ui-input w-full p-2"
                   placeholder="Enter Phone Number"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Personal Email ID</label>
+                <input
+                  type="email"
+                  value={formData.personalEmail || ""}
+                  onChange={(e) => setFormData({ ...formData, personalEmail: e.target.value })}
+                  className="ui-input w-full p-2"
+                  placeholder="Enter Personal Email"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Institutional Email ID *</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.institutionalEmail || formData.email || ""}
+                  onChange={(e) => setFormData({ ...formData, institutionalEmail: e.target.value, email: e.target.value })}
+                  className="ui-input w-full p-2"
+                  placeholder="Enter Institutional Email"
                 />
               </div>
             </div>

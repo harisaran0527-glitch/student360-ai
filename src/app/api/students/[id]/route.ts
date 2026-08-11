@@ -80,14 +80,40 @@ export async function PUT(
       }
     }
 
-    // Check duplicate registerNo / email if changed
+    // Handle institutional and personal email updates
+    const targetInstEmail = (updates.institutionalEmail || updates.email || "").trim().toLowerCase();
+    if (targetInstEmail && targetInstEmail !== (oldStudent.institutionalEmail || oldStudent.email || "").toLowerCase()) {
+      const dupProfile = await prisma.studentProfile.findFirst({
+        where: {
+          id: { not: params.id },
+          OR: [
+            { email: targetInstEmail },
+            { institutionalEmail: targetInstEmail },
+          ],
+        },
+      });
+      if (dupProfile) return apiError("Institutional Email ID is already in use by another student.", 400);
+
+      const dupUser = await prisma.user.findFirst({
+        where: {
+          id: { not: oldStudent.userId },
+          email: targetInstEmail,
+        },
+      });
+      if (dupUser) return apiError("Institutional Email ID is already in use by another user.", 400);
+
+      updates.institutionalEmail = targetInstEmail;
+      updates.email = targetInstEmail;
+    }
+
+    if (updates.personalEmail !== undefined) {
+      updates.personalEmail = updates.personalEmail ? String(updates.personalEmail).trim().toLowerCase() : null;
+    }
+
+    // Check duplicate registerNo if changed
     if (updates.registerNo && updates.registerNo !== oldStudent.registerNo) {
       const dup = await prisma.studentProfile.findFirst({ where: { registerNo: updates.registerNo } });
       if (dup) return apiError("Register Number already in use.", 400);
-    }
-    if (updates.email && updates.email !== oldStudent.email) {
-      const dup = await prisma.studentProfile.findFirst({ where: { email: updates.email } });
-      if (dup) return apiError("Email address already in use.", 400);
     }
 
     const updatedStudent = await prisma.studentProfile.update({
@@ -96,15 +122,14 @@ export async function PUT(
     });
 
     // Also update User full name / email if changed
-    if (updates.fullName || updates.email) {
-      await prisma.user.update({
-        where: { id: oldStudent.userId },
-        data: {
-          fullName: updates.fullName || oldStudent.fullName,
-          email: updates.email || oldStudent.email,
-        },
-      });
-    }
+    const finalUserEmail = updatedStudent.institutionalEmail || updatedStudent.email;
+    await prisma.user.update({
+      where: { id: oldStudent.userId },
+      data: {
+        fullName: updates.fullName || oldStudent.fullName,
+        email: finalUserEmail,
+      },
+    });
 
     // Write Field-Level Audit History Log
     await prisma.auditLog.create({

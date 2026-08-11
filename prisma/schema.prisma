@@ -194,6 +194,8 @@ model StudentProfile {
   dob                  String        
   bloodGroup           String?
   email                String        @unique
+  personalEmail        String?
+  institutionalEmail   String?       @unique
   phone                String
   aadharNo             String?
   profilePic           String?

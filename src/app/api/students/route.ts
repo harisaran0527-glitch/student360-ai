@@ -140,8 +140,11 @@ export async function POST(req: Request) {
       firstGraduate,
     } = data;
 
-    if (!registerNo || !fullName || !email) {
-      return apiError("Register Number, Full Name, and Email are required.", 400);
+    const finalInstitutionalEmail = String(data.institutionalEmail || data.email || "").trim().toLowerCase();
+    const finalPersonalEmail = data.personalEmail ? String(data.personalEmail).trim().toLowerCase() : null;
+
+    if (!registerNo || !fullName || !finalInstitutionalEmail) {
+      return apiError("Register Number, Full Name, and Institutional Email ID are required.", 400);
     }
 
     // Validate and Normalize Admission Quota
@@ -159,20 +162,32 @@ export async function POST(req: Request) {
       return apiError("Please select Government Quota or Management Quota.", 400);
     }
 
-    // 1. Prevent duplicate Register Number, Admission Number, or Email
+    // 1. Prevent duplicate Register Number, Admission Number, or Institutional Email
     const existing = await prisma.studentProfile.findFirst({
       where: {
         OR: [
           { registerNo },
           { admissionNo: admissionNo || registerNo },
-          { email },
+          { email: finalInstitutionalEmail },
+          { institutionalEmail: finalInstitutionalEmail },
         ],
       },
     });
 
     if (existing) {
       return apiError(
-        "A student with this Register Number, Admission Number, or Email already exists.",
+        "A student with this Register Number, Admission Number, or Institutional Email ID already exists.",
+        400
+      );
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: finalInstitutionalEmail },
+    });
+
+    if (existingUser) {
+      return apiError(
+        "A user account with this Institutional Email ID already exists.",
         400
       );
     }
@@ -221,10 +236,10 @@ export async function POST(req: Request) {
 
     // Atomic transaction for profile + user account + notifications
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create Student Portal Login User
+      // 1. Create Student Portal Login User (uses Institutional Email)
       const user = await tx.user.create({
         data: {
-          email,
+          email: finalInstitutionalEmail,
           passwordHash,
           fullName,
           role: "STUDENT",
@@ -242,7 +257,9 @@ export async function POST(req: Request) {
           gender: gender || "Male",
           dob: dob || "2005-06-15",
           bloodGroup: bloodGroup || "O+",
-          email,
+          email: finalInstitutionalEmail,
+          institutionalEmail: finalInstitutionalEmail,
+          personalEmail: finalPersonalEmail,
           phone: phone || "9876543210",
           aadharNo,
           fatherName: fatherName || "Father Name",

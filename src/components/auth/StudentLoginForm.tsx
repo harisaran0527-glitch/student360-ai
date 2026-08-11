@@ -68,7 +68,7 @@ export function StudentLoginForm() {
           <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                Student Email Address
+                Institutional Email ID
               </label>
               <input
                 type="email"
@@ -77,7 +77,7 @@ export function StudentLoginForm() {
                 required
                 autoComplete="username"
                 className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700/60 rounded-xl text-sm text-white focus:outline-none focus:border-purple-500 transition"
-                placeholder="Enter student email"
+                placeholder="Enter your Institutional Email"
               />
             </div>
 

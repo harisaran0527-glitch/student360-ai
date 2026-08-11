@@ -7,14 +7,35 @@ import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 export async function POST(req: Request) {
   const startTime = Date.now();
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const { email, password } = body || {};
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !password) {
-      return apiError("Email and password required", 400);
+    if (!normalizedEmail || !password) {
+      return apiError("Institutional Email ID and password required.", 400);
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Explicit check: Deny login if student attempts using Personal Email ID
+    const profileWithPersonalEmail = await prisma.studentProfile.findFirst({
+      where: {
+        personalEmail: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
+    });
+
+    if (profileWithPersonalEmail) {
+      return apiError("Login denied. Please use your Institutional Email ID to log into the Student Portal.", 401);
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
       include: {
         studentProfile: true,
       },
@@ -24,15 +45,21 @@ export async function POST(req: Request) {
       return apiError("Invalid email or password.", 401);
     }
 
-    const isMatch = await comparePassword(password, user.passwordHash);
-    if (!isMatch) {
-      return apiError("Invalid email or password.", 401);
-    }
-
     const userRole = user.role as Role;
 
     // STRICT: Only STUDENT may use this endpoint
     if (userRole !== "STUDENT") {
+      return apiError("Invalid email or password.", 401);
+    }
+
+    // STRICT: Ensure authentication email matches Institutional Email ID
+    const instEmail = (user.studentProfile?.institutionalEmail || user.studentProfile?.email || user.email).toLowerCase();
+    if (instEmail !== normalizedEmail) {
+      return apiError("Login denied. Please use your Institutional Email ID to log into the Student Portal.", 401);
+    }
+
+    const isMatch = await comparePassword(password, user.passwordHash);
+    if (!isMatch) {
       return apiError("Invalid email or password.", 401);
     }
 

@@ -103,7 +103,8 @@ export default async function StudentProfilePage() {
               <span>Contact & Guardian Info</span>
             </h3>
             <div className="space-y-1.5">
-              <div><span className="text-slate-400">Email:</span> <strong className="text-white">{student?.email || session?.email || "N/A"}</strong></div>
+              <div><span className="text-slate-400">Institutional Email ID:</span> <strong className="text-white">{student?.institutionalEmail || student?.email || session?.email || "N/A"}</strong></div>
+              <div><span className="text-slate-400">Personal Email ID:</span> <strong className="text-white">{student?.personalEmail || "N/A"}</strong></div>
               <div><span className="text-slate-400">Phone:</span> <strong className="text-white">{student?.phone || "N/A"}</strong></div>
               <div><span className="text-slate-400">Father&apos;s Name:</span> <strong className="text-white">{student?.fatherName || "N/A"}</strong></div>
               <div><span className="text-slate-400">Mother&apos;s Name:</span> <strong className="text-white">{student?.motherName || "N/A"}</strong></div>

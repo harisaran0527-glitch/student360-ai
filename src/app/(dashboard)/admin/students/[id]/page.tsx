@@ -168,7 +168,8 @@ export default function Student360ProfilePage({ params }: { params: { id: string
                     <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Contact & Family Info</span>
                   </div>
-                  <div><span className="text-slate-500 dark:text-slate-400">Email:</span> <strong>{student.email}</strong></div>
+                  <div><span className="text-slate-500 dark:text-slate-400">Institutional Email ID:</span> <strong>{student.institutionalEmail || student.email}</strong></div>
+                  <div><span className="text-slate-500 dark:text-slate-400">Personal Email ID:</span> <strong>{student.personalEmail || "N/A"}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Phone:</span> <strong>{student.phone}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Father&apos;s Name:</span> <strong>{student.fatherName}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Mother&apos;s Name:</span> <strong>{student.motherName}</strong></div>
