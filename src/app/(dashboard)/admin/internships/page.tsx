@@ -147,7 +147,7 @@ export default function AdminInternshipsPage() {
               className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Internship</span>
+              <span>Add Internship</span>
             </button>
 
             <button
@@ -195,7 +195,7 @@ export default function AdminInternshipsPage() {
             className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Add Internship</span>
+            <span>Add Internship</span>
           </button>
         </div>
 
@@ -224,7 +224,7 @@ export default function AdminInternshipsPage() {
                   className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>+ Add Internship</span>
+                  <span>Add Internship</span>
                 </button>
               }
             />

@@ -196,7 +196,7 @@ export default function BatchesPage() {
               className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Student</span>
+              <span>Add Student</span>
             </button>
 
             <button
@@ -270,7 +270,7 @@ export default function BatchesPage() {
                   }}
                   className="w-full mt-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm"
                 >
-                  <Plus className="w-3.5 h-3.5" /> + Add Student
+                  <Plus className="w-3.5 h-3.5" /> Add Student
                 </button>
               </div>
             ))
@@ -294,7 +294,7 @@ export default function BatchesPage() {
                 onClick={() => setIsAddStudentOpen(true)}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5"
               >
-                <Plus className="w-4 h-4" /> + Add Student to Batch {selectedBatch.name}
+                <Plus className="w-4 h-4" /> Add Student to Batch {selectedBatch.name}
               </button>
             </div>
 
@@ -313,7 +313,7 @@ export default function BatchesPage() {
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>+ Add Student</span>
+                    <span>Add Student</span>
                   </button>
                 }
               />

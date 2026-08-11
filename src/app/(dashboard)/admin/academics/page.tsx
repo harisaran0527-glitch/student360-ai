@@ -150,14 +150,14 @@ export default function AdminSyllabusPage() {
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Subject</span>
+              <span>Add Subject</span>
             </button>
             <button
               onClick={() => setModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
             >
               <Upload className="w-4 h-4 text-indigo-400" />
-              <span>+ Upload Syllabus</span>
+              <span>Upload Syllabus</span>
             </button>
           </div>
         }
@@ -209,7 +209,7 @@ export default function AdminSyllabusPage() {
               className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Subject</span>
+              <span>Add Subject</span>
             </button>
 
             <button
@@ -264,14 +264,14 @@ export default function AdminSyllabusPage() {
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>+ Add Subject</span>
+                    <span>Add Subject</span>
                   </button>
                   <button
                     onClick={() => setModalOpen(true)}
                     className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
                   >
                     <Upload className="w-4 h-4 text-indigo-400" />
-                    <span>+ Upload Syllabus</span>
+                    <span>Upload Syllabus</span>
                   </button>
                 </div>
               }
