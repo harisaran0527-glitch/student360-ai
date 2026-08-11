@@ -17,12 +17,16 @@ export default function DashboardLayoutClient({
   userEmail: string;
 }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Stable session state populated from server layout initial props
   const [session, setSession] = useState<{ role: string; fullName: string; email: string }>({
     role: initialRole || "",
     fullName: initialName || "",
     email: initialEmail || "",
   });
-  const [checkedSession, setCheckedSession] = useState(false);
+
+  // Checked session flag - true immediately if initialRole was provided by server layout
+  const [checkedSession, setCheckedSession] = useState<boolean>(Boolean(initialRole));
   const pathname = usePathname();
   const router = useRouter();
 
@@ -39,7 +43,11 @@ export default function DashboardLayoutClient({
               fullName: data.user.fullName || "",
               email: data.user.email || "",
             });
+          } else if (isMounted && !initialRole) {
+            setSession({ role: "", fullName: "", email: "" });
           }
+        } else if (isMounted && !initialRole) {
+          setSession({ role: "", fullName: "", email: "" });
         }
       } catch (err) {
         console.error("[LAYOUT_AUTH_ME_ERROR]", err);
@@ -52,7 +60,7 @@ export default function DashboardLayoutClient({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialRole]);
 
   const currentRole = (session.role || initialRole || "").toUpperCase();
   const currentName = session.fullName || initialName || "";
@@ -66,20 +74,37 @@ export default function DashboardLayoutClient({
   const isStudentUser = currentRole === "STUDENT";
   const isFacultyUser = currentRole === "FACULTY";
 
+  const isSubAdminRoute = isAdminRoute && pathname !== "/admin";
+
   // Redirect unauthenticated users attempting to access /admin sub-routes directly to /admin login
   useEffect(() => {
-    if (checkedSession && isAdminRoute && !isAdminUser && pathname !== "/admin") {
+    if (checkedSession && isSubAdminRoute && !isAdminUser) {
       router.replace("/admin");
     }
-  }, [checkedSession, isAdminRoute, isAdminUser, pathname, router]);
+  }, [checkedSession, isSubAdminRoute, isAdminUser, router]);
 
-  // Render Admin Sidebar when on /admin routes for Admin users (or initial server pass)
+  // Sidebar display condition:
+  // 1. Admin route: Show sidebar ONLY IF user is authenticated Admin (isAdminUser)
+  // 2. Student route: Show sidebar IF user is Student
+  // 3. Faculty route: Show sidebar IF user is Faculty
   const showSidebar =
-    (isAdminRoute && (isAdminUser || (!checkedSession && !initialRole))) ||
+    (isAdminRoute && isAdminUser) ||
     (isStudentRoute && isStudentUser) ||
     (isFacultyRoute && isFacultyUser);
 
-  if (!showSidebar && checkedSession) {
+  // Show neutral loading shell for deep-linked admin sub-routes before initial session check finishes
+  if (!checkedSession && isSubAdminRoute && !isAdminUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium text-slate-400">Verifying session...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!showSidebar) {
     return <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">{children}</main>;
   }
 
