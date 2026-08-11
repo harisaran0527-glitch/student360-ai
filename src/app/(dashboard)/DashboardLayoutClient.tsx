@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Menu } from "lucide-react";
 
 export default function DashboardLayoutClient({
   children,
-  userRole,
-  userName,
-  userEmail,
+  userRole: initialRole,
+  userName: initialName,
+  userEmail: initialEmail,
 }: {
   children: React.ReactNode;
   userRole: string;
@@ -17,36 +17,70 @@ export default function DashboardLayoutClient({
   userEmail: string;
 }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [session, setSession] = useState<{ role: string; fullName: string; email: string }>({
+    role: initialRole || "",
+    fullName: initialName || "",
+    email: initialEmail || "",
+  });
+  const [checkedSession, setCheckedSession] = useState(false);
   const pathname = usePathname();
 
-  // STRICT PORTAL ROUTE ISOLATION:
-  // 1. /admin routes -> ALWAYS render the Admin Sidebar for Admin navigation
-  // 2. /student routes -> render Student Sidebar
-  // 3. /faculty routes -> render Faculty Sidebar
+  useEffect(() => {
+    let isMounted = true;
+    async function verifyActiveSession() {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user && isMounted) {
+            setSession({
+              role: data.user.role || "",
+              fullName: data.user.fullName || "",
+              email: data.user.email || "",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[LAYOUT_AUTH_ME_ERROR]", err);
+      } finally {
+        if (isMounted) setCheckedSession(true);
+      }
+    }
+
+    verifyActiveSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const currentRole = (session.role || initialRole || "").toUpperCase();
+  const currentName = session.fullName || initialName || "";
+  const currentEmail = session.email || initialEmail || "";
+
   const isAdminRoute = !pathname || pathname.startsWith("/admin");
   const isStudentRoute = pathname?.startsWith("/student");
   const isFacultyRoute = pathname?.startsWith("/faculty");
 
-  const normalizedRole = (userRole || "").toUpperCase();
-  const isAdminUser = normalizedRole === "ADMIN" || normalizedRole === "SUPER_ADMIN" || normalizedRole === "SUPERADMIN";
-  const isStudentUser = normalizedRole === "STUDENT";
-  const isFacultyUser = normalizedRole === "FACULTY";
+  const isAdminUser = currentRole === "ADMIN" || currentRole === "SUPER_ADMIN" || currentRole === "SUPERADMIN";
+  const isStudentUser = currentRole === "STUDENT";
+  const isFacultyUser = currentRole === "FACULTY";
 
+  // Render Admin Sidebar when on /admin routes for Admin users (or initial server pass)
   const showSidebar =
-    (isAdminRoute && isAdminUser) ||
+    (isAdminRoute && (isAdminUser || (!checkedSession && !initialRole))) ||
     (isStudentRoute && isStudentUser) ||
     (isFacultyRoute && isFacultyUser);
 
-  if (!showSidebar) {
+  if (!showSidebar && checkedSession) {
     return <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">{children}</main>;
   }
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors relative">
       <Sidebar
-        userRole={userRole}
-        userName={userName}
-        userEmail={userEmail}
+        userRole={currentRole || (isAdminRoute ? "ADMIN" : "STUDENT")}
+        userName={currentName}
+        userEmail={currentEmail}
         isOpenMobile={isMobileOpen}
         onCloseMobile={() => setIsMobileOpen(false)}
       />
