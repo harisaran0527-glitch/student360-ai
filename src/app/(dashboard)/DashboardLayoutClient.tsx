@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Menu } from "lucide-react";
 
@@ -24,6 +24,7 @@ export default function DashboardLayoutClient({
   });
   const [checkedSession, setCheckedSession] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     let isMounted = true;
@@ -64,6 +65,13 @@ export default function DashboardLayoutClient({
   const isAdminUser = currentRole === "ADMIN" || currentRole === "SUPER_ADMIN" || currentRole === "SUPERADMIN";
   const isStudentUser = currentRole === "STUDENT";
   const isFacultyUser = currentRole === "FACULTY";
+
+  // Redirect unauthenticated users attempting to access /admin sub-routes directly to /admin login
+  useEffect(() => {
+    if (checkedSession && isAdminRoute && !isAdminUser && pathname !== "/admin") {
+      router.replace("/admin");
+    }
+  }, [checkedSession, isAdminRoute, isAdminUser, pathname, router]);
 
   // Render Admin Sidebar when on /admin routes for Admin users (or initial server pass)
   const showSidebar =
