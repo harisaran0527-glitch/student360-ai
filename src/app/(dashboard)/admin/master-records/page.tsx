@@ -431,7 +431,9 @@ export default function MasterRecordsPage() {
       if (selectedQuota && selectedQuota !== "ALL") query.set("admissionQuota", selectedQuota);
       if (showArchived) query.set("isArchived", "true");
 
-      const res = await fetch(`/api/students?${query.toString()}`);
+      const res = await fetch(`/api/students?${query.toString()}`, {
+        credentials: "include",
+      });
       const data = await res.json();
       setStudents(data.data?.students || data.students || []);
     } catch (err) {
@@ -488,6 +490,7 @@ export default function MasterRecordsPage() {
       const res = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(formData),
       });
       const data = await res.json();
@@ -509,6 +512,7 @@ export default function MasterRecordsPage() {
       const res = await fetch(`/api/students/${editStudent.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(formData),
       });
       const data = await res.json();
@@ -575,6 +579,7 @@ export default function MasterRecordsPage() {
       const res = await fetch(`/api/students/${studentId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Permanent deletion failed");
@@ -593,6 +598,7 @@ export default function MasterRecordsPage() {
       const res = await fetch(`/api/students/${studentId}/archive`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ reason: reason || "Administrative Soft Archival" }),
       });
       const data = await res.json();
@@ -612,6 +618,7 @@ export default function MasterRecordsPage() {
       const res = await fetch(`/api/students/${studentId}/restore`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Restore failed");
@@ -632,6 +639,7 @@ export default function MasterRecordsPage() {
 
       const res = await fetch("/api/students/import-preview", {
         method: "POST",
+        credentials: "include",
         body: uploadData,
       });
       const data = await res.json();
@@ -659,6 +667,7 @@ export default function MasterRecordsPage() {
       const res = await fetch("/api/students/import-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ selectedRows }),
       });
       const data = await res.json();

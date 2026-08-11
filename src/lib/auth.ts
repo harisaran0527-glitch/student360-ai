@@ -63,15 +63,24 @@ export async function getSession(req?: Request): Promise<UserSession | null> {
   try {
     const cookieStore = cookies();
     token = cookieStore.get("student360_session")?.value;
-  } catch {}
+  } catch (err) {
+    // cookies() call unavailable in non-component context
+  }
 
-  // 2. Fallback: Parse Cookie header directly from incoming Request if passed
+  // 2. Fallback: Parse Cookie header or Authorization header directly from incoming Request
   if (!token && req) {
     const cookieHeader = req.headers.get("cookie");
     if (cookieHeader) {
       const match = cookieHeader.match(/student360_session=([^;]+)/);
       if (match) {
-        token = match[1];
+        token = decodeURIComponent(match[1]);
+      }
+    }
+
+    if (!token) {
+      const authHeader = req.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7).trim();
       }
     }
   }
@@ -81,9 +90,10 @@ export async function getSession(req?: Request): Promise<UserSession | null> {
 }
 
 export async function setSessionCookie(token: string, res?: NextResponse) {
+  const isProduction = process.env.NODE_ENV === "production";
   const options = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProduction,
     path: "/",
     maxAge: 60 * 60 * 24, // 24 hours
     sameSite: "lax" as const,
@@ -92,7 +102,9 @@ export async function setSessionCookie(token: string, res?: NextResponse) {
   try {
     const cookieStore = cookies();
     cookieStore.set("student360_session", token, options);
-  } catch {}
+  } catch (err) {
+    console.warn("[SET_COOKIE_WARN] cookies() store set skipped:", err);
+  }
 
   if (res) {
     res.cookies.set("student360_session", token, options);
@@ -103,7 +115,9 @@ export async function clearSessionCookie(res?: NextResponse) {
   try {
     const cookieStore = cookies();
     cookieStore.delete("student360_session");
-  } catch {}
+  } catch (err) {
+    console.warn("[CLEAR_COOKIE_WARN] cookies() store delete skipped:", err);
+  }
 
   if (res) {
     res.cookies.delete("student360_session");

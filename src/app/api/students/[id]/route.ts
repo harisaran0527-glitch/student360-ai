@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return apiError("Unauthorized", 401);
 
     if (session.role === "STUDENT" && params.id !== session.studentProfileId) {
@@ -53,7 +53,7 @@ export async function PUT(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return apiError("Unauthorized", 401);
     }
@@ -172,7 +172,7 @@ export async function DELETE(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return apiError("Forbidden: Student deletion is restricted to ADMIN and SUPER_ADMIN.", 403);
     }
