@@ -472,7 +472,7 @@ export default function MasterRecordsPage() {
       !formData.rollNo ||
       !formData.admissionNo ||
       !formData.fullName ||
-      !formData.email ||
+      !(formData.institutionalEmail || formData.email) ||
       !formData.password ||
       !formData.departmentId ||
       !formData.batchId ||
@@ -491,7 +491,7 @@ export default function MasterRecordsPage() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create student profile");
+      if (!res.ok) throw new Error(data.message || data.error || "Failed to create student profile");
 
       setIsAddModalOpen(false);
       setFormData(emptyFormData);
@@ -512,7 +512,7 @@ export default function MasterRecordsPage() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update student profile");
+      if (!res.ok) throw new Error(data.message || data.error || "Failed to update student profile");
 
       setEditStudent(null);
       fetchStudents();
@@ -635,7 +635,7 @@ export default function MasterRecordsPage() {
         body: uploadData,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Preview failed");
+      if (!res.ok) throw new Error(data.message || data.error || "Preview failed");
 
       setPreviewData(data);
       // Select all valid row indices by default
@@ -662,7 +662,7 @@ export default function MasterRecordsPage() {
         body: JSON.stringify({ selectedRows }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Import failed");
+      if (!res.ok) throw new Error(data.message || data.error || "Import failed");
 
       alert(data.message);
       setIsImportModalOpen(false);

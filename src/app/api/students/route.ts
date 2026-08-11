@@ -124,6 +124,7 @@ export async function POST(req: Request) {
       city,
       state,
       pincode,
+      departmentId,
       batchId,
       sectionId,
       academicYear,
@@ -271,7 +272,7 @@ export async function POST(req: Request) {
           city: city || "Chennai",
           state: state || "Tamil Nadu",
           pincode: pincode || "600001",
-          departmentId: dept.id,
+          departmentId: departmentId || dept.id,
           batchId: finalBatchId,
           sectionId: sectionId || null,
           academicYear: targetYearCode,
@@ -298,7 +299,7 @@ export async function POST(req: Request) {
           studentId: student.id,
           type: "WELCOME_LOGIN",
           title: "Welcome to Student360 AI Student Portal",
-          message: `Your login account for Department of AI & ML has been created. Login Email: ${email}. Please change your password upon first login.`,
+          message: `Your login account for Department of AI & ML has been created. Login Email: ${finalInstitutionalEmail}. Please change your password upon first login.`,
           priority: "HIGH",
           emailRequired: true,
           emailStatus: process.env.SMTP_HOST ? "PENDING" : "DEVELOPMENT_EMAIL_PENDING",
@@ -324,6 +325,7 @@ export async function POST(req: Request) {
     logApiPerf("POST /api/students", startTime);
     return apiSuccess({ student: result }, "Student created successfully with portal login.", 201);
   } catch (error: any) {
+    console.error("[STUDENTS_POST_ERROR] Failed to create student profile:", error);
     return apiError(error.message || "Failed to create student profile", 500);
   }
 }
