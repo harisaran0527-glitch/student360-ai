@@ -41,7 +41,9 @@ export default function AdminVerificationCenterPage() {
   const fetchVerificationQueue = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/verification?academicYear=${selectedAcademicYear}&status=${selectedStatus}`);
+      const res = await fetch(`/api/verification?academicYear=${selectedAcademicYear}&status=${selectedStatus}`, {
+        credentials: "include",
+      });
       const json = await res.json();
       const data = json.data || json;
 
@@ -98,6 +100,7 @@ export default function AdminVerificationCenterPage() {
       const res = await fetch("/api/verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           targetType: targetItem.type,
           recordId: targetItem.record.id,

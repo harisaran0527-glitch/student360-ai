@@ -8,7 +8,7 @@ import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 export async function GET(req: Request) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return apiError("Unauthorized", 401);
     }
@@ -83,7 +83,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return apiError("Unauthorized", 401);
     }

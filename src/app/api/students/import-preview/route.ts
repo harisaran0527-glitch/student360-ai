@@ -7,7 +7,7 @@ import { apiSuccess, apiError } from "@/lib/apiResponse";
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return apiError("Unauthorized", 401);
     }
