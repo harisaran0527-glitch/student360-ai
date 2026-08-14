@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { ACADEMIC_YEAR_OPTIONS, isSelectableAcademicYear, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
+import { getCachedAcademicYears, setCachedAcademicYears, invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,6 +18,16 @@ export async function GET(req: Request) {
           headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
         }
       );
+    }
+
+    const cached = getCachedAcademicYears();
+    if (cached) {
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
+        },
+      });
     }
 
     // Fast Single-Query Fetch with minimal field selection
@@ -80,18 +91,19 @@ export async function GET(req: Request) {
 
     const currentYear = academicYears.find((y) => y.isCurrent) || academicYears[0];
 
-    return NextResponse.json(
-      {
-        academicYears,
-        currentYearCode: currentYear?.yearCode || DEFAULT_ACADEMIC_YEAR,
+    const payload = {
+      academicYears,
+      currentYearCode: currentYear?.yearCode || DEFAULT_ACADEMIC_YEAR,
+    };
+
+    setCachedAcademicYears(payload);
+
+    return NextResponse.json(payload, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
       },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
-        },
-      }
-    );
+    });
   } catch (error: any) {
     console.error("[ACADEMIC_YEARS_API_ERROR]", error);
     return NextResponse.json({ error: error.message || "Failed to load academic years" }, { status: 500 });
@@ -100,7 +112,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -147,6 +159,7 @@ export async function POST(req: Request) {
         },
       });
     });
+    invalidateServerMetadataCache();
 
     return NextResponse.json({ academicYear: newYear, message: "Academic Year created successfully" });
   } catch (error: any) {
@@ -156,7 +169,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -179,6 +192,7 @@ export async function PUT(req: Request) {
         },
       });
     });
+    invalidateServerMetadataCache();
 
     return NextResponse.json({ message: "Academic Year updated successfully" });
   } catch (error: any) {
@@ -188,7 +202,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -216,6 +230,8 @@ export async function DELETE(req: Request) {
     }
 
     await prisma.academicYear.delete({ where: { id } });
+
+    invalidateServerMetadataCache();
 
     return NextResponse.json({ message: "Academic Year deleted successfully" });
   } catch (error: any) {

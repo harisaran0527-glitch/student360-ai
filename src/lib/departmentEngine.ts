@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 export const DEFAULT_DEPARTMENT_CODE = "AIML";
 export const DEFAULT_DEPARTMENT_NAME = "AI & ML";
 
+let cachedDept: any = null;
+
 export async function getOrCreateDefaultDepartment() {
+  if (cachedDept) return cachedDept;
+
   let dept = await prisma.department.findUnique({
     where: { code: DEFAULT_DEPARTMENT_CODE },
   });
@@ -18,5 +22,7 @@ export async function getOrCreateDefaultDepartment() {
     });
   }
 
+  cachedDept = dept;
   return dept;
 }
+

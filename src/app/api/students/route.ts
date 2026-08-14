@@ -68,11 +68,55 @@ export async function GET(req: Request) {
     const [students, total] = await Promise.all([
       prisma.studentProfile.findMany({
         where,
-        include: {
-          department: true,
-          batch: true,
-          section: true,
-          admissionAcademicYear: true,
+        select: {
+          id: true,
+          registerNo: true,
+          rollNo: true,
+          admissionNo: true,
+          fullName: true,
+          gender: true,
+          dob: true,
+          email: true,
+          phone: true,
+          academicYear: true,
+          currentSemester: true,
+          admissionQuota: true,
+          residenceType: true,
+          academicStatus: true,
+          cgpa: true,
+          attendancePercentage: true,
+          departmentId: true,
+          batchId: true,
+          sectionId: true,
+          isArchived: true,
+          department: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          batch: {
+            select: {
+              id: true,
+              name: true,
+              admissionYear: true,
+              expectedGraduationYear: true,
+            },
+          },
+          section: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          admissionAcademicYear: {
+            select: {
+              id: true,
+              yearCode: true,
+              name: true,
+            },
+          },
         },
         orderBy: { [sortBy]: sortOrder },
         skip,

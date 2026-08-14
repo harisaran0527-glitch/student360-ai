@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
 import { BATCH_OPTIONS, isSelectableBatch } from "@/lib/academicYearConstants";
+import { getCachedBatches, setCachedBatches, invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -18,6 +19,16 @@ export async function GET(req: Request) {
           headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
         }
       );
+    }
+
+    const cached = getCachedBatches();
+    if (cached) {
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
+        },
+      });
     }
 
     // Fast Single-Query Fetch with explicit SELECT payload
@@ -94,15 +105,15 @@ export async function GET(req: Request) {
         departmentId: b.departmentId,
       }));
 
-    return NextResponse.json(
-      { batches: enrichedBatches },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
-        },
-      }
-    );
+    const payload = { batches: enrichedBatches };
+    setCachedBatches(payload);
+
+    return NextResponse.json(payload, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
+      },
+    });
   } catch (error: any) {
     console.error("[BATCHES_API_ERROR]", error);
     return NextResponse.json({ error: error.message || "Failed to load batches" }, { status: 500 });
@@ -111,7 +122,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -154,8 +165,11 @@ export async function POST(req: Request) {
       });
     }
 
+    invalidateServerMetadataCache();
+
     return NextResponse.json({ batch, message: "Batch created successfully" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

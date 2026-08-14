@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import {
-  ACADEMIC_YEAR_OPTIONS,
-  BATCH_OPTIONS,
   DEFAULT_ACADEMIC_YEAR,
   isSelectableAcademicYear,
   isSelectableBatch,
 } from "@/lib/academicYearConstants";
+import { getCachedAcademicOptions, setCachedAcademicOptions } from "@/lib/serverCache";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,6 +23,17 @@ export async function GET(req: Request) {
         }
       );
     }
+
+    const cached = getCachedAcademicOptions();
+    if (cached) {
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
+        },
+      });
+    }
+
 
     // Parallel execution of all 3 metadata queries with minimal SELECT payloads
     const [rawYears, rawBatches, rawDepts] = await Promise.all([
@@ -90,22 +100,24 @@ export async function GET(req: Request) {
 
     const currentYear = academicYears.find((y) => y.isCurrent) || academicYears[0];
 
-    return NextResponse.json(
-      {
-        academicYears,
-        batches,
-        departments,
-        currentYearCode: currentYear?.yearCode || DEFAULT_ACADEMIC_YEAR,
+    const payload = {
+      academicYears,
+      batches,
+      departments,
+      currentYearCode: currentYear?.yearCode || DEFAULT_ACADEMIC_YEAR,
+    };
+
+    setCachedAcademicOptions(payload);
+
+    return NextResponse.json(payload, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=10, s-maxage=30, stale-while-revalidate=30",
       },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, max-age=0, must-revalidate",
-        },
-      }
-    );
+    });
   } catch (error: any) {
     console.error("[ACADEMIC_OPTIONS_API_ERROR]", error);
     return NextResponse.json({ error: error.message || "Failed to load academic options" }, { status: 500 });
   }
 }
+

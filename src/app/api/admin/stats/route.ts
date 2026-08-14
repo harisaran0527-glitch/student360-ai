@@ -5,7 +5,7 @@ import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       activeBatchesCount,
       upcomingBatchesCount,
       totalDepartments,
-      allStudents,
+      avgAttendanceRes,
       recentAuditLogs,
     ] = await Promise.all([
       prisma.academicYear.findFirst({ where: { isCurrent: true } }),
@@ -40,9 +40,9 @@ export async function GET(req: Request) {
       prisma.batch.count({ where: { status: "ACTIVE", isArchived: false } }),
       prisma.batch.count({ where: { status: "UPCOMING", isArchived: false } }),
       prisma.department.count(),
-      prisma.studentProfile.findMany({
+      prisma.studentProfile.aggregate({
         where: { ...studentWhere, isArchived: false },
-        select: { cgpa: true, attendancePercentage: true },
+        _avg: { attendancePercentage: true },
       }),
       prisma.auditLog.findMany({
         take: 10,
@@ -50,15 +50,7 @@ export async function GET(req: Request) {
       }),
     ]);
 
-    const avgAttendance =
-      allStudents.length > 0
-        ? Number(
-            (
-              allStudents.reduce((sum, s) => sum + s.attendancePercentage, 0) /
-              allStudents.length
-            ).toFixed(1)
-          )
-        : 0;
+    const avgAttendance = Number((avgAttendanceRes._avg.attendancePercentage || 0).toFixed(1));
 
     return NextResponse.json(
       {
@@ -88,3 +80,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

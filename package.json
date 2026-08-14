@@ -15,7 +15,6 @@
     "restore:data": "node scripts/restoreData.js"
   },
   "dependencies": {
-    "@netlify/plugin-nextjs": "^5.15.13",
     "@prisma/client": "^5.18.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.12",
