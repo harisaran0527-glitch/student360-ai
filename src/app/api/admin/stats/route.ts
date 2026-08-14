@@ -16,26 +16,78 @@ export async function GET(req: Request) {
       studentWhere.academicYear = academicYearParam;
     }
 
-    const currentAcademicYearObj = await prisma.academicYear.findFirst({ where: { isCurrent: true } });
-    const totalStudents = await prisma.studentProfile.count({ where: studentWhere });
-    const activeStudents = await prisma.studentProfile.count({ where: { ...studentWhere, academicStatus: "PURSUING", isArchived: false } });
-    const graduatingStudents = await prisma.studentProfile.count({ where: { ...studentWhere, currentSemester: 8, academicStatus: "PURSUING", isArchived: false } });
-    const graduatedCount = await prisma.studentProfile.count({ where: { ...studentWhere, academicStatus: "GRADUATED", isArchived: false } });
-    const alumniCount = await prisma.studentProfile.count({ where: { ...studentWhere, academicStatus: "ALUMNI", isArchived: false } });
-    const archivedCount = await prisma.studentProfile.count({ where: { ...studentWhere, isArchived: true } });
-    const activeBatchesCount = await prisma.batch.count({ where: { status: "ACTIVE", isArchived: false } });
-    const upcomingBatchesCount = await prisma.batch.count({ where: { status: "UPCOMING", isArchived: false } });
-    const totalDepartments = await prisma.department.count();
-    const avgAttendanceRes = await prisma.studentProfile.aggregate({
-      where: { ...studentWhere, isArchived: false },
-      _avg: { attendancePercentage: true },
-    });
-    const recentAuditLogs = await prisma.auditLog.findMany({
-      take: 10,
-      orderBy: { createdAt: "desc" },
-    });
+    const [
+      currentAcademicYearObj,
+      statusGroups,
+      batchGroups,
+      totalDepartments,
+      recentAuditLogs,
+    ] = await Promise.all([
+      prisma.academicYear.findFirst({ where: { isCurrent: true } }),
+      prisma.studentProfile.groupBy({
+        by: ["academicStatus", "isArchived", "currentSemester"],
+        where: studentWhere,
+        _count: { _all: true },
+        _avg: { attendancePercentage: true },
+      }),
+      prisma.batch.groupBy({
+        by: ["status", "isArchived"],
+        _count: { _all: true },
+      }),
+      prisma.department.count(),
+      prisma.auditLog.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
-    const avgAttendance = Number((avgAttendanceRes._avg.attendancePercentage || 0).toFixed(1));
+    let totalStudents = 0;
+    let activeStudents = 0;
+    let graduatingStudents = 0;
+    let graduatedCount = 0;
+    let alumniCount = 0;
+    let archivedCount = 0;
+    let totalAttendanceSum = 0;
+    let attendanceCount = 0;
+
+    for (const group of statusGroups) {
+      const count = group._count._all || 0;
+      totalStudents += count;
+
+      if (group.isArchived) {
+        archivedCount += count;
+      } else {
+        const avgAtt = group._avg.attendancePercentage || 0;
+        totalAttendanceSum += avgAtt * count;
+        attendanceCount += count;
+
+        if (group.academicStatus === "PURSUING") {
+          activeStudents += count;
+          if (group.currentSemester === 8) {
+            graduatingStudents += count;
+          }
+        } else if (group.academicStatus === "GRADUATED") {
+          graduatedCount += count;
+        } else if (group.academicStatus === "ALUMNI") {
+          alumniCount += count;
+        }
+      }
+    }
+
+    const avgAttendance = attendanceCount > 0 ? Number((totalAttendanceSum / attendanceCount).toFixed(1)) : 0;
+
+    let activeBatchesCount = 0;
+    let upcomingBatchesCount = 0;
+
+    for (const group of batchGroups) {
+      if (!group.isArchived) {
+        if (group.status === "ACTIVE") {
+          activeBatchesCount += group._count._all || 0;
+        } else if (group.status === "UPCOMING") {
+          upcomingBatchesCount += group._count._all || 0;
+        }
+      }
+    }
 
     return NextResponse.json(
       {
