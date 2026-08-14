@@ -477,7 +477,6 @@ export default function MasterRecordsPage() {
       !(formData.institutionalEmail || formData.email) ||
       !formData.password ||
       !formData.departmentId ||
-      !formData.batchId ||
       !formData.academicYear ||
       !formData.currentSemester ||
       !formData.admissionQuota
@@ -783,18 +782,6 @@ export default function MasterRecordsPage() {
           {/* Filters Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
 
-            <select
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="ui-input px-2.5 py-1.5"
-            >
-              <option value="">All Batches</option>
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
 
             <select
               value={selectedYear}
@@ -943,7 +930,7 @@ export default function MasterRecordsPage() {
                           {st.department?.code}
                         </div>
                         <div className="text-[11px] text-slate-400">
-                          Batch {st.batch?.name} (Sem {st.currentSemester})
+                          Sem {st.currentSemester} (AY {st.academicYear})
                         </div>
                       </td>
                       <td className="p-4">
@@ -1056,7 +1043,7 @@ export default function MasterRecordsPage() {
                   {quickViewStudent.fullName}
                 </div>
                 <div className="text-slate-500 font-mono mt-0.5">
-                  Dept: {quickViewStudent.department?.code} | Batch: {quickViewStudent.batch?.name}
+                  Dept: {quickViewStudent.department?.code} | AY: {quickViewStudent.academicYear}
                 </div>
               </div>
               <Link
@@ -1355,22 +1342,6 @@ export default function MasterRecordsPage() {
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.code} - {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Batch *</label>
-                <select
-                  required
-                  value={formData.batchId || ""}
-                  onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
-                  className="ui-input w-full p-2"
-                >
-                  <option value="" disabled>Select Batch</option>
-                  {batches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      Batch {b.name}
                     </option>
                   ))}
                 </select>

@@ -69,14 +69,14 @@ export async function GET(req: Request) {
       : undefined;
 
     const formattedStudents = students.map((s) => {
-      const semConfig = s.batch.semesterConfigs.find((sc) => sc.semesterNumber === s.currentSemester);
+      const semConfig = s.batch?.semesterConfigs?.find((sc) => sc.semesterNumber === s.currentSemester);
 
       return {
         id: s.id,
         registerNo: s.registerNo,
         fullName: s.fullName,
         departmentCode: s.department.code,
-        batchName: s.batch.name,
+        batchName: s.batch?.name || "N/A",
         sectionName: s.section?.name,
         semester: s.currentSemester,
         attendancePercentage: s.attendancePercentage,

@@ -211,7 +211,7 @@ model StudentProfile {
   pincode              String
   
   departmentId         String
-  batchId              String
+  batchId              String?
   sectionId            String?
   academicYear         String        @default("2025-2029")
   currentSemester      Int           @default(1)
@@ -246,7 +246,7 @@ model StudentProfile {
   updatedAt            DateTime      @updatedAt
 
   department           Department    @relation(fields: [departmentId], references: [id])
-  batch                Batch         @relation(fields: [batchId], references: [id])
+  batch                Batch?        @relation(fields: [batchId], references: [id])
   section              Section?      @relation(fields: [sectionId], references: [id])
   admissionAcademicYearId String?
   admissionAcademicYear AcademicYear? @relation("AdmissionAcademicYear", fields: [admissionAcademicYearId], references: [id])

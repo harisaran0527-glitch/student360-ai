@@ -188,18 +188,7 @@ export default function AlumniDirectoryPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <select
-              value={selectedBatchId}
-              onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="ui-input px-2.5 py-1.5"
-            >
-              <option value="">All 4-Year Batches (2025–2029, 2026–2030...)</option>
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  Batch {b.name} (Graduation {b.expectedGraduationYear})
-                </option>
-              ))}
-            </select>
+
 
             <select
               value={selectedYear}

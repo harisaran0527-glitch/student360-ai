@@ -113,7 +113,7 @@ export default function Student360ProfilePage({ params }: { params: { id: string
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="purple">Dept: {student.department?.code}</Badge>
-                <Badge variant="info">Batch: {student.batch?.name}</Badge>
+                {student.academicYear && <Badge variant="info">AY: {student.academicYear}</Badge>}
                 <Badge variant="info">Semester {student.currentSemester}</Badge>
                 <Badge variant="success">CGPA: {student.cgpa}</Badge>
                 <Badge variant="info">Attendance: {student.attendancePercentage}%</Badge>
@@ -183,7 +183,7 @@ export default function Student360ProfilePage({ params }: { params: { id: string
                     <span>Institutional Academic Setup</span>
                   </div>
                   <div><span className="text-slate-500 dark:text-slate-400">Department:</span> <strong>{student.department?.name} ({student.department?.code})</strong></div>
-                  <div><span className="text-slate-500 dark:text-slate-400">Batch Name:</span> <strong>{student.batch?.name}</strong></div>
+                  {student.batch?.name && <div><span className="text-slate-500 dark:text-slate-400">Batch Name:</span> <strong>{student.batch?.name}</strong></div>}
                   <div><span className="text-slate-500 dark:text-slate-400">Academic Year:</span> <strong>{student.academicYear || DEFAULT_ACADEMIC_YEAR}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Current Semester:</span> <strong>Semester {student.currentSemester}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Entry Type:</span> <strong>{student.entryType}</strong></div>

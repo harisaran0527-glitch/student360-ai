@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     if (!student) return NextResponse.json({ error: "Student record not found" }, { status: 404 });
 
     // Determine current semester config
-    const currentSemConfig = student.batch.semesterConfigs.find(
+    const currentSemConfig = student.batch?.semesterConfigs?.find(
       (sc) => sc.semesterNumber === student.currentSemester
     );
 

@@ -127,7 +127,7 @@ export async function GET(req: Request) {
     const batches = await prisma.batch.findMany();
     const batchDistribution = batches.map((b) => ({
       name: b.name,
-      students: studentsList.filter((s) => s.batch.id === b.id).length,
+      students: studentsList.filter((s) => s.batch?.id === b.id).length,
     }));
 
     // Internship Domains Distribution

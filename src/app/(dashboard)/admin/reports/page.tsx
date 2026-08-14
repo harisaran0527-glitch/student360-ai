@@ -235,21 +235,6 @@ export default function AdminReportingCenterPage() {
               </select>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-500 block mb-1">Batch</label>
-              <select
-                value={batchId}
-                onChange={(e) => setBatchId(e.target.value)}
-                className="ui-input py-1.5 px-3"
-              >
-                <option value="">All Batches</option>
-                {batches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div>
               <label className="text-[11px] font-bold text-slate-500 block mb-1">Semester</label>

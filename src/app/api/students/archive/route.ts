@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         data: {
           studentRegisterNo: student.registerNo,
           studentName: student.fullName,
-          batchName: student.batch.name,
+          batchName: student.batch?.name || "N/A",
           departmentCode: student.department.code,
           archivedReason: reason || "Graduation & Cold Storage Retention",
           fullBackupSnapshot: snapshot,
@@ -117,9 +117,9 @@ export async function POST(req: Request) {
           data: {
             studentRegisterNo: st.registerNo,
             studentName: st.fullName,
-            batchName: st.batch.name,
+            batchName: st.batch?.name || "N/A",
             departmentCode: st.department.code,
-            archivedReason: reason || `Batch ${st.batch.name} Archival Rollover`,
+            archivedReason: reason || `Batch ${st.batch?.name || "N/A"} Archival Rollover`,
             fullBackupSnapshot: snapshot,
             archivedBy: session.email,
           },

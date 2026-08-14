@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         registerNo: s.registerNo,
         fullName: s.fullName,
         department: s.department.code,
-        batch: s.batch.name,
+        batch: s.batch?.name || "N/A",
         semester: s.currentSemester,
         attendancePercentage: s.attendancePercentage,
         cgpa: s.cgpa,

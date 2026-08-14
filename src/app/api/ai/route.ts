@@ -50,7 +50,7 @@ export async function GET(req: Request) {
         registerNo: s.registerNo,
         fullName: s.fullName,
         department: s.department.code,
-        batch: s.batch.name,
+        batch: s.batch?.name || "N/A",
         cgpa: s.cgpa,
         attendancePercentage: s.attendancePercentage,
         riskLevel: r.riskLevel,

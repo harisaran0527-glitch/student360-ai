@@ -67,7 +67,7 @@ export default async function StudentProfilePage() {
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="purple">Department: {deptCode}</Badge>
-                <Badge variant="info">Batch: {batchName}</Badge>
+                {student?.academicYear && <Badge variant="info">AY: {student.academicYear}</Badge>}
                 {sectionName !== "N/A" && <Badge variant="default">Section: {sectionName}</Badge>}
                 <Badge variant="success">CGPA: {cgpaVal}</Badge>
                 <Badge variant="default">Quota: {quota}</Badge>

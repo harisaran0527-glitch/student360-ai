@@ -83,6 +83,15 @@ export default function AdminTakeAttendancePage() {
     return () => window.removeEventListener("academicYearChanged", handleAYChange);
   }, []);
 
+  useEffect(() => {
+    if (batches.length > 0 && selectedAcademicYear) {
+      const match = batches.find((b: any) => b.name === selectedAcademicYear);
+      if (match) {
+        setSelectedBatchId(match.id);
+      }
+    }
+  }, [selectedAcademicYear, batches]);
+
   // Fetch students and existing attendance when filters change
   const loadStudentsAndAttendance = async () => {
     if (!selectedBatchId || !selectedAcademicYear) return;
@@ -285,22 +294,6 @@ export default function AdminTakeAttendancePage() {
               </select>
             </div>
 
-            <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Batch *
-              </label>
-              <select
-                value={selectedBatchId}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                {batches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    Batch {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
