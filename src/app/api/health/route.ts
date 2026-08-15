@@ -17,6 +17,7 @@ export async function GET() {
 
   const storageProvider = getActiveStorageProvider();
   const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+  const gitCommit = process.env.RENDER_GIT_COMMIT || "local";
 
   const dbUrl = process.env.DATABASE_URL || "";
   let dbHost = "";
@@ -36,6 +37,7 @@ export async function GET() {
       status: dbStatus === "HEALTHY" ? "UP" : "DOWN",
       system: "Student360 AI Enterprise ERP",
       environment: process.env.NODE_ENV || "development",
+      commit: gitCommit,
       timestamp: new Date().toISOString(),
       latencyMs: Date.now() - startTime,
       components: {
