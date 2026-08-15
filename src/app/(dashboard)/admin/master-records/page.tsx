@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { getAcademicOptions, invalidateOptionsCache } from "@/lib/clientOptionsCache";
@@ -340,11 +340,14 @@ export default function MasterRecordsPage() {
     return () => window.removeEventListener("academicYearChanged", handleAYChange);
   }, []);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Debounced search state
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   // Selected Student Drawers & Modals
   const [quickViewStudent, setQuickViewStudent] = useState<any | null>(null);
@@ -419,12 +422,19 @@ export default function MasterRecordsPage() {
     return INDIAN_STATES_AND_CITIES["Tamil Nadu"];
   }, [formData.state]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async (searchTerm: string) => {
+    // Cancel any in-flight request to prevent stale results
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
       const activeYear = selectedYear || (typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") || "ALL" : "ALL");
       const query = new URLSearchParams();
-      if (search) query.set("search", search);
+      if (searchTerm.trim()) query.set("search", searchTerm.trim());
       if (selectedBatch) query.set("batchId", selectedBatch);
       if (selectedSection) query.set("sectionId", selectedSection);
       if (activeYear && activeYear !== "ALL") query.set("academicYear", activeYear);
@@ -440,17 +450,25 @@ export default function MasterRecordsPage() {
 
       const res = await fetch(`/api/students?${query.toString()}`, {
         credentials: "include",
+        signal: controller.signal,
       });
       const data = await res.json();
-      setStudents(data.data?.students || data.students || []);
-      setTotalPages(data.data?.totalPages || data.totalPages || 1);
-      setTotalCount(data.data?.total || data.total || 0);
-    } catch (err) {
-      console.error("Failed to fetch students", err);
+      // Only update state if this request was not aborted
+      if (!controller.signal.aborted) {
+        setStudents(data.data?.students || data.students || []);
+        setTotalPages(data.data?.totalPages || data.totalPages || 1);
+        setTotalCount(data.data?.total || data.total || 0);
+      }
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        console.error("Failed to fetch students", err);
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  };
+  }, [selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived, currentPage, sortBy, sortOrder]);
 
   const fetchMetadata = async () => {
     try {
@@ -466,20 +484,29 @@ export default function MasterRecordsPage() {
   useEffect(() => {
     fetchMetadata();
 
-    const handleYearChange = () => fetchStudents();
+    const handleYearChange = () => fetchStudents(debouncedSearch);
     window.addEventListener("academicYearChanged", handleYearChange);
     return () => window.removeEventListener("academicYearChanged", handleYearChange);
   }, []);
 
-  // Reset pagination to page 1 when any search or filter options change
+  // Debounce search input: wait 300ms after typing stops before updating debouncedSearch
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Reset pagination to page 1 when any filter options change (except search, handled by debounce)
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived]);
+  }, [selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived]);
 
-  // Main fetch hook including pagination & sorting parameters
+  // Main fetch hook: triggers when debouncedSearch, filters, pagination, or sorting change
   useEffect(() => {
-    fetchStudents();
-  }, [search, selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived, currentPage, sortBy, sortOrder]);
+    fetchStudents(debouncedSearch);
+  }, [debouncedSearch, selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived, currentPage, sortBy, sortOrder, fetchStudents]);
 
   // Handle Add Student
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -512,7 +539,7 @@ export default function MasterRecordsPage() {
 
       setIsAddModalOpen(false);
       setFormData(emptyFormData);
-      fetchStudents();
+      fetchStudents(debouncedSearch);
     } catch (err: any) {
       alert(err.message);
     }
@@ -533,7 +560,7 @@ export default function MasterRecordsPage() {
       if (!res.ok) throw new Error(data.message || data.error || "Failed to update student profile");
 
       setEditStudent(null);
-      fetchStudents();
+      fetchStudents(debouncedSearch);
     } catch (err: any) {
       alert(err.message);
     }
@@ -600,7 +627,7 @@ export default function MasterRecordsPage() {
       alert("Student profile and user account permanently deleted!");
       invalidateOptionsCache();
       setQuickViewStudent(null);
-      fetchStudents();
+      fetchStudents(debouncedSearch);
     } catch (err: any) {
       alert(err.message);
     }
@@ -619,7 +646,7 @@ export default function MasterRecordsPage() {
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Archival failed");
       alert("Student profile moved to Archive!");
       setQuickViewStudent(null);
-      fetchStudents();
+      fetchStudents(debouncedSearch);
     } catch (err: any) {
       alert(err.message);
     }
@@ -638,7 +665,7 @@ export default function MasterRecordsPage() {
       if (!res.ok || data.success === false) throw new Error(data.message || data.error || "Restore failed");
       alert("Student profile successfully restored!");
       setQuickViewStudent(null);
-      fetchStudents();
+      fetchStudents(debouncedSearch);
     } catch (err: any) {
       alert(err.message);
     }
@@ -691,7 +718,7 @@ export default function MasterRecordsPage() {
       setIsImportModalOpen(false);
       setPreviewData(null);
       setImportFile(null);
-      fetchStudents();
+      fetchStudents(debouncedSearch);
     } catch (err: any) {
       alert(err.message);
     } finally {

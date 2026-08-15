@@ -279,6 +279,8 @@ model StudentProfile {
   @@index([batchId])
   @@index([admissionQuota])
   @@index([academicStatus])
+  @@index([academicYear])
+  @@index([fullName])
 }
 
 model BusRecord {

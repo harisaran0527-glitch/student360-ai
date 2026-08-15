@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
-import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { apiSuccess, apiError, serverError, logApiPerf } from "@/lib/apiResponse";
 import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export async function GET(req: Request) {
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const sortOrder = searchParams.get("sortOrder") === "desc" ? "desc" : "asc";
 
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
     const skip = (page - 1) * limit;
 
     const dept = await getOrCreateDefaultDepartment();
@@ -37,13 +37,17 @@ export async function GET(req: Request) {
     };
 
     if (search) {
-      where.OR = [
-        { fullName: { contains: search } },
-        { registerNo: { contains: search } },
-        { rollNo: { contains: search } },
-        { admissionNo: { contains: search } },
-        { email: { contains: search } },
-      ];
+      const trimmed = search.trim();
+      if (trimmed) {
+        where.OR = [
+          { fullName: { contains: trimmed, mode: "insensitive" } },
+          { registerNo: { contains: trimmed, mode: "insensitive" } },
+          { rollNo: { contains: trimmed, mode: "insensitive" } },
+          { admissionNo: { contains: trimmed, mode: "insensitive" } },
+          { email: { contains: trimmed, mode: "insensitive" } },
+          { institutionalEmail: { contains: trimmed, mode: "insensitive" } },
+        ];
+      }
     }
 
     if (batchId) where.batchId = batchId;
@@ -134,7 +138,7 @@ export async function GET(req: Request) {
       departmentName: dept.name,
     });
   } catch (error: any) {
-    return apiError(error.message || "Failed to fetch students", 500);
+    return serverError(error.message || "Failed to fetch students");
   }
 }
 
