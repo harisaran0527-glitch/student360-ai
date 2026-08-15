@@ -103,9 +103,15 @@ export async function GET(req: Request) {
     });
     const findManyTime = Date.now() - tFindStart;
 
-    const tCountStart = Date.now();
-    const total = await prisma.studentProfile.count({ where });
-    const countTime = Date.now() - tCountStart;
+    let total = 0;
+    let countTime = 0;
+    if (page === 1 && students.length < limit) {
+      total = students.length;
+    } else {
+      const tCountStart = Date.now();
+      total = await prisma.studentProfile.count({ where });
+      countTime = Date.now() - tCountStart;
+    }
 
     const routeTime = Date.now() - startTime;
 
