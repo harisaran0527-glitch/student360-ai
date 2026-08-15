@@ -31,10 +31,15 @@ export async function GET(req: Request) {
 
     const dept = await getOrCreateDefaultDepartment();
 
+    const departmentId = searchParams.get("departmentId") || "";
+
     const where: any = {
       isArchived,
-      departmentId: dept.id,
     };
+
+    if (departmentId) {
+      where.departmentId = departmentId;
+    }
 
     if (search) {
       const trimmed = search.trim();
