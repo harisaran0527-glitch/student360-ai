@@ -52,32 +52,31 @@ export async function GET(req: Request) {
       isArchived: false,
     };
 
-    // Parallel fetch students & existing attendance
-    const [students, existingAttendance] = await Promise.all([
-      prisma.studentProfile.findMany({
-        where: studentWhere,
-        orderBy: { registerNo: "asc" },
-        select: {
-          id: true,
-          registerNo: true,
-          rollNo: true,
-          fullName: true,
-          email: true,
-          batchId: true,
-          academicYear: true,
-          attendancePercentage: true,
-        },
-      }),
-      courseId && date
-        ? prisma.attendance.findMany({
-            where: {
-              courseId,
-              date,
-              student: { batchId },
-            },
-          })
-        : Promise.resolve([]),
-    ]);
+    // Fetch students & existing attendance sequentially to respect connection_limit=1
+    const students = await prisma.studentProfile.findMany({
+      where: studentWhere,
+      orderBy: { registerNo: "asc" },
+      select: {
+        id: true,
+        registerNo: true,
+        rollNo: true,
+        fullName: true,
+        email: true,
+        batchId: true,
+        academicYear: true,
+        attendancePercentage: true,
+      },
+    });
+
+    const existingAttendance = courseId && date
+      ? await prisma.attendance.findMany({
+          where: {
+            courseId,
+            date,
+            student: { batchId },
+          },
+        })
+      : [];
 
     logApiPerf("GET /api/attendance", startTime);
     return new NextResponse(
@@ -139,41 +138,37 @@ export async function POST(req: Request) {
 
       const existingMap = new Map(existingAtts.map((a) => [a.studentId, a]));
 
-      // 2. Perform bulk upsert promises in parallel
-      const upsertPromises = attendanceRecords
-        .map((rec) => {
-          const { studentId, status, remarks } = rec;
-          if (!studentId) return null;
+      // 2. Perform bulk upsert sequentially
+      for (const rec of attendanceRecords) {
+        const { studentId, status, remarks } = rec;
+        if (!studentId) continue;
 
-          const existing = existingMap.get(studentId);
-          if (existing) {
-            return tx.attendance.update({
-              where: { id: existing.id },
-              data: {
-                status: status || "PRESENT",
-                academicYearCode: academicYear,
-                facultyId: session.id,
-                remarks: remarks || null,
-              },
-            });
-          } else {
-            return tx.attendance.create({
-              data: {
-                studentId,
-                courseId,
-                date,
-                session: targetSession,
-                status: status || "PRESENT",
-                academicYearCode: academicYear,
-                facultyId: session.id,
-                remarks: remarks || null,
-              },
-            });
-          }
-        })
-        .filter(Boolean) as Promise<any>[];
-
-      await Promise.all(upsertPromises);
+        const existing = existingMap.get(studentId);
+        if (existing) {
+          await tx.attendance.update({
+            where: { id: existing.id },
+            data: {
+              status: status || "PRESENT",
+              academicYearCode: academicYear,
+              facultyId: session.id,
+              remarks: remarks || null,
+            },
+          });
+        } else {
+          await tx.attendance.create({
+            data: {
+              studentId,
+              courseId,
+              date,
+              session: targetSession,
+              status: status || "PRESENT",
+              academicYearCode: academicYear,
+              facultyId: session.id,
+              remarks: remarks || null,
+            },
+          });
+        }
+      }
 
       // 3. Fetch all attendance records for the affected students in a single query to compute percentages
       const allAttRecords = await tx.attendance.findMany({
@@ -193,19 +188,14 @@ export async function POST(req: Request) {
         }
       }
 
-      // 4. Update student profile attendance percentages in parallel
-      const updateProfilePromises: any[] = [];
-      countsMap.forEach((item, studentId) => {
+      // 4. Update student profile attendance percentages sequentially
+      for (const [studentId, item] of Array.from(countsMap.entries())) {
         const percentage = Math.round((item.present / item.total) * 100 * 10) / 10;
-        updateProfilePromises.push(
-          tx.studentProfile.update({
-            where: { id: studentId },
-            data: { attendancePercentage: percentage },
-          })
-        );
-      });
-
-      await Promise.all(updateProfilePromises);
+        await tx.studentProfile.update({
+          where: { id: studentId },
+          data: { attendancePercentage: percentage },
+        });
+      }
 
       // Write Audit Log
       await tx.auditLog.create({

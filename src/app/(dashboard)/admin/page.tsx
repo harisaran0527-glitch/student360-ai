@@ -59,19 +59,19 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const fetchDashboardData = () => {
+  const fetchDashboardData = async () => {
     const selectedYear = typeof window !== "undefined" ? localStorage.getItem("selected_academic_year") || DEFAULT_ACADEMIC_YEAR : DEFAULT_ACADEMIC_YEAR;
     setLoading(true);
-    Promise.all([
-      fetch(`/api/admin/stats?academicYear=${selectedYear}`).then((res) => res.json()),
-      fetch(`/api/students?academicYear=${selectedYear}`).then((res) => res.json()),
-    ])
-      .then(([statsRes, studRes]) => {
-        setData(statsRes);
-        setStudents(studRes.students || []);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+    try {
+      const statsRes = await fetch(`/api/admin/stats?academicYear=${selectedYear}`).then((res) => res.json());
+      setData(statsRes);
+      const studRes = await fetch(`/api/students?academicYear=${selectedYear}`).then((res) => res.json());
+      setStudents(studRes.students || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

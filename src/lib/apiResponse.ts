@@ -16,13 +16,22 @@ export function apiError(
   status: number = 400,
   errors: Record<string, string> | null = null
 ) {
+  const isPoolTimeout = typeof message === "string" && (
+    message.includes("timed out") ||
+    message.includes("connection pool") ||
+    message.includes("P2024")
+  );
+
+  const finalMessage = isPoolTimeout ? "Database is temporarily busy. Please retry." : message;
+  const finalStatus = isPoolTimeout ? 503 : status;
+
   return NextResponse.json(
     {
       success: false,
-      message,
+      message: finalMessage,
       ...(errors ? { errors } : {}),
     },
-    { status }
+    { status: finalStatus }
   );
 }
 

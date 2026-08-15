@@ -45,6 +45,14 @@ export default function AdminBusManagementPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
+  // Server-side Pagination & Filter State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [uniqueBusNos, setUniqueBusNos] = useState<string[]>([]);
+  const [uniqueRoutes, setUniqueRoutes] = useState<string[]>([]);
+  const [uniqueBoardingPoints, setUniqueBoardingPoints] = useState<string[]>([]);
+
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedBusNoFilter, setSelectedBusNoFilter] = useState<string>("ALL");
@@ -66,15 +74,33 @@ export default function AdminBusManagementPage() {
   const [modalStudentSearch, setModalStudentSearch] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Fetch Bus Records
-  const fetchBusRecords = async () => {
+  // Fetch Bus Records with server-side filters and pagination
+  const fetchBusRecords = async (page = 1) => {
     setLoading(true);
     setErrorMsg("");
     try {
-      const res = await fetch("/api/bus");
+      const query = new URLSearchParams({
+        page: String(page),
+        limit: "10",
+        search: searchQuery,
+        busNo: selectedBusNoFilter,
+        route: selectedRouteFilter,
+        boardingPoint: selectedBoardingFilter,
+      });
+      const res = await fetch(`/api/bus?${query.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || data.error || "Failed to load bus records");
-      setBusRecords(data.data?.busRecords || data.busRecords || []);
+      
+      const payload = data.data || data;
+      setBusRecords(payload.busRecords || []);
+      setTotalPages(payload.totalPages || 1);
+      setTotalCount(payload.total || 0);
+      setCurrentPage(page);
+
+      // Set filter dropdown options computed dynamically by the server
+      setUniqueBusNos(payload.uniqueBusNos || []);
+      setUniqueRoutes(payload.uniqueRoutes || []);
+      setUniqueBoardingPoints(payload.uniqueBoardingPoints || []);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "Failed to load bus records");
@@ -95,59 +121,29 @@ export default function AdminBusManagementPage() {
     }
   };
 
+  // Sequential loading helper on initial mount to respect connection_limit=1
+  const loadInitialData = async () => {
+    setLoading(true);
+    await fetchBusRecords(1);
+    await fetchStudents();
+    setLoading(false);
+  };
+
   useEffect(() => {
-    fetchBusRecords();
-    fetchStudents();
+    loadInitialData();
   }, []);
 
-  // Filter options lists
-  const uniqueBusNos = useMemo(() => {
-    const list = Array.from(new Set(busRecords.map((r) => r.busNo).filter(Boolean)));
-    return list.sort();
-  }, [busRecords]);
+  // Debounced search/filter trigger to prevent query storms
+  useEffect(() => {
+    if (loading) return; // skip initial mount
+    const handler = setTimeout(() => {
+      fetchBusRecords(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery, selectedBusNoFilter, selectedRouteFilter, selectedBoardingFilter]);
 
-  const uniqueRoutes = useMemo(() => {
-    const list = Array.from(new Set(busRecords.map((r) => r.route).filter(Boolean)));
-    return list.sort();
-  }, [busRecords]);
-
-  const uniqueBoardingPoints = useMemo(() => {
-    const list = Array.from(new Set(busRecords.map((r) => r.boardingPoint).filter(Boolean)));
-    return list.sort();
-  }, [busRecords]);
-
-  // Client-side filtering
-  const filteredRecords = useMemo(() => {
-    return busRecords.filter((rec) => {
-      // Search by Name or Register Number
-      if (searchQuery.trim() !== "") {
-        const q = searchQuery.toLowerCase().trim();
-        const sName = rec.student?.fullName?.toLowerCase() || "";
-        const sReg = rec.student?.registerNo?.toLowerCase() || "";
-        const sRoll = rec.student?.rollNo?.toLowerCase() || "";
-        if (!sName.includes(q) && !sReg.includes(q) && !sRoll.includes(q)) {
-          return false;
-        }
-      }
-
-      // Filter by BusNo
-      if (selectedBusNoFilter !== "ALL" && rec.busNo !== selectedBusNoFilter) {
-        return false;
-      }
-
-      // Filter by Route
-      if (selectedRouteFilter !== "ALL" && rec.route !== selectedRouteFilter) {
-        return false;
-      }
-
-      // Filter by Boarding Point
-      if (selectedBoardingFilter !== "ALL" && rec.boardingPoint !== selectedBoardingFilter) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [busRecords, searchQuery, selectedBusNoFilter, selectedRouteFilter, selectedBoardingFilter]);
+  // Rename variables to keep downstream rendering functional
+  const filteredRecords = busRecords;
 
   // Filter students for modal dropdown
   const filteredStudentsForModal = useMemo(() => {
@@ -432,6 +428,33 @@ export default function AdminBusManagementPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-800 bg-slate-900/40 text-xs">
+                  <div className="text-slate-400">
+                    Showing page <span className="font-bold text-white">{currentPage}</span> of <span className="font-bold text-white">{totalPages}</span> ({totalCount} total records)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fetchBusRecords(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-50 disabled:hover:text-slate-300 transition"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fetchBusRecords(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-50 disabled:hover:text-slate-300 transition"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

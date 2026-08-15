@@ -18,33 +18,53 @@ export async function GET(req: Request) {
       orderBy: [{ verified: "desc" }, { name: "asc" }],
     });
 
-    // Populate Backing Evidence Graph Records
-    const skillsWithEvidence = await Promise.all(
-      skills.map(async (sk) => {
-        let evidenceRecord: any = null;
-        if (sk.evidenceType === "CERTIFICATE" && sk.evidenceRecordId) {
-          evidenceRecord = await prisma.certificate.findUnique({
-            where: { id: sk.evidenceRecordId },
-            select: { title: true, issuingBody: true, issueDate: true },
-          });
-        } else if (sk.evidenceType === "PROJECT" && sk.evidenceRecordId) {
-          evidenceRecord = await prisma.project.findUnique({
-            where: { id: sk.evidenceRecordId },
-            select: { title: true, category: true, techStack: true },
-          });
-        } else if (sk.evidenceType === "INTERNSHIP" && sk.evidenceRecordId) {
-          evidenceRecord = await prisma.internship.findUnique({
-            where: { id: sk.evidenceRecordId },
-            select: { companyName: true, role: true, startDate: true },
-          });
-        }
+    // Collect unique record IDs for bulk fetch to prevent N+1 database connection timeouts
+    const certIds = skills.filter((s) => s.evidenceType === "CERTIFICATE" && s.evidenceRecordId).map((s) => s.evidenceRecordId as string);
+    const projIds = skills.filter((s) => s.evidenceType === "PROJECT" && s.evidenceRecordId).map((s) => s.evidenceRecordId as string);
+    const internIds = skills.filter((s) => s.evidenceType === "INTERNSHIP" && s.evidenceRecordId).map((s) => s.evidenceRecordId as string);
 
-        return {
-          ...sk,
-          evidenceRecord,
-        };
-      })
-    );
+    // Fetch dependencies sequentially
+    const certs = certIds.length > 0
+      ? await prisma.certificate.findMany({
+          where: { id: { in: certIds } },
+          select: { id: true, title: true, issuingBody: true, issueDate: true },
+        })
+      : [];
+
+    const projects = projIds.length > 0
+      ? await prisma.project.findMany({
+          where: { id: { in: projIds } },
+          select: { id: true, title: true, category: true, techStack: true },
+        })
+      : [];
+
+    const internships = internIds.length > 0
+      ? await prisma.internship.findMany({
+          where: { id: { in: internIds } },
+          select: { id: true, companyName: true, role: true, startDate: true },
+        })
+      : [];
+
+    const certMap = new Map(certs.map((c) => [c.id, c]));
+    const projMap = new Map(projects.map((p) => [p.id, p]));
+    const internMap = new Map(internships.map((i) => [i.id, i]));
+
+    const skillsWithEvidence = skills.map((sk) => {
+      let evidenceRecord: any = null;
+      if (sk.evidenceRecordId) {
+        if (sk.evidenceType === "CERTIFICATE") {
+          evidenceRecord = certMap.get(sk.evidenceRecordId) || null;
+        } else if (sk.evidenceType === "PROJECT") {
+          evidenceRecord = projMap.get(sk.evidenceRecordId) || null;
+        } else if (sk.evidenceType === "INTERNSHIP") {
+          evidenceRecord = internMap.get(sk.evidenceRecordId) || null;
+        }
+      }
+      return {
+        ...sk,
+        evidenceRecord,
+      };
+    });
 
     return NextResponse.json({ skills: skillsWithEvidence });
   } catch (error: any) {

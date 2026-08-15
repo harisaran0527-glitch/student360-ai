@@ -52,23 +52,21 @@ export async function GET(req: Request) {
       orderBy: { registerNo: "asc" },
     });
 
-    // 3. Fetch Active Approved ODs & Internships covering this date
-    const [approvedOds, approvedInternships] = await Promise.all([
-      prisma.oDRecord.findMany({
-        where: {
-          status: "APPROVED",
-          fromDate: { lte: date },
-          toDate: { gte: date },
-        },
-      }),
-      prisma.internship.findMany({
-        where: {
-          status: "NOC_ISSUED",
-          startDate: { lte: date },
-          endDate: { gte: date },
-        },
-      }),
-    ]);
+    // Fetch Active Approved ODs & Internships covering this date sequentially to respect connection_limit=1
+    const approvedOds = await prisma.oDRecord.findMany({
+      where: {
+        status: "APPROVED",
+        fromDate: { lte: date },
+        toDate: { gte: date },
+      },
+    });
+    const approvedInternships = await prisma.internship.findMany({
+      where: {
+        status: "NOC_ISSUED",
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+    });
 
     const activeOdStudentIds = new Set(approvedOds.map((o) => o.studentId));
     const activeInternshipStudentIds = new Set(approvedInternships.map((i) => i.studentId));

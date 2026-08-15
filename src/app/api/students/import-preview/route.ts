@@ -27,14 +27,12 @@ export async function POST(req: Request) {
       return apiError("Uploaded spreadsheet is empty", 400);
     }
 
-    // Fetch Existing Identifiers for Duplicate Check
-    const [existingStudents, departments, batches] = await Promise.all([
-      prisma.studentProfile.findMany({
-        select: { registerNo: true, admissionNo: true, email: true },
-      }),
-      prisma.department.findMany(),
-      prisma.batch.findMany(),
-    ]);
+    // Fetch Existing Identifiers sequentially to respect connection_limit=1
+    const existingStudents = await prisma.studentProfile.findMany({
+      select: { registerNo: true, admissionNo: true, email: true },
+    });
+    const departments = await prisma.department.findMany();
+    const batches = await prisma.batch.findMany();
 
     const existingRegNos = new Set(existingStudents.map((s) => s.registerNo.toLowerCase()));
     const existingAdmNos = new Set(existingStudents.map((s) => s.admissionNo.toLowerCase()));

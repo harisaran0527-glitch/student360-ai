@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { apiSuccess, apiError, serverError, logApiPerf } from "@/lib/apiResponse";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,10 @@ export async function GET(req: Request) {
     const busNo = searchParams.get("busNo") || "";
     const routeFilter = searchParams.get("route") || "";
     const boardingPoint = searchParams.get("boardingPoint") || "";
+
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
 
     const where: any = {};
 
@@ -39,26 +43,59 @@ export async function GET(req: Request) {
       };
     }
 
+    // 1. Fetch paginated records with minimal select fields
     const busRecords = await prisma.busRecord.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        resident: true,
+        busNo: true,
+        route: true,
+        boardingPoint: true,
+        createdAt: true,
         student: {
           select: {
             id: true,
             fullName: true,
             registerNo: true,
-            rollNo: true,
-            residenceType: true,
           },
         },
       },
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
 
+    // 2. Fetch total count for pagination
+    const total = await prisma.busRecord.count({ where });
+
+    // 3. Fetch unique filter option dropdown values sequentially to respect connection_limit=1
+    const uniqueBusNosObj = await prisma.busRecord.groupBy({
+      by: ["busNo"],
+    });
+    const uniqueRoutesObj = await prisma.busRecord.groupBy({
+      by: ["route"],
+    });
+    const uniqueBoardingPointsObj = await prisma.busRecord.groupBy({
+      by: ["boardingPoint"],
+    });
+
+    const uniqueBusNos = uniqueBusNosObj.map((b) => b.busNo).filter(Boolean).sort();
+    const uniqueRoutes = uniqueRoutesObj.map((r) => r.route).filter(Boolean).sort();
+    const uniqueBoardingPoints = uniqueBoardingPointsObj.map((bp) => bp.boardingPoint).filter(Boolean).sort();
+
     logApiPerf("GET /api/bus", startTime);
-    return apiSuccess({ busRecords });
+    return apiSuccess({
+      busRecords,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit) || 1,
+      uniqueBusNos,
+      uniqueRoutes,
+      uniqueBoardingPoints,
+    });
   } catch (error: any) {
-    return apiError(error.message || "Failed to fetch bus records", 500);
+    return serverError(error.message || "Failed to fetch bus records");
   }
 }
 

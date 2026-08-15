@@ -35,44 +35,44 @@ export async function GET(req: Request) {
     }
 
 
-    // Parallel execution of all 3 metadata queries with minimal SELECT payloads
-    const [rawYears, rawBatches, rawDepts] = await Promise.all([
-      prisma.academicYear.findMany({
-        where: { status: "ACTIVE" },
-        select: {
-          id: true,
-          yearCode: true,
-          name: true,
-          isCurrent: true,
-          status: true,
-        },
-        orderBy: [{ isCurrent: "desc" }, { yearCode: "asc" }],
-      }),
-      prisma.batch.findMany({
-        where: {
-          isArchived: false,
-          admissionYear: { gte: 2025 },
-        },
-        select: {
-          id: true,
-          name: true,
-          admissionYear: true,
-          expectedGraduationYear: true,
-          departmentId: true,
-          _count: { select: { students: true } },
-        },
-        orderBy: [{ admissionYear: "asc" }, { name: "asc" }],
-      }),
-      prisma.department.findMany({
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          hodName: true,
-        },
-        orderBy: { code: "asc" },
-      }),
-    ]);
+    // Sequential execution of metadata queries to respect connection_limit=1
+    const rawYears = await prisma.academicYear.findMany({
+      where: { status: "ACTIVE" },
+      select: {
+        id: true,
+        yearCode: true,
+        name: true,
+        isCurrent: true,
+        status: true,
+      },
+      orderBy: [{ isCurrent: "desc" }, { yearCode: "asc" }],
+    });
+
+    const rawBatches = await prisma.batch.findMany({
+      where: {
+        isArchived: false,
+        admissionYear: { gte: 2025 },
+      },
+      select: {
+        id: true,
+        name: true,
+        admissionYear: true,
+        expectedGraduationYear: true,
+        departmentId: true,
+        _count: { select: { students: true } },
+      },
+      orderBy: [{ admissionYear: "asc" }, { name: "asc" }],
+    });
+
+    const rawDepts = await prisma.department.findMany({
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        hodName: true,
+      },
+      orderBy: { code: "asc" },
+    });
 
     const academicYears = rawYears
       .map((ay) => ({
