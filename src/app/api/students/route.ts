@@ -16,13 +16,8 @@ export async function GET(req: Request) {
 
     if (!session) return apiError("Unauthorized", 401);
 
-    const tConnectStart = Date.now();
-    await prisma.$connect();
-    const connectTime = Date.now() - tConnectStart;
-
-    const tPingStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    const pingTime = Date.now() - tPingStart;
+    const connectTime = 0;
+    const pingTime = 0;
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
