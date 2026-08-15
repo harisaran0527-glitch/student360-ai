@@ -7,12 +7,14 @@ export async function GET() {
   let dbStatus = "HEALTHY";
   let dbLatencyMs = 0;
 
+  let dbError = "";
   try {
     const t0 = Date.now();
     await prisma.$queryRaw`SELECT 1`;
     dbLatencyMs = Date.now() - t0;
-  } catch (err) {
+  } catch (err: any) {
     dbStatus = "UNHEALTHY";
+    dbError = err.message || String(err);
   }
 
   const storageProvider = getActiveStorageProvider();
@@ -46,6 +48,7 @@ export async function GET() {
           latencyMs: dbLatencyMs,
           host: dbHost,
           port: dbPort,
+          error: dbError || undefined,
         },
         storage: {
           provider: storageProvider,
