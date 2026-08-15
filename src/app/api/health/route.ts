@@ -18,6 +18,17 @@ export async function GET() {
   const storageProvider = getActiveStorageProvider();
   const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
 
+  const dbUrl = process.env.DATABASE_URL || "";
+  let dbHost = "";
+  let dbPort = "";
+  try {
+    const match = dbUrl.match(/@([^:\/]+)(?::(\d+))?/);
+    if (match) {
+      dbHost = match[1];
+      dbPort = match[2] || "5432";
+    }
+  } catch (e) {}
+
   const status = dbStatus === "HEALTHY" ? 200 : 503;
 
   return NextResponse.json(
@@ -31,6 +42,8 @@ export async function GET() {
         database: {
           status: dbStatus,
           latencyMs: dbLatencyMs,
+          host: dbHost,
+          port: dbPort,
         },
         storage: {
           provider: storageProvider,
