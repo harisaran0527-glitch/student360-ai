@@ -10,8 +10,19 @@ import { invalidateServerMetadataCache } from "@/lib/serverCache";
 export async function GET(req: Request) {
   const startTime = Date.now();
   try {
+    const tAuthStart = Date.now();
     const session = await getSession(req);
+    const authTime = Date.now() - tAuthStart;
+
     if (!session) return apiError("Unauthorized", 401);
+
+    const tConnectStart = Date.now();
+    await prisma.$connect();
+    const connectTime = Date.now() - tConnectStart;
+
+    const tPingStart = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    const pingTime = Date.now() - tPingStart;
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
@@ -74,6 +85,7 @@ export async function GET(req: Request) {
     }
 
     // Optimized findMany including only needed relations
+    const tFindStart = Date.now();
     const students = await prisma.studentProfile.findMany({
       where,
       include: {
@@ -94,8 +106,23 @@ export async function GET(req: Request) {
       skip,
       take: limit,
     });
+    const findManyTime = Date.now() - tFindStart;
 
+    const tCountStart = Date.now();
     const total = await prisma.studentProfile.count({ where });
+    const countTime = Date.now() - tCountStart;
+
+    const routeTime = Date.now() - startTime;
+
+    const perfMetrics = {
+      authTime,
+      connectTime,
+      pingTime,
+      findManyTime,
+      countTime,
+      routeTime,
+      serverTotalTime: Date.now() - startTime,
+    };
 
     logApiPerf("GET /api/students", startTime);
     return apiSuccess({
@@ -103,6 +130,7 @@ export async function GET(req: Request) {
       total,
       page,
       totalPages: Math.ceil(total / limit) || 1,
+      perfMetrics,
     });
   } catch (error: any) {
     return serverError(error.message || "Failed to fetch students");
