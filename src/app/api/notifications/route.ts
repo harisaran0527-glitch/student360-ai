@@ -6,7 +6,7 @@ import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 export async function GET(req: Request) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return apiError("Unauthorized", 401);
 
     const { searchParams } = new URL(req.url);
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return apiError("Unauthorized", 401);
 
     const data = await req.json();

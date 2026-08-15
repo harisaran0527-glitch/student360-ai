@@ -16,30 +16,22 @@ export async function GET(req: Request) {
       studentWhere.academicYear = academicYearParam;
     }
 
-    const [
-      currentAcademicYearObj,
-      statusGroups,
-      batchGroups,
-      totalDepartments,
-      recentAuditLogs,
-    ] = await Promise.all([
-      prisma.academicYear.findFirst({ where: { isCurrent: true } }),
-      prisma.studentProfile.groupBy({
-        by: ["academicStatus", "isArchived", "currentSemester"],
-        where: studentWhere,
-        _count: { _all: true },
-        _avg: { attendancePercentage: true },
-      }),
-      prisma.batch.groupBy({
-        by: ["status", "isArchived"],
-        _count: { _all: true },
-      }),
-      prisma.department.count(),
-      prisma.auditLog.findMany({
-        take: 10,
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+    const currentAcademicYearObj = await prisma.academicYear.findFirst({ where: { isCurrent: true } });
+    const statusGroups = await prisma.studentProfile.groupBy({
+      by: ["academicStatus", "isArchived", "currentSemester"],
+      where: studentWhere,
+      _count: { _all: true },
+      _avg: { attendancePercentage: true },
+    });
+    const batchGroups = await prisma.batch.groupBy({
+      by: ["status", "isArchived"],
+      _count: { _all: true },
+    });
+    const totalDepartments = await prisma.department.count();
+    const recentAuditLogs = await prisma.auditLog.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+    });
 
     let totalStudents = 0;
     let activeStudents = 0;

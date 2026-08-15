@@ -10,7 +10,7 @@ export async function PUT(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN" && session.role !== "FACULTY")) {
       return apiError("Forbidden: Unauthorized to update internship", 403);
     }
@@ -81,7 +81,7 @@ export async function PATCH(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return apiError("Unauthorized", 401);
 
     const { action, reason } = await req.json().catch(() => ({ action: "archive", reason: "Admin Archive" }));
@@ -130,7 +130,7 @@ export async function DELETE(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return apiError("Forbidden: Unauthorized to delete internship", 403);
     }

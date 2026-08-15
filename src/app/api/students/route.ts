@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export async function GET(req: Request) {
   const startTime = Date.now();
@@ -65,65 +66,64 @@ export async function GET(req: Request) {
       }
     }
 
-    const [students, total] = await Promise.all([
-      prisma.studentProfile.findMany({
-        where,
-        select: {
-          id: true,
-          registerNo: true,
-          rollNo: true,
-          admissionNo: true,
-          fullName: true,
-          gender: true,
-          dob: true,
-          email: true,
-          phone: true,
-          academicYear: true,
-          currentSemester: true,
-          admissionQuota: true,
-          residenceType: true,
-          academicStatus: true,
-          cgpa: true,
-          attendancePercentage: true,
-          departmentId: true,
-          batchId: true,
-          sectionId: true,
-          isArchived: true,
-          department: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-            },
-          },
-          batch: {
-            select: {
-              id: true,
-              name: true,
-              admissionYear: true,
-              expectedGraduationYear: true,
-            },
-          },
-          section: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          admissionAcademicYear: {
-            select: {
-              id: true,
-              yearCode: true,
-              name: true,
-            },
+    const students = await prisma.studentProfile.findMany({
+      where,
+      select: {
+        id: true,
+        registerNo: true,
+        rollNo: true,
+        admissionNo: true,
+        fullName: true,
+        gender: true,
+        dob: true,
+        email: true,
+        phone: true,
+        academicYear: true,
+        currentSemester: true,
+        admissionQuota: true,
+        residenceType: true,
+        academicStatus: true,
+        cgpa: true,
+        attendancePercentage: true,
+        departmentId: true,
+        batchId: true,
+        sectionId: true,
+        isArchived: true,
+        department: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
           },
         },
-        orderBy: { [sortBy]: sortOrder },
-        skip,
-        take: limit,
-      }),
-      prisma.studentProfile.count({ where }),
-    ]);
+        batch: {
+          select: {
+            id: true,
+            name: true,
+            admissionYear: true,
+            expectedGraduationYear: true,
+          },
+        },
+        section: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        admissionAcademicYear: {
+          select: {
+            id: true,
+            yearCode: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { [sortBy]: sortOrder },
+      skip,
+      take: limit,
+    });
+
+    const total = await prisma.studentProfile.count({ where });
 
     logApiPerf("GET /api/students", startTime);
     return apiSuccess({
@@ -366,6 +366,7 @@ export async function POST(req: Request) {
       return student;
     });
 
+    invalidateServerMetadataCache();
     logApiPerf("POST /api/students", startTime);
     return apiSuccess({ student: result }, "Student created successfully with portal login.", 201);
   } catch (error: any) {

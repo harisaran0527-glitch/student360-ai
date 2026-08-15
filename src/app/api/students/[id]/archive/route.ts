@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { apiError, apiSuccess, logApiPerf } from "@/lib/apiResponse";
+import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export async function PATCH(
   req: Request,
@@ -55,6 +56,7 @@ export async function PATCH(
       },
     });
 
+    invalidateServerMetadataCache();
     logApiPerf("PATCH /api/students/[id]/archive", startTime);
     return apiSuccess({ student: updatedStudent }, "Student profile archived successfully.", 200);
   } catch (error: any) {

@@ -5,7 +5,7 @@ import { getAcademicYearFromRequest } from "@/lib/academicYearEngine";
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || session.role === "STUDENT") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id, verificationStatus } = await req.json();

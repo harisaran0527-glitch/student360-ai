@@ -5,7 +5,7 @@ import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN" && session.role !== "FACULTY")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

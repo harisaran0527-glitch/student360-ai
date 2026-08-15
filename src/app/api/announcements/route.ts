@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const announcements = await prisma.announcement.findMany({
@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN" && session.role !== "FACULTY")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

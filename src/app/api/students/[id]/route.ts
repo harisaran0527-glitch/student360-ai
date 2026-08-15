@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export async function GET(
   req: Request,
@@ -159,6 +160,7 @@ export async function PUT(
       },
     });
 
+    invalidateServerMetadataCache();
     logApiPerf("PUT /api/students/[id]", startTime);
     return apiSuccess({ student: updatedStudent }, "Student profile updated successfully.");
   } catch (error: any) {
@@ -223,6 +225,7 @@ export async function DELETE(
       });
     });
 
+    invalidateServerMetadataCache();
     logApiPerf("DELETE /api/students/[id]", startTime);
     return apiSuccess({ id: studentId }, "Student profile and user account permanently deleted successfully.", 200);
   } catch (error: any) {

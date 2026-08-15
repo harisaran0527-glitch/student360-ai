@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const drives = await prisma.placementDrive.findMany({
@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN" && session.role !== "FACULTY")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

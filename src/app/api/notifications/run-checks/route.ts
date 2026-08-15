@@ -6,7 +6,7 @@ import { renderAttendanceShortageEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     const cronSecretHeader = req.headers.get("x-cron-secret");
     const expectedSecret = process.env.CRON_SECRET || "student360-cron-secret-key-2026";
 

@@ -343,6 +343,8 @@ export default function MasterRecordsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Selected Student Drawers & Modals
   const [quickViewStudent, setQuickViewStudent] = useState<any | null>(null);
@@ -431,11 +433,18 @@ export default function MasterRecordsPage() {
       if (selectedQuota && selectedQuota !== "ALL") query.set("admissionQuota", selectedQuota);
       if (showArchived) query.set("isArchived", "true");
 
+      query.set("page", String(currentPage));
+      query.set("limit", String(itemsPerPage));
+      query.set("sortBy", sortBy);
+      query.set("sortOrder", sortOrder);
+
       const res = await fetch(`/api/students?${query.toString()}`, {
         credentials: "include",
       });
       const data = await res.json();
       setStudents(data.data?.students || data.students || []);
+      setTotalPages(data.data?.totalPages || data.totalPages || 1);
+      setTotalCount(data.data?.total || data.total || 0);
     } catch (err) {
       console.error("Failed to fetch students", err);
     } finally {
@@ -462,9 +471,15 @@ export default function MasterRecordsPage() {
     return () => window.removeEventListener("academicYearChanged", handleYearChange);
   }, []);
 
+  // Reset pagination to page 1 when any search or filter options change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived]);
+
+  // Main fetch hook including pagination & sorting parameters
   useEffect(() => {
     fetchStudents();
-  }, [search, selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived]);
+  }, [search, selectedBatch, selectedSection, selectedYear, selectedSemester, selectedStatus, selectedQuota, showArchived, currentPage, sortBy, sortOrder]);
 
   // Handle Add Student
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -684,22 +699,8 @@ export default function MasterRecordsPage() {
     }
   };
 
-  // Sort and Paginate
-  const sortedStudents = [...students].sort((a, b) => {
-    let valA = a[sortBy];
-    let valB = b[sortBy];
-    if (typeof valA === "string") valA = valA.toLowerCase();
-    if (typeof valB === "string") valB = valB.toLowerCase();
-    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
-    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  const totalPages = Math.ceil(sortedStudents.length / itemsPerPage) || 1;
-  const paginatedStudents = sortedStudents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Server-side sorted and paginated results
+  const paginatedStudents = students;
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
@@ -976,7 +977,7 @@ export default function MasterRecordsPage() {
                         </button>
 
                         <button
-                          onClick={() => handlePermanentDeleteStudent(st.id, st.fullName)}
+                          onClick={() => handlePermanentDeleteStudent(st.id)}
                           className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition"
                           title="Permanently Delete Student Profile"
                         >
@@ -1002,8 +1003,8 @@ export default function MasterRecordsPage() {
           <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>
               Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, sortedStudents.length)} of{" "}
-              {sortedStudents.length} entries
+              {Math.min(currentPage * itemsPerPage, totalCount)} of{" "}
+              {totalCount} entries
             </span>
             <div className="flex items-center gap-1.5">
               <button

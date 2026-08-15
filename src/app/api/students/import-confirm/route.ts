@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import bcrypt from "bcryptjs";
+import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export async function POST(req: Request) {
   try {
@@ -110,6 +111,7 @@ export async function POST(req: Request) {
       },
     });
 
+    invalidateServerMetadataCache();
     return NextResponse.json({
       success: true,
       message: `Successfully imported ${importedCount} permanent student master profiles.`,

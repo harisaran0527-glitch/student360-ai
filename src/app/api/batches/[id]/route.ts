@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return apiError("Unauthorized: Only Admin can delete batches", 401);
     }

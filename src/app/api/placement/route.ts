@@ -35,8 +35,6 @@ export async function GET(req: Request) {
             id: true,
             fullName: true,
             registerNo: true,
-            department: true,
-            batch: true,
             cgpa: true,
           },
         },

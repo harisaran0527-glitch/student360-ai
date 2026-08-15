@@ -6,7 +6,7 @@ import { computeAttendanceStats, getAttendancePolicy } from "@/lib/attendance";
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -99,7 +99,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN" && session.role !== "FACULTY")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -172,16 +172,23 @@ export async function POST(req: Request) {
 
     const policy = await getAttendancePolicy();
 
-    // 2. Save / Update individual Student Attendance rows & record Corrections
+    // 2. Fetch all existing attendance records for these students on this course, date & period in a single query
+    const studentIds = attendances.map((a: any) => a.studentId).filter(Boolean) as string[];
+    const existingAtts = await prisma.attendance.findMany({
+      where: {
+        studentId: { in: studentIds },
+        courseId,
+        date,
+        session: `Period_${period || 1}`,
+      },
+    });
+
+    const existingMap = new Map(existingAtts.map((a) => [a.studentId, a]));
+
+    // 3. Save / Update individual Student Attendance rows & record Corrections sequentially
     for (const item of attendances) {
-      const existingRecord = await prisma.attendance.findFirst({
-        where: {
-          studentId: item.studentId,
-          courseId,
-          date,
-          session: `Period_${period || 1}`,
-        },
-      });
+      if (!item.studentId) continue;
+      const existingRecord = existingMap.get(item.studentId);
 
       if (existingRecord) {
         if (existingRecord.status !== item.status) {
@@ -224,16 +231,30 @@ export async function POST(req: Request) {
           },
         });
       }
+    }
 
-      // Recompute student's overall attendance % dynamically
-      const studentAllRecords = await prisma.attendance.findMany({
-        where: { studentId: item.studentId },
-        select: { status: true },
-      });
-      const stats = computeAttendanceStats(studentAllRecords, policy);
+    // 4. Batch query all attendance records for ALL affected students to calculate percentages in a single trip
+    const allAttRecords = await prisma.attendance.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, status: true },
+    });
+
+    // Group in memory
+    const studentRecordsMap = new Map<string, Array<{ status: string }>>();
+    for (const att of allAttRecords) {
+      if (!studentRecordsMap.has(att.studentId)) {
+        studentRecordsMap.set(att.studentId, []);
+      }
+      studentRecordsMap.get(att.studentId)!.push({ status: att.status });
+    }
+
+    // Update percentages sequentially
+    for (const studentId of studentIds) {
+      const records = studentRecordsMap.get(studentId) || [];
+      const stats = computeAttendanceStats(records, policy);
 
       await prisma.studentProfile.update({
-        where: { id: item.studentId },
+        where: { id: studentId },
         data: { attendancePercentage: stats.percentage },
       });
     }

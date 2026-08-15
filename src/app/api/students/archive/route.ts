@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

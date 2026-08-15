@@ -19,7 +19,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 export async function POST(req: Request) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return apiError("Unauthorized", 401);
 
     const formData = await req.formData();

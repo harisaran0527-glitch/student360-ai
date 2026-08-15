@@ -4,7 +4,7 @@ import { getSession, comparePassword, hashPassword, validatePasswordPolicy } fro
 
 export async function PUT(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

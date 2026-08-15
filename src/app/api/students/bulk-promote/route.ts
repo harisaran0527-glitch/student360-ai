@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -126,6 +127,7 @@ export async function POST(req: Request) {
         },
       });
 
+      invalidateServerMetadataCache();
       return NextResponse.json({
         success: true,
         message: `Successfully promoted ${promotedCount} students to Semester ${nextSemester} (${nextAcademicYear}).`,

@@ -11,7 +11,7 @@ export async function PUT(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return apiError("Unauthorized: Only Admin can update bus records.", 403);
     }
@@ -62,7 +62,7 @@ export async function DELETE(
 ) {
   const startTime = Date.now();
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
       return apiError("Unauthorized: Only Admin can delete bus records.", 403);
     }

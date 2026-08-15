@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return apiError("Unauthorized", 401);
 
     const certificateId = params.id;
