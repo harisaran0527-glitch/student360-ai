@@ -29,8 +29,6 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const skip = (page - 1) * limit;
 
-    const dept = await getOrCreateDefaultDepartment();
-
     const departmentId = searchParams.get("departmentId") || "";
 
     const where: any = {
@@ -75,54 +73,19 @@ export async function GET(req: Request) {
       }
     }
 
+    // Optimized findMany including only needed relations
     const students = await prisma.studentProfile.findMany({
       where,
-      select: {
-        id: true,
-        registerNo: true,
-        rollNo: true,
-        admissionNo: true,
-        fullName: true,
-        gender: true,
-        dob: true,
-        email: true,
-        phone: true,
-        academicYear: true,
-        currentSemester: true,
-        admissionQuota: true,
-        residenceType: true,
-        academicStatus: true,
-        cgpa: true,
-        attendancePercentage: true,
-        departmentId: true,
-        batchId: true,
-        sectionId: true,
-        isArchived: true,
+      include: {
         department: {
           select: {
             id: true,
             code: true,
-            name: true,
           },
         },
         batch: {
           select: {
             id: true,
-            name: true,
-            admissionYear: true,
-            expectedGraduationYear: true,
-          },
-        },
-        section: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        admissionAcademicYear: {
-          select: {
-            id: true,
-            yearCode: true,
             name: true,
           },
         },
@@ -140,7 +103,6 @@ export async function GET(req: Request) {
       total,
       page,
       totalPages: Math.ceil(total / limit) || 1,
-      departmentName: dept.name,
     });
   } catch (error: any) {
     return serverError(error.message || "Failed to fetch students");
