@@ -183,6 +183,7 @@ export async function POST(req: Request) {
       degreeLevel,
       reservation75,
       firstGraduate,
+      profilePic,
     } = data;
 
     const finalInstitutionalEmail = String(data.institutionalEmail || data.email || "").trim().toLowerCase();
@@ -307,6 +308,7 @@ export async function POST(req: Request) {
           personalEmail: finalPersonalEmail,
           phone: phone || "9876543210",
           aadharNo,
+          profilePic: profilePic || null,
           fatherName: fatherName || "Father Name",
           motherName: motherName || "Mother Name",
           guardianPhone,

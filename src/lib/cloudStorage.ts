@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 
 export interface UploadFileOptions {
-  folder: "certificates" | "syllabus" | "internships" | "projects" | "placements";
+  folder: "certificates" | "syllabus" | "internships" | "projects" | "placements" | "avatars";
   allowedExtensions?: string[];
   maxSizeBytes?: number;
 }

@@ -404,6 +404,7 @@ export default function MasterRecordsPage() {
     degreeLevel: "",
     reservation75: "",
     firstGraduate: "",
+    profilePic: "",
   };
 
   const [formData, setFormData] = useState<any>(emptyFormData);
@@ -607,6 +608,7 @@ export default function MasterRecordsPage() {
       degreeLevel: st.degreeLevel || "",
       reservation75: st.reservation75 || "",
       firstGraduate: st.firstGraduate || "",
+      profilePic: st.profilePic || "",
     });
   };
 
@@ -931,9 +933,17 @@ export default function MasterRecordsPage() {
                     <tr key={st.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                            {st.fullName[0]}
-                          </div>
+                          {st.profilePic ? (
+                            <img
+                              src={st.profilePic}
+                              alt={st.fullName}
+                              className="w-9 h-9 rounded-full object-cover shadow-sm flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
+                              {st.fullName ? st.fullName[0].toUpperCase() : "S"}
+                            </div>
+                          )}
                           <div>
                             <div className="font-bold text-slate-900 dark:text-white text-xs">
                               {st.fullName}
@@ -1174,6 +1184,87 @@ export default function MasterRecordsPage() {
             <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase text-[10px]">
               2. Personal Profile
             </span>
+
+            {/* Profile Photo Upload Field */}
+            <div className="flex flex-col md:flex-row items-center gap-4 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800">
+              <div className="relative w-16 h-16 rounded-full border-2 border-indigo-500/20 flex-shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                {formData.profilePic ? (
+                  <img
+                    src={formData.profilePic}
+                    alt="Profile Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xl font-bold text-indigo-500">
+                    {formData.fullName ? formData.fullName[0].toUpperCase() : "S"}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <span className="block text-slate-800 dark:text-slate-200 font-bold">Profile Photograph</span>
+                <span className="block text-[10px] text-slate-400">
+                  JPEG, JPG, PNG, or WebP. Max size: 2MB.
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <label className="ui-btn ui-btn-primary px-3 py-1 cursor-pointer flex items-center gap-1.5 text-[11px] font-bold">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{formData.profilePic ? "Change Photo" : "Upload Photo"}</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+                        if (!allowedTypes.includes(file.type)) {
+                          alert("Invalid image type. Please select JPEG, JPG, PNG or WebP images.");
+                          return;
+                        }
+                        
+                        if (file.size > 2 * 1024 * 1024) {
+                          alert("Image size exceeds 2 MB limit.");
+                          return;
+                        }
+                        
+                        const uploadData = new FormData();
+                        uploadData.append("file", file);
+                        
+                        try {
+                          const uploadRes = await fetch("/api/upload/profile-pic", {
+                            method: "POST",
+                            body: uploadData,
+                          });
+                          const uploadJson = await uploadRes.json();
+                          if (!uploadRes.ok) {
+                            throw new Error(uploadJson.message || uploadJson.error || "Upload failed");
+                          }
+                          
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            profilePic: uploadJson.data.url
+                          }));
+                        } catch (err: any) {
+                          alert("Failed to upload profile photo: " + err.message);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {formData.profilePic && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev: any) => ({ ...prev, profilePic: "" }))}
+                      className="ui-btn bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-3 py-1 text-[11px] font-bold flex items-center gap-1.5 border border-rose-500/20"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove Photo</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Full Name *</label>

@@ -57,9 +57,17 @@ export default async function StudentProfilePage() {
         {/* Profile Card Header */}
         <div className="glass-card p-6 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 to-slate-900 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-indigo-500/30">
-              {firstLetter}
-            </div>
+            {student?.profilePic ? (
+              <img
+                src={student.profilePic}
+                alt={fullName}
+                className="w-20 h-20 rounded-2xl object-cover shadow-xl shadow-indigo-500/30 flex-shrink-0"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-indigo-500/30 flex-shrink-0">
+                {firstLetter}
+              </div>
+            )}
             <div>
               <h2 className="text-2xl font-black text-white tracking-tight">{fullName}</h2>
               <p className="text-indigo-300 font-mono text-xs mt-0.5">
