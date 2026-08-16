@@ -61,7 +61,11 @@ export async function GET(req: Request) {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        student: {
+          registerNo: "asc",
+        },
+      },
       skip,
       take: limit,
     });
