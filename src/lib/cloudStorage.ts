@@ -44,7 +44,14 @@ export async function uploadToCloudStorage(
 
   // 1. SUPABASE CLOUD STORAGE
   if (provider === "SUPABASE" && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const storageBase = `${process.env.SUPABASE_URL}/storage/v1`;
+    let baseUrl = process.env.SUPABASE_URL || "";
+    if (baseUrl.includes("/rest/v1")) {
+      baseUrl = baseUrl.split("/rest/v1")[0];
+    }
+    if (baseUrl.endsWith("/")) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    const storageBase = `${baseUrl}/storage/v1`;
     const bucket = process.env.SUPABASE_BUCKET || "student360-assets";
     const uploadUrl = `${storageBase}/object/${bucket}/${options.folder}/${safeFileName}`;
 

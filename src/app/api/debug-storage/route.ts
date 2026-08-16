@@ -27,12 +27,42 @@ export async function GET(req: Request) {
       },
     });
 
-    const buckets = await res.json();
+    let buckets = await res.json();
+
+    // If bucket list is empty or doesn't have student360-assets, create it!
+    let createResult = null;
+    const hasBucket = Array.isArray(buckets) && buckets.some((b: any) => b.id === "student360-assets");
+    if (!hasBucket) {
+      const createRes = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          apikey: supabaseKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: "student360-assets",
+          name: "student360-assets",
+          public: true,
+        }),
+      });
+      createResult = await createRes.json();
+
+      // Refresh buckets list
+      const refreshRes = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          apikey: supabaseKey,
+        },
+      });
+      buckets = await refreshRes.json();
+    }
     return NextResponse.json({
       success: true,
       supabaseUrl,
       supabaseBucket,
       buckets,
+      createResult,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
