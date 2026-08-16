@@ -117,10 +117,65 @@ export async function PUT(
       if (dup) return apiError("Register Number already in use.", 400);
     }
 
-    const updatedStudent = await prisma.studentProfile.update({
-      where: { id: params.id },
-      data: updates,
-    });
+    // Normalize and validate optional relations: sectionId, departmentId, batchId
+    if (updates.sectionId !== undefined) {
+      const secTrimmed = typeof updates.sectionId === "string" ? updates.sectionId.trim() : "";
+      updates.sectionId = (secTrimmed === "" || secTrimmed === "null" || secTrimmed === "undefined") ? null : secTrimmed;
+    }
+    if (updates.sectionId) {
+      const sectionExists = await prisma.section.findUnique({
+        where: { id: updates.sectionId },
+      });
+      if (!sectionExists) {
+        return apiError("Selected section no longer exists. Please select a valid section.", 400);
+      }
+    }
+
+    if (updates.departmentId !== undefined) {
+      const deptTrimmed = typeof updates.departmentId === "string" ? updates.departmentId.trim() : "";
+      updates.departmentId = (deptTrimmed === "" || deptTrimmed === "null" || deptTrimmed === "undefined") ? null : deptTrimmed;
+      if (!updates.departmentId) {
+        return apiError("Department ID is required.", 400);
+      }
+    }
+    if (updates.departmentId) {
+      const deptExists = await prisma.department.findUnique({
+        where: { id: updates.departmentId },
+      });
+      if (!deptExists) {
+        return apiError("Selected department no longer exists. Please select a valid department.", 400);
+      }
+    }
+
+    if (updates.batchId !== undefined) {
+      const batchTrimmed = typeof updates.batchId === "string" ? updates.batchId.trim() : "";
+      updates.batchId = (batchTrimmed === "" || batchTrimmed === "null" || batchTrimmed === "undefined") ? null : batchTrimmed;
+      if (!updates.batchId) {
+        return apiError("Batch ID is required.", 400);
+      }
+    }
+    if (updates.batchId) {
+      const batchExists = await prisma.batch.findUnique({
+        where: { id: updates.batchId },
+      });
+      if (!batchExists) {
+        return apiError("Selected batch no longer exists. Please select a valid batch.", 400);
+      }
+    }
+
+    let updatedStudent;
+    try {
+      updatedStudent = await prisma.studentProfile.update({
+        where: { id: params.id },
+        data: updates,
+      });
+    } catch (err: any) {
+      console.error("[STUDENT_UPDATE_DB_ERROR]", err);
+      if (err.code === "P2003") {
+        return apiError("Database constraint violation. Please verify that all selected relations (department, batch, section) are valid.", 400);
+      }
+      return apiError("Failed to update student profile in database.", 500);
+    }
 
     // Also update User full name / email if changed
     const finalUserEmail = updatedStudent.institutionalEmail || updatedStudent.email;

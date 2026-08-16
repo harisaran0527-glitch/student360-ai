@@ -238,6 +238,37 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate and Normalize relation IDs
+    const finalSectionId = (sectionId && String(sectionId).trim()) ? String(sectionId).trim() : null;
+    if (finalSectionId) {
+      const sectionExists = await prisma.section.findUnique({
+        where: { id: finalSectionId },
+      });
+      if (!sectionExists) {
+        return apiError("Selected section no longer exists. Please select a valid section.", 400);
+      }
+    }
+
+    const finalDepartmentId = (departmentId && String(departmentId).trim()) ? String(departmentId).trim() : null;
+    if (finalDepartmentId) {
+      const deptExists = await prisma.department.findUnique({
+        where: { id: finalDepartmentId },
+      });
+      if (!deptExists) {
+        return apiError("Selected department no longer exists. Please select a valid department.", 400);
+      }
+    }
+
+    const finalBatchIdPassed = (batchId && String(batchId).trim()) ? String(batchId).trim() : null;
+    if (finalBatchIdPassed) {
+      const batchExists = await prisma.batch.findUnique({
+        where: { id: finalBatchIdPassed },
+      });
+      if (!batchExists) {
+        return apiError("Selected batch no longer exists. Please select a valid batch.", 400);
+      }
+    }
+
     const dept = await getOrCreateDefaultDepartment();
     const targetYearCode = academicYear || DEFAULT_ACADEMIC_YEAR;
 
@@ -318,9 +349,9 @@ export async function POST(req: Request) {
           city: city || "Chennai",
           state: state || "Tamil Nadu",
           pincode: pincode || "600001",
-          departmentId: departmentId || dept.id,
-          batchId: finalBatchId,
-          sectionId: sectionId || null,
+          departmentId: finalDepartmentId || dept.id,
+          batchId: finalBatchIdPassed || finalBatchId,
+          sectionId: finalSectionId,
           academicYear: targetYearCode,
           admissionAcademicYearId: acadYearObj.id,
           currentSemester: currentSemester || 1,
