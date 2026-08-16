@@ -6,7 +6,13 @@ export async function GET(req: Request) {
     const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
+    let supabaseUrl = process.env.SUPABASE_URL || "";
+    if (supabaseUrl.includes("/rest/v1")) {
+      supabaseUrl = supabaseUrl.split("/rest/v1")[0];
+    }
+    if (supabaseUrl.endsWith("/")) {
+      supabaseUrl = supabaseUrl.slice(0, -1);
+    }
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseBucket = process.env.SUPABASE_BUCKET;
 
