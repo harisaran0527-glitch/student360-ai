@@ -8,6 +8,7 @@ export async function GET(req: Request) {
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseBucket = process.env.SUPABASE_BUCKET;
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json({ error: "Supabase environment variables missing" });
@@ -23,6 +24,8 @@ export async function GET(req: Request) {
     const buckets = await res.json();
     return NextResponse.json({
       success: true,
+      supabaseUrl,
+      supabaseBucket,
       buckets,
     });
   } catch (error: any) {
