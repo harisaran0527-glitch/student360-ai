@@ -20,7 +20,14 @@ export async function uploadToCloudStorage(
   file: File,
   options: UploadFileOptions
 ): Promise<UploadResult> {
-  const provider = (process.env.CLOUD_STORAGE_PROVIDER || "LOCAL").toUpperCase();
+  let provider = (process.env.CLOUD_STORAGE_PROVIDER || "").toUpperCase();
+  if (!provider) {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      provider = "SUPABASE";
+    } else {
+      provider = "LOCAL";
+    }
+  }
   const maxSizeBytes = options.maxSizeBytes || 10 * 1024 * 1024; // 10 MB default
 
   if (file.size > maxSizeBytes) {
@@ -36,8 +43,6 @@ export async function uploadToCloudStorage(
   const safeFileName = `${uniqueId}${rawExt}`;
 
   // 1. SUPABASE CLOUD STORAGE
-  // SUPABASE_URL is the project URL e.g. https://xyz.supabase.co
-  // Storage REST API is at SUPABASE_URL/storage/v1
   if (provider === "SUPABASE" && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     const storageBase = `${process.env.SUPABASE_URL}/storage/v1`;
     const bucket = process.env.SUPABASE_BUCKET || "student360-assets";
@@ -48,6 +53,7 @@ export async function uploadToCloudStorage(
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
         "Content-Type": file.type || "application/octet-stream",
       },
       body: buffer,
