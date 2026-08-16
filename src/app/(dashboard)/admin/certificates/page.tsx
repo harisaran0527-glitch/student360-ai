@@ -25,6 +25,7 @@ import {
   Trash2,
   RefreshCw,
   Archive,
+  Edit2,
 } from "lucide-react";
 
 export default function AdminCertificatesPage() {
@@ -48,6 +49,59 @@ export default function AdminCertificatesPage() {
 
   // Lightbox Preview Modal
   const [previewCert, setPreviewCert] = useState<any | null>(null);
+
+  // Edit Certificate state
+  const [editCertificate, setEditCertificate] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editCategory, setEditCategory] = useState<string>("Certification");
+  const [editIssuingBody, setEditIssuingBody] = useState<string>("");
+  const [editIssueDate, setEditIssueDate] = useState<string>("");
+  const [editSkillsGained, setEditSkillsGained] = useState<string>("");
+  const [editCredentialId, setEditCredentialId] = useState<string>("");
+
+  const handleEditClick = (cert: any) => {
+    setEditCertificate(cert);
+    setEditTitle(cert.title || "");
+    setEditCategory(cert.category || "Certification");
+    setEditIssuingBody(cert.issuingBody || "");
+    setEditIssueDate(cert.issueDate || "");
+    setEditSkillsGained(cert.skillsGained || "");
+    setEditCredentialId(cert.credentialId || "");
+  };
+
+  const handleEditCertificateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCertificate || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/certificates/${editCertificate.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          category: editCategory,
+          issuingBody: editIssuingBody,
+          issueDate: editIssueDate,
+          skillsGained: editSkillsGained,
+          credentialId: editCredentialId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || data.error || "Failed to update certificate");
+      }
+
+      alert("Certificate record updated successfully!");
+      setEditCertificate(null);
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Form Fields
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
@@ -484,6 +538,14 @@ export default function AdminCertificatesPage() {
                             </a>
 
                             <button
+                              onClick={() => handleEditClick(cert)}
+                              className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 font-bold flex items-center gap-1 text-[11px]"
+                              title="Edit Details"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" /> Edit
+                            </button>
+
+                            <button
                               onClick={() => setReplaceTarget(cert)}
                               className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 hover:bg-sky-100 font-bold flex items-center gap-1 text-[11px]"
                               title="Replace File"
@@ -688,6 +750,107 @@ export default function AdminCertificatesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Certificate Modal */}
+      {editCertificate && (
+        <Modal isOpen={Boolean(editCertificate)} onClose={() => setEditCertificate(null)} title={`Edit Certificate Details — ${editCertificate.student?.fullName || "Student"}`} maxWidth="lg">
+          <form onSubmit={handleEditCertificateSubmit} className="space-y-4 text-xs">
+            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 space-y-1">
+              <span className="font-bold text-slate-500 block">Student Information:</span>
+              <div className="font-bold text-slate-800 dark:text-slate-200">
+                {editCertificate.student?.fullName || "N/A"} ({editCertificate.student?.registerNo || "N/A"})
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Certificate Title *</label>
+              <input
+                type="text"
+                required
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="e.g. AWS Certified Machine Learning - Specialty"
+                className="ui-input w-full p-2"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Issuing Organization *</label>
+                <input
+                  type="text"
+                  required
+                  value={editIssuingBody}
+                  onChange={(e) => setEditIssuingBody(e.target.value)}
+                  placeholder="e.g. Amazon Web Services (AWS)"
+                  className="ui-input w-full p-2"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Category *</label>
+                <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="ui-input w-full p-2">
+                  <option value="Certification">Certification</option>
+                  <option value="Course">Course</option>
+                  <option value="Project">Project</option>
+                  <option value="Hackathon">Hackathon</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Issue Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={editIssueDate}
+                  onChange={(e) => setEditIssueDate(e.target.value)}
+                  className="ui-input w-full p-2"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Credential ID (Optional)</label>
+                <input
+                  type="text"
+                  value={editCredentialId}
+                  onChange={(e) => setEditCredentialId(e.target.value)}
+                  placeholder="e.g. AWS-SEC-12345"
+                  className="ui-input w-full p-2"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Notes / Skills Gained</label>
+              <input
+                type="text"
+                value={editSkillsGained}
+                onChange={(e) => setEditSkillsGained(e.target.value)}
+                placeholder="e.g. PyTorch, Computer Vision"
+                className="ui-input w-full p-2"
+              />
+            </div>
+
+            <div className="pt-3 border-t flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditCertificate(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold shadow-md"
+              >
+                {submitting ? "Saving..." : "Update Details"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Replace File Modal */}
       {replaceTarget && (

@@ -19,6 +19,7 @@ import {
   Sparkles,
   Trash2,
   Archive,
+  Edit2,
 } from "lucide-react";
 
 export default function AdminInternshipsPage() {
@@ -43,6 +44,70 @@ export default function AdminInternshipsPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [status, setStatus] = useState<string>("COMPLETED");
+
+  // Edit Internship state
+  const [editInternship, setEditInternship] = useState<any | null>(null);
+  const [editCompanyName, setEditCompanyName] = useState<string>("");
+  const [editDomain, setEditDomain] = useState<string>("");
+  const [editRole, setEditRole] = useState<string>("");
+  const [editMode, setEditMode] = useState<string>("ONLINE");
+  const [editLocation, setEditLocation] = useState<string>("");
+  const [editStartDate, setEditStartDate] = useState<string>("");
+  const [editEndDate, setEditEndDate] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<string>("COMPLETED");
+
+  const handleEditClick = (item: any) => {
+    setEditInternship(item);
+    setEditCompanyName(item.companyName || "");
+    setEditDomain(item.domain || "");
+    setEditRole(item.role || "");
+    setEditMode(item.mode || "ONLINE");
+    setEditLocation(item.location || "");
+    setEditStartDate(item.startDate || "");
+    setEditEndDate(item.endDate || "");
+    setEditStatus(item.status || "COMPLETED");
+  };
+
+  const handleEditInternshipSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editInternship || submitting) return;
+    
+    if (editStartDate && editEndDate && new Date(editStartDate) > new Date(editEndDate)) {
+      alert("Start Date cannot be after End Date.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/internships/${editInternship.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: editCompanyName,
+          role: editRole,
+          domain: editDomain,
+          mode: editMode,
+          location: editLocation,
+          startDate: editStartDate,
+          endDate: editEndDate,
+          status: editStatus
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || data.error || "Failed to update internship");
+      }
+
+      alert("Internship record updated successfully!");
+      setEditInternship(null);
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -299,6 +364,13 @@ export default function AdminInternshipsPage() {
                             <option value="NEEDS_CHANGES">NEEDS_CHANGES</option>
                           </select>
                           <button
+                            onClick={() => handleEditClick(int)}
+                            className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 font-bold flex items-center gap-1 text-[11px]"
+                            title="Edit Internship"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
                             onClick={async () => {
                               if (!confirm("Are you sure you want to permanently delete this record?\nThis action cannot be undone.")) return;
                               try {
@@ -455,6 +527,131 @@ export default function AdminInternshipsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Internship Modal */}
+      {editInternship && (
+        <Modal isOpen={Boolean(editInternship)} onClose={() => setEditInternship(null)} title={`Edit Internship — ${editInternship.student?.fullName || "Student"}`} maxWidth="lg">
+          <form onSubmit={handleEditInternshipSubmit} className="space-y-4 text-xs">
+            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 space-y-1">
+              <span className="font-bold text-slate-500 block">Student Information:</span>
+              <div className="font-bold text-slate-800 dark:text-slate-200">
+                {editInternship.student?.fullName || "N/A"} ({editInternship.student?.registerNo || "N/A"})
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Company Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editCompanyName}
+                  onChange={(e) => setEditCompanyName(e.target.value)}
+                  placeholder="e.g. OpenAI"
+                  className="ui-input w-full p-2"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Internship Role *</label>
+                <input
+                  type="text"
+                  required
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  placeholder="e.g. Software Engineer Intern"
+                  className="ui-input w-full p-2"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Domain</label>
+                <input
+                  type="text"
+                  value={editDomain}
+                  onChange={(e) => setEditDomain(e.target.value)}
+                  className="ui-input w-full p-2"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mode</label>
+                <select value={editMode} onChange={(e) => setEditMode(e.target.value)} className="ui-input w-full p-2">
+                  <option value="ONLINE">ONLINE</option>
+                  <option value="OFFLINE">OFFLINE</option>
+                  <option value="HYBRID">HYBRID</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="ui-input w-full p-2">
+                  <option value="Not Started">Not Started</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Applied">Applied</option>
+                  <option value="Selected">Selected</option>
+                  <option value="Ongoing">Ongoing</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Not Attending / Not Joined">Not Attending / Not Joined</option>
+                  <option value="Action Required">Action Required</option>
+                  <option value="APPROVED">APPROVED</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Location</label>
+              <input
+                type="text"
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                placeholder="e.g. Bengaluru"
+                className="ui-input w-full p-2"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Start Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                  className="ui-input w-full p-2"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">End Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={editEndDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                  className="ui-input w-full p-2"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditInternship(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold shadow-md"
+              >
+                {submitting ? "Saving..." : "Update Record"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Top-Level Delete Management Panel */}
       <DeleteManagementPanel
