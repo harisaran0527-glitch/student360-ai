@@ -16,6 +16,7 @@ export async function GET(req: Request) {
     const res = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
       headers: {
         Authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey,
       },
     });
 
