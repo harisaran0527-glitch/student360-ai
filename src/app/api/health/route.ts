@@ -53,6 +53,10 @@ export async function GET() {
         storage: {
           provider: storageProvider,
           status: "CONFIGURED",
+          cloudProvider: process.env.CLOUD_STORAGE_PROVIDER || "NOT_SET",
+          hasSupabaseUrl: Boolean(process.env.SUPABASE_URL),
+          hasSupabaseKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+          supabaseBucket: process.env.SUPABASE_BUCKET || "NOT_SET",
         },
         notificationsEmail: {
           status: smtpConfigured ? "CONFIGURED" : "NOT_CONFIGURED",
