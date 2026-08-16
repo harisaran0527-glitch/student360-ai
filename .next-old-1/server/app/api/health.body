@@ -1,0 +1,1 @@
+{"status":"UP","system":"Student360 AI Enterprise ERP","environment":"production","timestamp":"2026-08-15T12:43:00.353Z","latencyMs":764,"components":{"database":{"status":"HEALTHY","latencyMs":752},"storage":{"provider":"LOCAL_DEVELOPMENT","status":"CONFIGURED"},"notificationsEmail":{"status":"NOT_CONFIGURED"}}}

@@ -1,0 +1,1 @@
+{"version":1,"functions":{"/api/academic-years":{},"/api/academic-options":{},"/api/batches":{},"/api/bus/[id]":{},"/api/bus":{},"/_not-found":{},"/admin/bus":{},"/admin/audit-logs":{},"/admin/master-records":{},"/admin/students/[id]":{},"/student/academics":{},"/student/placements":{},"/student/profile":{},"/login":{},"/":{}}}
