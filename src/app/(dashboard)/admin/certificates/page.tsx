@@ -57,7 +57,7 @@ export default function AdminCertificatesPage() {
   const [editIssuingBody, setEditIssuingBody] = useState<string>("");
   const [editIssueDate, setEditIssueDate] = useState<string>("");
   const [editSkillsGained, setEditSkillsGained] = useState<string>("");
-  const [editCredentialId, setEditCredentialId] = useState<string>("");
+  const [editCertificateNo, setEditCertificateNo] = useState<string>("");
 
   const handleEditClick = (cert: any) => {
     setEditCertificate(cert);
@@ -66,7 +66,7 @@ export default function AdminCertificatesPage() {
     setEditIssuingBody(cert.issuingBody || "");
     setEditIssueDate(cert.issueDate || "");
     setEditSkillsGained(cert.skillsGained || "");
-    setEditCredentialId(cert.credentialId || "");
+    setEditCertificateNo(cert.certificateNo || "");
   };
 
   const handleEditCertificateSubmit = async (e: React.FormEvent) => {
@@ -84,7 +84,7 @@ export default function AdminCertificatesPage() {
           issuingBody: editIssuingBody,
           issueDate: editIssueDate,
           skillsGained: editSkillsGained,
-          credentialId: editCredentialId,
+          certificateNo: editCertificateNo,
         }),
       });
 
@@ -810,11 +810,11 @@ export default function AdminCertificatesPage() {
                 />
               </div>
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Credential ID (Optional)</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Certificate Number (Optional)</label>
                 <input
                   type="text"
-                  value={editCredentialId}
-                  onChange={(e) => setEditCredentialId(e.target.value)}
+                  value={editCertificateNo}
+                  onChange={(e) => setEditCertificateNo(e.target.value)}
                   placeholder="e.g. AWS-SEC-12345"
                   className="ui-input w-full p-2"
                 />
