@@ -25,6 +25,18 @@ import {
   Search,
 } from "lucide-react";
 
+const parseSemesterNumber = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  const match = String(val).match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+};
+
+const isCompletedStatus = (status: any): boolean => {
+  if (!status) return false;
+  return ['COMPLETED', 'APPROVED', 'VERIFIED'].includes(String(status).toUpperCase().trim());
+};
+
 export default function StudentInternshipsPage() {
   const [internships, setInternships] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -85,9 +97,9 @@ export default function StudentInternshipsPage() {
         const cData = await cRes.json();
         const oData = await oRes.json();
 
-        setInternships(iData.internships || []);
-        setCompanies(cData.companies || []);
-        setOpportunities(oData.opportunities || []);
+        setInternships(iData.data?.internships || iData.internships || []);
+        setCompanies(cData.data?.companies || cData.companies || []);
+        setOpportunities(oData.data?.opportunities || oData.opportunities || []);
       }
     } catch (err) {
       console.error("Failed to load internship data", err);
@@ -196,10 +208,10 @@ export default function StudentInternshipsPage() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => {
-                      const semInternships = internships.filter((i) => i.semester === sem);
+                      const semInternships = internships.filter((i) => parseSemesterNumber(i.semester) === sem);
                       const isCurrent = student?.currentSemester === sem;
 
-                      const isCompleted = semInternships.some(i => ['COMPLETED', 'APPROVED', 'VERIFIED'].includes(i.status.toUpperCase()));
+                      const isCompleted = semInternships.some(i => isCompletedStatus(i.status));
 
                       let cardStyles = "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30";
                       if (semInternships.length > 0) {
@@ -244,7 +256,7 @@ export default function StudentInternshipsPage() {
                             {semInternships.length > 0 ? (
                               <div className="space-y-3 pt-1">
                                 {semInternships.map((internship: any) => {
-                                  const itemCompleted = ['COMPLETED', 'APPROVED', 'VERIFIED'].includes(internship.status.toUpperCase());
+                                  const itemCompleted = isCompletedStatus(internship.status);
                                   return (
                                     <div
                                       key={internship.id}
@@ -266,7 +278,7 @@ export default function StudentInternshipsPage() {
                                             <span className="text-emerald-600 dark:text-emerald-400 font-bold">COMPLETED ✓</span>
                                           ) : (
                                             <span className="text-sky-600 dark:text-sky-400 font-bold">
-                                              {internship.status.toUpperCase() === "ONGOING" ? "ONGOING" : internship.status.replace("_", " ").toUpperCase()}
+                                              {internship.status && internship.status.toUpperCase() === "ONGOING" ? "ONGOING" : String(internship.status || '').replace("_", " ").toUpperCase()}
                                             </span>
                                           )}
                                         </span>
@@ -310,7 +322,10 @@ export default function StudentInternshipsPage() {
                   </div>
 
                   {(() => {
-                    const unassignedInternships = internships.filter((i) => !i.semester || i.semester < 1 || i.semester > 8);
+                    const unassignedInternships = internships.filter((i) => {
+                      const semNum = parseSemesterNumber(i.semester);
+                      return !semNum || semNum < 1 || semNum > 8;
+                    });
                     if (unassignedInternships.length === 0) return null;
                     return (
                       <div className="mt-8 space-y-4">
