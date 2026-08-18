@@ -194,54 +194,126 @@ export default function StudentInternshipsPage() {
                 <Skeleton className="h-48 rounded-2xl" />
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => {
-                      const semInternships = internships.filter((i) => i.semester === sem);
-                      const isCurrent = student?.currentSemester === sem;
+                  {(() => {
+                    const assignedSemesters = [1, 2, 3, 4, 5, 6, 7, 8].filter((sem) =>
+                      internships.some((i) => i.semester === sem)
+                    );
+                    const unassignedInternships = internships.filter(
+                      (i) => !i.semester || i.semester < 1 || i.semester > 8
+                    );
 
+                    if (assignedSemesters.length === 0 && unassignedInternships.length === 0) {
                       return (
-                        <div
-                          key={sem}
-                          className={`p-5 rounded-2xl border transition space-y-3 flex flex-col justify-between ${
-                            isCurrent
-                              ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 shadow-md"
-                              : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
-                          }`}
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                                Semester {sem}
-                              </span>
-                              {isCurrent && <Badge variant="info">Current Term</Badge>}
-                            </div>
+                        <div className="ui-card p-12 text-center text-slate-500 dark:text-slate-400 font-semibold border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+                          <Briefcase className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                          <p className="text-sm">No internship records available yet.</p>
+                        </div>
+                      );
+                    }
 
-                            {semInternships.length > 0 ? (
-                              <div className="space-y-3">
-                                {semInternships.map((semInternship: any) => (
-                                  <div key={semInternship.id} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs shadow-sm">
-                                    <div className="font-bold text-slate-900 dark:text-white">{semInternship.companyName}</div>
-                                    <div className="text-sky-600 dark:text-sky-400 font-semibold">{semInternship.role}</div>
-                                    <div className="text-[11px] text-slate-500">
-                                      {semInternship.startDate} to {semInternship.endDate}
+                    return (
+                      <div className="space-y-8">
+                        {assignedSemesters.map((sem) => {
+                          const semInternships = internships.filter((i) => i.semester === sem);
+                          const isCurrent = student?.currentSemester === sem;
+
+                          return (
+                            <div key={sem} className="space-y-4">
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                                  Semester {sem}
+                                </h3>
+                                {isCurrent && <Badge variant="info">Current Term</Badge>}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {semInternships.map((internship: any) => (
+                                  <div
+                                    key={internship.id}
+                                    className="ui-card p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm rounded-2xl hover:shadow-md transition duration-200 flex flex-col justify-between space-y-4"
+                                  >
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <h4 className="font-bold text-slate-900 dark:text-white text-base tracking-tight truncate">
+                                          {internship.companyName}
+                                        </h4>
+                                        <Badge
+                                          variant={
+                                            internship.status === "VERIFIED" || internship.status === "APPROVED"
+                                              ? "success"
+                                              : internship.status === "NEEDS_CHANGES"
+                                              ? "warning"
+                                              : "info"
+                                          }
+                                        >
+                                          {internship.status.replace("_", " ")}
+                                        </Badge>
+                                      </div>
+
+                                      <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                                        <div className="flex items-center gap-2">
+                                          <Briefcase className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                            {internship.role}
+                                          </span>
+                                        </div>
+
+                                        {internship.domain && (
+                                          <div className="flex items-center gap-2">
+                                            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                            <span>
+                                              Domain: <strong className="text-slate-700 dark:text-slate-300">{internship.domain}</strong>
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {internship.location && (
+                                          <div className="flex items-center gap-2">
+                                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                            <span>
+                                              Location: <strong className="text-slate-700 dark:text-slate-300">{internship.location} ({internship.mode || "ONLINE"})</strong>
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span>
+                                            Timeline: <strong>{internship.startDate} to {internship.endDate}</strong>
+                                          </span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className="pt-1.5 flex items-center justify-between gap-2 flex-wrap">
-                                      <Badge
-                                        variant={
-                                          semInternship.status === "VERIFIED" || semInternship.status === "APPROVED"
-                                            ? "success"
-                                            : semInternship.status === "NEEDS_CHANGES"
-                                            ? "warning"
-                                            : "info"
-                                        }
-                                      >
-                                        {semInternship.status.replace("_", " ")}
-                                      </Badge>
-                                      {semInternship.status === "APPROVED" && (
+
+                                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                                      <div className="flex items-center gap-3">
+                                        {internship.offerLetterUrl && (
+                                          <a
+                                            href={internship.offerLetterUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[11px] text-sky-600 dark:text-sky-400 hover:underline font-medium"
+                                          >
+                                            <ExternalLink className="w-3 h-3" /> Offer Letter
+                                          </a>
+                                        )}
+                                        {internship.certificateUrl && (
+                                          <a
+                                            href={internship.certificateUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                                          >
+                                            <ExternalLink className="w-3 h-3" /> Certificate
+                                          </a>
+                                        )}
+                                      </div>
+
+                                      {internship.status === "APPROVED" && (
                                         <button
                                           type="button"
-                                          onClick={() => setCompletionModalItem(semInternship)}
-                                          className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shrink-0"
+                                          onClick={() => setCompletionModalItem(internship)}
+                                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition shadow-sm shrink-0"
                                         >
                                           Verify Completion
                                         </button>
@@ -250,72 +322,115 @@ export default function StudentInternshipsPage() {
                                   </div>
                                 ))}
                               </div>
-                            ) : (
-                              <div className="py-4 text-center text-xs text-slate-400">
-                                No Internship Record
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {(() => {
-                    const unassignedInternships = internships.filter((i) => !i.semester || i.semester < 1 || i.semester > 8);
-                    if (unassignedInternships.length === 0) return null;
-                    return (
-                      <div className="mt-8 space-y-4">
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 text-rose-500" />
-                          <span>Semester Not Assigned / Archive Records</span>
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {unassignedInternships.map((semInternship: any) => (
-                            <div
-                              key={semInternship.id}
-                              className="p-5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10 space-y-3 flex flex-col justify-between"
-                            >
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-xs text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                                    Unassigned Record
-                                  </span>
-                                </div>
-                                <div className="space-y-1 text-xs">
-                                  <div className="font-bold text-slate-900 dark:text-white">{semInternship.companyName}</div>
-                                  <div className="text-sky-600 dark:text-sky-400 font-semibold">{semInternship.role}</div>
-                                  <div className="text-[11px] text-slate-500">
-                                    {semInternship.startDate} to {semInternship.endDate}
-                                  </div>
-                                  <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
-                                    <Badge
-                                      variant={
-                                        semInternship.status === "VERIFIED" || semInternship.status === "APPROVED"
-                                          ? "success"
-                                          : semInternship.status === "NEEDS_CHANGES"
-                                          ? "warning"
-                                          : "info"
-                                      }
-                                    >
-                                      {semInternship.status.replace("_", " ")}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {semInternship.status === "APPROVED" && (
-                                <button
-                                  type="button"
-                                  onClick={() => setCompletionModalItem(semInternship)}
-                                  className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition mt-2"
-                                >
-                                  Submit Completion Proof →
-                                </button>
-                              )}
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
+
+                        {unassignedInternships.length > 0 && (
+                          <div className="space-y-4">
+                            <h3 className="text-sm font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                              <Briefcase className="w-4 h-4" />
+                              <span>Semester Not Assigned / Archive Records</span>
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {unassignedInternships.map((internship: any) => (
+                                <div
+                                  key={internship.id}
+                                  className="ui-card p-5 border border-rose-200 dark:border-rose-900/50 bg-rose-50/10 dark:bg-rose-950/5 shadow-sm rounded-2xl hover:shadow-md transition duration-200 flex flex-col justify-between space-y-4"
+                                >
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <h4 className="font-bold text-slate-900 dark:text-white text-base tracking-tight truncate">
+                                        {internship.companyName}
+                                      </h4>
+                                      <Badge
+                                        variant={
+                                          internship.status === "VERIFIED" || internship.status === "APPROVED"
+                                            ? "success"
+                                            : internship.status === "NEEDS_CHANGES"
+                                            ? "warning"
+                                            : "info"
+                                        }
+                                      >
+                                        {internship.status.replace("_", " ")}
+                                      </Badge>
+                                    </div>
+
+                                    <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                                      <div className="flex items-center gap-2">
+                                        <Briefcase className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                          {internship.role}
+                                        </span>
+                                      </div>
+
+                                      {internship.domain && (
+                                        <div className="flex items-center gap-2">
+                                          <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span>
+                                            Domain: <strong className="text-slate-700 dark:text-slate-300">{internship.domain}</strong>
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {internship.location && (
+                                        <div className="flex items-center gap-2">
+                                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span>
+                                            Location: <strong className="text-slate-700 dark:text-slate-300">{internship.location} ({internship.mode || "ONLINE"})</strong>
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                        <span>
+                                          Timeline: <strong>{internship.startDate} to {internship.endDate}</strong>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-3 border-t border-rose-100 dark:border-rose-950 flex items-center justify-between gap-2 flex-wrap">
+                                    <div className="flex items-center gap-3">
+                                      {internship.offerLetterUrl && (
+                                        <a
+                                          href={internship.offerLetterUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[11px] text-sky-600 dark:text-sky-400 hover:underline font-medium"
+                                        >
+                                          <ExternalLink className="w-3 h-3" /> Offer Letter
+                                        </a>
+                                      )}
+                                      {internship.certificateUrl && (
+                                        <a
+                                          href={internship.certificateUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                                        >
+                                          <ExternalLink className="w-3 h-3" /> Certificate
+                                        </a>
+                                      )}
+                                    </div>
+
+                                    {internship.status === "APPROVED" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setCompletionModalItem(internship)}
+                                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition shadow-sm shrink-0"
+                                      >
+                                        Verify Completion
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}

@@ -76,21 +76,26 @@ export default function DashboardLayoutClient({
 
   const isSubAdminRoute = isAdminRoute && pathname !== "/admin";
 
-  // Redirect unauthenticated users attempting to access /admin sub-routes directly to /admin login
+  // Redirect unauthenticated users attempting to access respective sub-routes directly to their login page
   useEffect(() => {
-    if (checkedSession && isSubAdminRoute && !isAdminUser) {
-      router.replace("/admin");
+    if (checkedSession) {
+      if (isSubAdminRoute && !isAdminUser) {
+        router.replace("/admin");
+      } else if (isStudentRoute && pathname !== "/student" && !isStudentUser) {
+        router.replace("/student");
+      } else if (isFacultyRoute && pathname !== "/faculty" && !isFacultyUser) {
+        router.replace("/faculty");
+      }
     }
-  }, [checkedSession, isSubAdminRoute, isAdminUser, router]);
+  }, [checkedSession, isSubAdminRoute, isAdminUser, isStudentRoute, isStudentUser, isFacultyRoute, isFacultyUser, pathname, router]);
 
   // Sidebar display condition:
-  // 1. Admin route: Show sidebar ONLY IF user is authenticated Admin (isAdminUser)
-  // 2. Student route: Show sidebar IF user is Student
-  // 3. Faculty route: Show sidebar IF user is Faculty
+  // Render sidebar immediately on sub-routes to avoid layout shifts or disappearing sidebars during hydration,
+  // and let the useEffect hook handle unauthenticated redirects.
   const showSidebar =
-    (isAdminRoute && isAdminUser) ||
-    (isStudentRoute && isStudentUser) ||
-    (isFacultyRoute && isFacultyUser);
+    (isAdminRoute && pathname !== "/admin") ||
+    (isStudentRoute && pathname !== "/student") ||
+    (isFacultyRoute && pathname !== "/faculty");
 
   // Show neutral loading shell for deep-linked admin sub-routes before initial session check finishes
   if (!checkedSession && isSubAdminRoute && !isAdminUser) {
