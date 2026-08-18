@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import fs from "fs";
-import path from "path";
+import { uploadToCloudStorage } from "@/lib/cloudStorage";
 
 export async function POST(req: Request) {
   try {
@@ -24,37 +23,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Size Validation (10MB Max)
-    const MAX_SIZE = 10 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File exceeds 10MB maximum size limit." },
-        { status: 400 }
-      );
-    }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Create safe unique filename
-    const ext = path.extname(file.name) || ".pdf";
-    const sanitizeName = file.name.replace(/[^a-zA-Z0-9]/g, "_");
-    const uniqueFilename = `${Date.now()}_${sanitizeName}${ext}`;
-
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filePath = path.join(uploadDir, uniqueFilename);
-    fs.writeFileSync(filePath, buffer);
-
-    const publicUrl = `/uploads/${uniqueFilename}`;
+    // Process the upload via cloudStorage.ts helper (using "syllabus" folder)
+    const uploadResult = await uploadToCloudStorage(file, {
+      folder: "syllabus",
+      maxSizeBytes: 10 * 1024 * 1024,
+    });
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      filename: uniqueFilename,
+      url: uploadResult.url,
+      filename: uploadResult.fileName,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

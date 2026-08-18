@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { apiError, apiSuccess, logApiPerf } from "@/lib/apiResponse";
-import fs from "fs/promises";
+import { uploadToCloudStorage } from "@/lib/cloudStorage";
 import path from "path";
-import crypto from "crypto";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -46,28 +45,21 @@ export async function POST(req: Request) {
       return apiError(`Invalid MIME type '${file.type}'. Allowed types: JPG, PNG, WEBP, PDF.`, 400);
     }
 
-    // Generate secure random filename
-    const uniqueId = crypto.randomUUID();
-    const safeFileName = `${uniqueId}${rawExt}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "certificates");
-
-    await fs.mkdir(uploadDir, { recursive: true });
-    const filePath = path.join(uploadDir, safeFileName);
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    await fs.writeFile(filePath, buffer);
-
-    const documentUrl = `/uploads/certificates/${safeFileName}`;
+    // Process the upload via cloudStorage.ts helper
+    const uploadResult = await uploadToCloudStorage(file, {
+      folder: "certificates",
+      allowedExtensions: Array.from(ALLOWED_EXTENSIONS),
+      maxSizeBytes: MAX_FILE_SIZE,
+    });
 
     logApiPerf("POST /api/upload/certificate", startTime);
 
     return apiSuccess(
       {
-        documentUrl,
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
+        documentUrl: uploadResult.url,
+        fileName: uploadResult.fileName,
+        mimeType: uploadResult.mimeType,
+        fileSize: uploadResult.fileSize,
         uploadedAt: new Date().toISOString(),
       },
       "Certificate document uploaded successfully.",

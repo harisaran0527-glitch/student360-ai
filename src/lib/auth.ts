@@ -50,7 +50,16 @@ export async function createSessionToken(payload: UserSession): Promise<string> 
 export async function verifySessionToken(token: string): Promise<UserSession | null> {
   try {
     const verified = await jwtVerify(token, JWT_SECRET);
-    return verified.payload as unknown as UserSession;
+    const payload = verified.payload as unknown as any;
+    if (payload) {
+      if (payload.studentId && !payload.studentProfileId) {
+        payload.studentProfileId = payload.studentId;
+      }
+      if (payload.studentProfileId && !payload.studentId) {
+        payload.studentId = payload.studentProfileId;
+      }
+    }
+    return payload as UserSession;
   } catch (err) {
     return null;
   }

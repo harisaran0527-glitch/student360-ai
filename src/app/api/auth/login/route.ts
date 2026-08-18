@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       fullName: user.fullName,
       role: userRole,
       studentId: user.studentProfile?.id,
+      studentProfileId: user.studentProfile?.id,
       registerNo: user.studentProfile?.registerNo,
     });
 
