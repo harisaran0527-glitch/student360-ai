@@ -199,70 +199,104 @@ export default function StudentInternshipsPage() {
                       const semInternships = internships.filter((i) => i.semester === sem);
                       const isCurrent = student?.currentSemester === sem;
 
+                      const isCompleted = semInternships.some(i => ['COMPLETED', 'APPROVED', 'VERIFIED'].includes(i.status.toUpperCase()));
+
+                      let cardStyles = "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30";
+                      if (semInternships.length > 0) {
+                        if (isCompleted) {
+                          cardStyles = "border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-sm";
+                        } else {
+                          cardStyles = "border-sky-500 bg-sky-50/20 dark:bg-sky-950/10 shadow-sm";
+                        }
+                      } else if (isCurrent) {
+                        cardStyles = "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 shadow-md";
+                      }
+
                       return (
                         <div
                           key={sem}
-                          className={`p-5 rounded-2xl border transition space-y-3 flex flex-col justify-between ${
-                            isCurrent
-                              ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 shadow-md"
-                              : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
-                          }`}
+                          className={`p-5 rounded-2xl border transition space-y-3 flex flex-col justify-between ${cardStyles}`}
                         >
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                            <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800/80">
+                              <span className={`font-bold text-xs uppercase tracking-wider ${
+                                isCompleted && semInternships.length > 0
+                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  : "text-slate-900 dark:text-white"
+                              }`}>
                                 Semester {sem}
                               </span>
-                              {isCurrent && <Badge variant="info">Current Term</Badge>}
+                              {semInternships.length > 0 ? (
+                                isCompleted ? (
+                                  <Badge variant="success" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] px-1.5 py-0.5 rounded">
+                                    COMPLETED ✓
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="info" className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-[10px] px-1.5 py-0.5 rounded">
+                                    ONGOING
+                                  </Badge>
+                                )
+                              ) : isCurrent ? (
+                                <Badge variant="info">Current Term</Badge>
+                              ) : null}
                             </div>
 
                             {semInternships.length > 0 ? (
-                              <div className="space-y-3">
-                                {semInternships.map((internship: any) => (
-                                  <div
-                                    key={internship.id}
-                                    className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs shadow-sm"
-                                  >
-                                    <div className="font-bold text-slate-900 dark:text-white">{internship.companyName}</div>
-                                    <div className="text-slate-600 dark:text-slate-400 font-medium">Role / Course: <strong>{internship.role}</strong></div>
-                                    <div className="text-slate-600 dark:text-slate-400 font-medium">Mode: <strong>{internship.mode || "ONLINE"}</strong></div>
-                                    <div className="text-slate-600 dark:text-slate-400 font-medium">Dates: <strong>{internship.startDate} to {internship.endDate}</strong></div>
-                                    
-                                    <div className="pt-1.5 flex items-center justify-between gap-2 flex-wrap border-t border-slate-100 dark:border-slate-800/80">
-                                      <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                        Status:{" "}
-                                        {["COMPLETED", "APPROVED", "VERIFIED"].includes(internship.status.toUpperCase()) ? (
-                                          <span className="text-emerald-600 dark:text-emerald-400">COMPLETED ✓</span>
-                                      ) : (
-                                          <span className="text-sky-600 dark:text-sky-400">{internship.status.replace("_", " ")}</span>
-                                      )}
-                                      </span>
+                              <div className="space-y-3 pt-1">
+                                {semInternships.map((internship: any) => {
+                                  const itemCompleted = ['COMPLETED', 'APPROVED', 'VERIFIED'].includes(internship.status.toUpperCase());
+                                  return (
+                                    <div
+                                      key={internship.id}
+                                      className={`p-3 rounded-xl bg-white dark:bg-slate-900 border space-y-2 text-xs shadow-sm ${
+                                        itemCompleted
+                                          ? "border-emerald-100 dark:border-emerald-950"
+                                          : "border-sky-100 dark:border-sky-950"
+                                      }`}
+                                    >
+                                      <div className="font-bold text-slate-900 dark:text-white">{internship.companyName}</div>
+                                      <div className="text-slate-600 dark:text-slate-400 font-medium">Role / Course: <strong>{internship.role}</strong></div>
+                                      <div className="text-slate-600 dark:text-slate-400 font-medium">Mode: <strong>{internship.mode || "ONLINE"}</strong></div>
+                                      <div className="text-slate-600 dark:text-slate-400 font-medium">Dates: <strong>{internship.startDate} to {internship.endDate}</strong></div>
+                                      
+                                      <div className="pt-1.5 flex items-center justify-between gap-2 flex-wrap border-t border-slate-100 dark:border-slate-800/80">
+                                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                          Status:{" "}
+                                          {itemCompleted ? (
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">COMPLETED ✓</span>
+                                          ) : (
+                                            <span className="text-sky-600 dark:text-sky-400 font-bold">
+                                              {internship.status.toUpperCase() === "ONGOING" ? "ONGOING" : internship.status.replace("_", " ").toUpperCase()}
+                                            </span>
+                                          )}
+                                        </span>
 
-                                      {internship.status === "APPROVED" && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setCompletionModalItem(internship)}
-                                          className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shrink-0"
-                                        >
-                                          Verify Completion
-                                        </button>
-                                      )}
-                                    </div>
+                                        {internship.status === "APPROVED" && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setCompletionModalItem(internship)}
+                                            className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shrink-0"
+                                          >
+                                            Verify Completion
+                                          </button>
+                                        )}
+                                      </div>
 
-                                    <div className="flex gap-2 pt-1 flex-wrap">
-                                      {internship.offerLetterUrl && (
-                                        <a href={internship.offerLetterUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-sky-600 hover:underline">
-                                          Offer Letter
-                                        </a>
-                                      )}
-                                      {internship.certificateUrl && (
-                                        <a href={internship.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-emerald-600 hover:underline">
-                                          Certificate
-                                        </a>
-                                      )}
+                                      <div className="flex gap-2 pt-1 flex-wrap">
+                                        {internship.offerLetterUrl && (
+                                          <a href={internship.offerLetterUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-sky-600 hover:underline">
+                                            Offer Letter
+                                          </a>
+                                        )}
+                                        {internship.certificateUrl && (
+                                          <a href={internship.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-emerald-600 hover:underline">
+                                            Certificate
+                                          </a>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             ) : (
                               <div className="py-3 text-center text-[11px] text-slate-400/60 dark:text-slate-500/60 italic border border-dashed border-slate-200/60 dark:border-slate-800/60 rounded-xl bg-slate-50/20">
