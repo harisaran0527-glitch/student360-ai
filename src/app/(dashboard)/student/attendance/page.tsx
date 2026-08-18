@@ -125,7 +125,7 @@ export default function StudentAttendancePage() {
   // Full Day Calculations
   const fullDayRecords = studentData?.fullDayAttendances || [];
   const totalWorkingDays = fullDayRecords.length;
-  const presentDays = fullDayRecords.filter((r: any) => r.status === "PRESENT").length;
+  const presentDays = fullDayRecords.filter((r: any) => r.status === "PRESENT" || r.status === "OD" || r.status === "MEDICAL_LEAVE" || r.status === "ML").length;
   const absentDays = fullDayRecords.filter((r: any) => r.status === "ABSENT").length;
   const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 100;
 
@@ -368,8 +368,18 @@ export default function StudentAttendancePage() {
                               {getDayOfWeek(r.date)}
                             </td>
                             <td className="p-3">
-                              <Badge variant={r.status === "PRESENT" ? "success" : "danger"}>
-                                {r.status}
+                              <Badge
+                                variant={
+                                  r.status === "PRESENT" || r.status === "Present"
+                                    ? "success"
+                                    : r.status === "ABSENT" || r.status === "Absent"
+                                    ? "danger"
+                                    : r.status === "OD"
+                                    ? "purple"
+                                    : "warning" // ML / MEDICAL_LEAVE
+                                }
+                              >
+                                {r.status === "MEDICAL_LEAVE" ? "ML" : r.status}
                               </Badge>
                             </td>
                           </tr>

@@ -73,8 +73,17 @@ export async function POST(req: Request) {
 
     await prisma.$transaction(async (tx) => {
       for (const rec of attendanceRecords) {
-        const { studentId, status, remarks } = rec;
+        const { studentId, remarks } = rec;
+        let status = rec.status;
         if (!studentId) continue;
+
+        if (status === "ML") {
+          status = "MEDICAL_LEAVE";
+        }
+
+        if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE"].includes(status)) {
+          throw new Error(`Invalid attendance status '${status}'`);
+        }
 
         // Upsert record sequentially
         await tx.fullDayAttendance.upsert({

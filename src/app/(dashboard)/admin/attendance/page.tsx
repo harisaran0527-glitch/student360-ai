@@ -24,7 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE";
+type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE" | "ML";
 
 export default function AdminTakeAttendancePage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -154,7 +154,11 @@ export default function AdminTakeAttendancePage() {
         if (existingRecords.length > 0) {
           setIsEditMode(true);
           existingRecords.forEach((rec: any) => {
-            existingMap[rec.studentId] = rec.status as AttendanceStatus;
+            let statusVal = rec.status;
+            if (statusVal === "MEDICAL_LEAVE") {
+              statusVal = "ML";
+            }
+            existingMap[rec.studentId] = statusVal as AttendanceStatus;
           });
         } else {
           setIsEditMode(false);
@@ -275,6 +279,7 @@ export default function AdminTakeAttendancePage() {
   const internshipCount = Object.values(attendanceState).filter((s) => s === "INTERNSHIP").length;
   const medicalCount = Object.values(attendanceState).filter((s) => s === "MEDICAL_LEAVE").length;
   const lateCount = Object.values(attendanceState).filter((s) => s === "LATE").length;
+  const mlCount = Object.values(attendanceState).filter((s) => s === "ML" || s === "MEDICAL_LEAVE").length;
 
   // Delete Management State
   const [isDeletePanelOpen, setIsDeletePanelOpen] = useState(false);
@@ -479,7 +484,7 @@ export default function AdminTakeAttendancePage() {
         )}
 
         {/* Summary Counter Bar */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-3"} gap-3`}>
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-5"} gap-3`}>
           <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
             <div className="text-[10px] uppercase font-bold text-slate-500">Total</div>
             <div className="text-lg font-bold text-slate-900 dark:text-white">{totalStudents}</div>
@@ -492,7 +497,18 @@ export default function AdminTakeAttendancePage() {
             <div className="text-[10px] uppercase font-bold text-rose-600">Absent</div>
             <div className="text-lg font-bold text-rose-700 dark:text-rose-400">{absentCount}</div>
           </div>
-          {attendanceMode === "SUBJECT" && (
+          {attendanceMode === "FULL_DAY" ? (
+            <>
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
+                <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-amber-600">ML</div>
+                <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{mlCount}</div>
+              </div>
+            </>
+          ) : (
             <>
               <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
                 <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
@@ -587,7 +603,7 @@ export default function AdminTakeAttendancePage() {
                         <td className="p-3.5">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(attendanceMode === "FULL_DAY"
-                              ? ["PRESENT", "ABSENT"]
+                              ? ["PRESENT", "ABSENT", "OD", "ML"]
                               : [
                                   "PRESENT",
                                   "ABSENT",
@@ -611,14 +627,14 @@ export default function AdminTakeAttendancePage() {
                                   ? isSel
                                     ? "bg-blue-600 text-white"
                                     : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                  : (stKey === "MEDICAL_LEAVE" || stKey === "ML")
+                                  ? isSel
+                                    ? "bg-amber-600 text-white"
+                                    : "bg-amber-50 text-amber-700 hover:bg-amber-100"
                                   : stKey === "INTERNSHIP"
                                   ? isSel
                                     ? "bg-purple-600 text-white"
                                     : "bg-purple-50 text-purple-700 hover:bg-purple-100"
-                                  : stKey === "MEDICAL_LEAVE"
-                                  ? isSel
-                                    ? "bg-amber-600 text-white"
-                                    : "bg-amber-50 text-amber-700 hover:bg-amber-100"
                                   : isSel
                                   ? "bg-sky-600 text-white"
                                   : "bg-sky-50 text-sky-700 hover:bg-sky-100";
