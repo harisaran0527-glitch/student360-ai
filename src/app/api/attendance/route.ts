@@ -12,45 +12,48 @@ export async function GET(req: Request) {
     if (!session) return apiError("Unauthorized", 401);
 
     const { searchParams } = new URL(req.url);
-    const academicYearParam = searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
+    const academicYearParam = searchParams.get("academicYear") || "";
     const batchId = searchParams.get("batchId") || "";
     const courseId = searchParams.get("courseId") || "";
     const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
+    const departmentId = searchParams.get("departmentId") || "";
+    const sectionId = searchParams.get("sectionId") || "";
 
     const dept = await getOrCreateDefaultDepartment();
 
-    // 1. Fetch available subjects/courses for AI & ML
+    // 1. Fetch available subjects/courses
+    const courseWhere: any = { isActive: true };
+    if (departmentId) {
+      courseWhere.departmentId = departmentId;
+    } else {
+      courseWhere.departmentId = dept.id; // default to AI & ML courses if no department is specified
+    }
+
     const courses = await prisma.course.findMany({
-      where: { departmentId: dept.id, isActive: true },
+      where: courseWhere,
       orderBy: { code: "asc" },
     });
 
-    if (!batchId) {
-      logApiPerf("GET /api/attendance (no batch)", startTime);
-      return new NextResponse(
-        JSON.stringify({
-          success: true,
-          data: { courses, students: [], existingAttendance: [], isEditMode: false },
-          courses,
-          students: [],
-          existingAttendance: [],
-          isEditMode: false,
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-store, max-age=0, must-revalidate",
-          },
-        }
-      );
-    }
-
-    // 2. Fetch students belonging to the batch (non-archived active students)
+    // 2. Fetch students belonging to the active filters
     const studentWhere: any = {
-      batchId,
       isArchived: false,
     };
+
+    if (batchId) {
+      studentWhere.batchId = batchId;
+    }
+
+    if (departmentId) {
+      studentWhere.departmentId = departmentId;
+    }
+
+    if (sectionId) {
+      studentWhere.sectionId = sectionId;
+    }
+
+    if (academicYearParam) {
+      studentWhere.academicYear = academicYearParam;
+    }
 
     // Fetch students & existing attendance sequentially to respect connection_limit=1
     const students = await prisma.studentProfile.findMany({
@@ -73,7 +76,7 @@ export async function GET(req: Request) {
           where: {
             courseId,
             date,
-            student: { batchId },
+            student: studentWhere,
           },
         })
       : [];
@@ -116,8 +119,8 @@ export async function POST(req: Request) {
 
     const { academicYear, batchId, courseId, date, sessionName, attendanceRecords } = await req.json();
 
-    if (!academicYear || !batchId || !courseId || !date || !Array.isArray(attendanceRecords)) {
-      return apiError("Academic Year, Batch, Subject/Course, Date, and Attendance Records are required.", 400);
+    if (!academicYear || !courseId || !date || !Array.isArray(attendanceRecords)) {
+      return apiError("Academic Year, Subject/Course, Date, and Attendance Records are required.", 400);
     }
 
     const targetSession = sessionName || "FN";

@@ -34,6 +34,8 @@ export default function AdminTakeAttendancePage() {
   // Selection state
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
+  const [departments, setDepartments] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -65,9 +67,8 @@ export default function AdminTakeAttendancePage() {
 
         const bList = opts.batches || [];
         setBatches(bList);
-        if (bList.length > 0) {
-          setSelectedBatchId(bList[0].id);
-        }
+        const dList = opts.departments || [];
+        setDepartments(dList);
       })
       .catch((err) => {
         console.error("[Attendance Options Error]", err);
@@ -83,24 +84,18 @@ export default function AdminTakeAttendancePage() {
     return () => window.removeEventListener("academicYearChanged", handleAYChange);
   }, []);
 
-  useEffect(() => {
-    if (batches.length > 0 && selectedAcademicYear) {
-      const match = batches.find((b: any) => b.name === selectedAcademicYear);
-      if (match) {
-        setSelectedBatchId(match.id);
-      }
-    }
-  }, [selectedAcademicYear, batches]);
+  // Background batch auto-matching removed to avoid silent narrowing filters
 
   // Fetch students and existing attendance when filters change
-  const loadStudentsAndAttendance = async () => {
-    if (!selectedBatchId || !selectedAcademicYear) return;
+  const loadStudentsAndAttendance = React.useCallback(async () => {
+    if (!selectedAcademicYear) return;
     setLoading(true);
     setMessage(null);
     try {
       const params = new URLSearchParams({
         academicYear: selectedAcademicYear,
         batchId: selectedBatchId,
+        departmentId: selectedDepartmentId,
         date: selectedDate,
         courseId: selectedCourseId,
       });
@@ -139,11 +134,11 @@ export default function AdminTakeAttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAcademicYear, selectedBatchId, selectedDepartmentId, selectedDate, selectedCourseId]);
 
   useEffect(() => {
     loadStudentsAndAttendance();
-  }, [selectedAcademicYear, selectedBatchId, selectedDate, selectedCourseId]);
+  }, [loadStudentsAndAttendance]);
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceState((prev) => ({ ...prev, [studentId]: status }));
@@ -273,7 +268,7 @@ export default function AdminTakeAttendancePage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                 Academic Year *
@@ -294,6 +289,41 @@ export default function AdminTakeAttendancePage() {
               </select>
             </div>
 
+            <div>
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                Department
+              </label>
+              <select
+                value={selectedDepartmentId}
+                onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                className="ui-input w-full p-2"
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.code} — {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                Batch
+              </label>
+              <select
+                value={selectedBatchId}
+                onChange={(e) => setSelectedBatchId(e.target.value)}
+                className="ui-input w-full p-2"
+              >
+                <option value="">All Batches</option>
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
