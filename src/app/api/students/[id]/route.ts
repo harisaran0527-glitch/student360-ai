@@ -34,6 +34,7 @@ export async function GET(
         placementRecords: true,
         alumniRecord: true,
         busRecord: true,
+        fullDayAttendances: true,
       },
     });
 

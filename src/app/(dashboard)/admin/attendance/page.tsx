@@ -31,6 +31,9 @@ export default function AdminTakeAttendancePage() {
   const [batches, setBatches] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
 
+  // Tab mode state
+  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT">("FULL_DAY");
+
   // Selection state
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
@@ -92,49 +95,83 @@ export default function AdminTakeAttendancePage() {
     setLoading(true);
     setMessage(null);
     try {
-      const params = new URLSearchParams({
-        academicYear: selectedAcademicYear,
-        batchId: selectedBatchId,
-        departmentId: selectedDepartmentId,
-        date: selectedDate,
-        courseId: selectedCourseId,
-      });
-
-      const res = await fetch(`/api/attendance?${params.toString()}`);
-      const data = await res.json();
-      const courseList = data.data?.courses || data.courses || [];
-      const studentList = data.data?.students || data.students || [];
-
-      setCourses(courseList);
-      if (!selectedCourseId && courseList.length > 0) {
-        setSelectedCourseId(courseList[0].id);
-      }
-
-      setStudents(studentList);
-
-      const existingMap: Record<string, AttendanceStatus> = {};
-      const existingRecords = data.data?.existingAttendance || data.existingAttendance || [];
-
-      if (existingRecords.length > 0) {
-        setIsEditMode(true);
-        existingRecords.forEach((rec: any) => {
-          existingMap[rec.studentId] = rec.status as AttendanceStatus;
+      if (attendanceMode === "SUBJECT") {
+        const params = new URLSearchParams({
+          academicYear: selectedAcademicYear,
+          batchId: selectedBatchId,
+          departmentId: selectedDepartmentId,
+          date: selectedDate,
+          courseId: selectedCourseId,
         });
+
+        const res = await fetch(`/api/attendance?${params.toString()}`);
+        const data = await res.json();
+        const courseList = data.data?.courses || data.courses || [];
+        const studentList = data.data?.students || data.students || [];
+
+        setCourses(courseList);
+        if (!selectedCourseId && courseList.length > 0) {
+          setSelectedCourseId(courseList[0].id);
+        }
+
+        setStudents(studentList);
+
+        const existingMap: Record<string, AttendanceStatus> = {};
+        const existingRecords = data.data?.existingAttendance || data.existingAttendance || [];
+
+        if (existingRecords.length > 0) {
+          setIsEditMode(true);
+          existingRecords.forEach((rec: any) => {
+            existingMap[rec.studentId] = rec.status as AttendanceStatus;
+          });
+        } else {
+          setIsEditMode(false);
+          // Default all to PRESENT
+          studentList.forEach((st: any) => {
+            existingMap[st.id] = "PRESENT";
+          });
+        }
+
+        setAttendanceState(existingMap);
       } else {
-        setIsEditMode(false);
-        // Default all to PRESENT
-        studentList.forEach((st: any) => {
-          existingMap[st.id] = "PRESENT";
+        // FULL_DAY mode
+        const params = new URLSearchParams({
+          academicYear: selectedAcademicYear,
+          batchId: selectedBatchId,
+          departmentId: selectedDepartmentId,
+          date: selectedDate,
         });
-      }
 
-      setAttendanceState(existingMap);
+        const res = await fetch(`/api/attendance/full-day?${params.toString()}`);
+        const data = await res.json();
+        const studentList = data.data?.students || data.students || [];
+
+        setStudents(studentList);
+
+        const existingMap: Record<string, AttendanceStatus> = {};
+        const existingRecords = data.data?.existingAttendance || data.existingAttendance || [];
+
+        if (existingRecords.length > 0) {
+          setIsEditMode(true);
+          existingRecords.forEach((rec: any) => {
+            existingMap[rec.studentId] = rec.status as AttendanceStatus;
+          });
+        } else {
+          setIsEditMode(false);
+          // Default all to PRESENT
+          studentList.forEach((st: any) => {
+            existingMap[st.id] = "PRESENT";
+          });
+        }
+
+        setAttendanceState(existingMap);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [selectedAcademicYear, selectedBatchId, selectedDepartmentId, selectedDate, selectedCourseId]);
+  }, [selectedAcademicYear, selectedBatchId, selectedDepartmentId, selectedDate, selectedCourseId, attendanceMode]);
 
   useEffect(() => {
     loadStudentsAndAttendance();
@@ -153,44 +190,80 @@ export default function AdminTakeAttendancePage() {
   };
 
   const handleSave = async () => {
-    if (!selectedCourseId || saving) {
-      setMessage({ text: "Please select a Subject/Course before saving.", type: "error" });
-      return;
-    }
-
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      const records = students.map((st) => ({
-        studentId: st.id,
-        status: attendanceState[st.id] || "PRESENT",
-      }));
-
-      const res = await fetch("/api/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          academicYear: selectedAcademicYear,
-          batchId: selectedBatchId,
-          courseId: selectedCourseId,
-          date: selectedDate,
-          sessionName: "FN",
-          attendanceRecords: records,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.success === false) {
-        throw new Error(data.message || data.error || "Failed to save attendance");
+    if (attendanceMode === "SUBJECT") {
+      if (!selectedCourseId || saving) {
+        setMessage({ text: "Please select a Subject/Course before saving.", type: "error" });
+        return;
       }
 
-      setMessage({ text: "Attendance saved successfully! Student percentages updated.", type: "success" });
-      setIsEditMode(true);
-    } catch (err: any) {
-      setMessage({ text: err.message, type: "error" });
-    } finally {
-      setSaving(false);
+      setSaving(true);
+      setMessage(null);
+
+      try {
+        const records = students.map((st) => ({
+          studentId: st.id,
+          status: attendanceState[st.id] || "PRESENT",
+        }));
+
+        const res = await fetch("/api/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            academicYear: selectedAcademicYear,
+            batchId: selectedBatchId,
+            courseId: selectedCourseId,
+            date: selectedDate,
+            sessionName: "FN",
+            attendanceRecords: records,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || data.error || "Failed to save attendance");
+        }
+
+        setMessage({ text: "Attendance saved successfully! Student percentages updated.", type: "success" });
+        setIsEditMode(true);
+      } catch (err: any) {
+        setMessage({ text: err.message, type: "error" });
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // FULL_DAY mode
+      if (saving) return;
+
+      setSaving(true);
+      setMessage(null);
+
+      try {
+        const records = students.map((st) => ({
+          studentId: st.id,
+          status: attendanceState[st.id] || "PRESENT",
+        }));
+
+        const res = await fetch("/api/attendance/full-day", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: selectedDate,
+            attendanceRecords: records,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || data.error || "Failed to save full day attendance");
+        }
+
+        setMessage({ text: "Full day attendance saved successfully!", type: "success" });
+        setIsEditMode(true);
+      } catch (err: any) {
+        setMessage({ text: err.message, type: "error" });
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -220,7 +293,6 @@ export default function AdminTakeAttendancePage() {
   useEffect(() => {
     fetchAttendanceSessions();
   }, []);
-
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950">
       <Header
@@ -237,27 +309,57 @@ export default function AdminTakeAttendancePage() {
               <span>{saving ? "Saving..." : "Save Attendance"}</span>
             </button>
 
-            <button
-              onClick={() => {
-                fetchAttendanceSessions();
-                setIsDeletePanelOpen(true);
-              }}
-              className="px-3.5 py-2 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition flex items-center gap-1.5"
-            >
-              <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              <span>Delete Attendance Session</span>
-            </button>
+            {attendanceMode === "SUBJECT" && (
+              <button
+                onClick={() => {
+                  fetchAttendanceSessions();
+                  setIsDeletePanelOpen(true);
+                }}
+                className="px-3.5 py-2 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                <span>Delete Attendance Session</span>
+              </button>
+            )}
           </div>
         }
       />
 
       <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Mode Selector Tabs */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800">
+          <button
+            onClick={() => setAttendanceMode("FULL_DAY")}
+            className={`py-3 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
+              attendanceMode === "FULL_DAY"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Full Day Attendance
+          </button>
+          <button
+            onClick={() => setAttendanceMode("SUBJECT")}
+            className={`py-3 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
+              attendanceMode === "SUBJECT"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Subject Attendance
+          </button>
+        </div>
+
         {/* Top Control Bar */}
         <div className="ui-card p-6 rounded-2xl bg-white dark:bg-slate-900 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-indigo-600" />
-              <span>Attendance Selector (Single Class Context)</span>
+              <span>
+                {attendanceMode === "FULL_DAY"
+                  ? "Full Day Attendance Selector"
+                  : "Attendance Selector (Single Class Context)"}
+              </span>
             </h2>
             {isEditMode ? (
               <Badge variant="warning">
@@ -268,7 +370,7 @@ export default function AdminTakeAttendancePage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${attendanceMode === "SUBJECT" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4 text-xs`}>
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                 Academic Year *
@@ -337,26 +439,28 @@ export default function AdminTakeAttendancePage() {
               />
             </div>
 
-            <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Subject / Course *
-              </label>
-              <select
-                value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                {courses.length === 0 ? (
-                  <option value="">No active subjects found</option>
-                ) : (
-                  courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} — {c.title} (Sem {c.semester})
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+            {attendanceMode === "SUBJECT" && (
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Subject / Course *
+                </label>
+                <select
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="ui-input w-full p-2"
+                >
+                  {courses.length === 0 ? (
+                    <option value="">No active subjects found</option>
+                  ) : (
+                    courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {c.title} (Sem {c.semester})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -375,7 +479,7 @@ export default function AdminTakeAttendancePage() {
         )}
 
         {/* Summary Counter Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-3"} gap-3`}>
           <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
             <div className="text-[10px] uppercase font-bold text-slate-500">Total</div>
             <div className="text-lg font-bold text-slate-900 dark:text-white">{totalStudents}</div>
@@ -388,22 +492,26 @@ export default function AdminTakeAttendancePage() {
             <div className="text-[10px] uppercase font-bold text-rose-600">Absent</div>
             <div className="text-lg font-bold text-rose-700 dark:text-rose-400">{absentCount}</div>
           </div>
-          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
-            <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-purple-600">Internship</div>
-            <div className="text-lg font-bold text-purple-700 dark:text-purple-400">{internshipCount}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-amber-600">Medical</div>
-            <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{medicalCount}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-sky-600">Late</div>
-            <div className="text-lg font-bold text-sky-700 dark:text-sky-400">{lateCount}</div>
-          </div>
+          {attendanceMode === "SUBJECT" && (
+            <>
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
+                <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-purple-600">Internship</div>
+                <div className="text-lg font-bold text-purple-700 dark:text-purple-400">{internshipCount}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-amber-600">Medical</div>
+                <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{medicalCount}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-sky-600">Late</div>
+                <div className="text-lg font-bold text-sky-700 dark:text-sky-400">{lateCount}</div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Quick Batch Actions & Student List */}
@@ -478,15 +586,16 @@ export default function AdminTakeAttendancePage() {
                         </td>
                         <td className="p-3.5">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {(
-                              [
-                                "PRESENT",
-                                "ABSENT",
-                                "OD",
-                                "INTERNSHIP",
-                                "MEDICAL_LEAVE",
-                                "LATE",
-                              ] as AttendanceStatus[]
+                            {(attendanceMode === "FULL_DAY"
+                              ? ["PRESENT", "ABSENT"]
+                              : [
+                                  "PRESENT",
+                                  "ABSENT",
+                                  "OD",
+                                  "INTERNSHIP",
+                                  "MEDICAL_LEAVE",
+                                  "LATE",
+                                ]
                             ).map((stKey) => {
                               const isSel = status === stKey;
                               const btnColor =
@@ -518,7 +627,7 @@ export default function AdminTakeAttendancePage() {
                                 <button
                                   key={stKey}
                                   type="button"
-                                  onClick={() => handleStatusChange(st.id, stKey)}
+                                  onClick={() => handleStatusChange(st.id, stKey as AttendanceStatus)}
                                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition border border-transparent ${btnColor}`}
                                 >
                                   {stKey.replace("_", " ")}
@@ -539,7 +648,9 @@ export default function AdminTakeAttendancePage() {
           {students.length > 0 && (
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500">
-                Updating attendance automatically recalculates student percentages.
+                {attendanceMode === "SUBJECT"
+                  ? "Updating subject attendance automatically recalculates student percentages."
+                  : "Updating full day attendance records independently."}
               </span>
               <button
                 onClick={handleSave}

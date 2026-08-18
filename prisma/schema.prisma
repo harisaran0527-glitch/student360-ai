@@ -253,6 +253,7 @@ model StudentProfile {
   admissionAcademicYear AcademicYear? @relation("AdmissionAcademicYear", fields: [admissionAcademicYearId], references: [id])
 
   attendances          Attendance[]
+  fullDayAttendances   FullDayAttendance[]
   semesterHistory      StudentSemesterHistory[]
   odRecords            ODRecord[]
   corrections          AttendanceCorrection[]
@@ -984,5 +985,22 @@ model Timetable {
 
   @@unique([academicYearCode, semester])
 }
+
+model FullDayAttendance {
+  id               String         @id @default(uuid())
+  studentId        String
+  date             String         // Format: YYYY-MM-DD
+  status           String         // Format: PRESENT or ABSENT
+  remarks          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([date])
+  @@index([studentId])
+}
+
 
 
