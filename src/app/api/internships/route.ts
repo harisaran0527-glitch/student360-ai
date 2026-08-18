@@ -93,8 +93,8 @@ export async function POST(req: Request) {
       status,
     } = data;
 
-    if (!studentId || !companyName || !role || !startDate || !endDate) {
-      return apiError("studentId, companyName, role, startDate, and endDate are required", 400);
+    if (!studentId || !companyName || !role || !startDate || !endDate || !semester) {
+      return apiError("studentId, companyName, role, startDate, endDate, and semester are required", 400);
     }
 
     const studentProfile = await prisma.studentProfile.findUnique({
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
         academicYearCode: academicYearCode || studentProfile.academicYear || DEFAULT_ACADEMIC_YEAR,
         batchId: studentProfile.batchId,
         departmentId: studentProfile.departmentId,
-        semester: semester || studentProfile.currentSemester || 1,
+        semester: parseInt(semester, 10),
         companyName,
         companyWebsite,
         industry: industry || "Software & IT",

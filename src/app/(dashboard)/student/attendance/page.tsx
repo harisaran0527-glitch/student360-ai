@@ -65,44 +65,56 @@ export default function StudentAttendancePage() {
   const attendances = studentData?.attendances || [];
   const minRequired = 75.0; // Institutional policy threshold
 
-  // Group attendance by course code
-  const subjectMap: Record<string, { title: string; conducted: number; attended: number; od: number; internship: number; medical: number }> = {};
-
-  attendances.forEach((att: any) => {
-    const code = att.course?.code || "GENERAL";
-    const title = att.course?.title || "Subject Course";
-    if (!subjectMap[code]) {
-      subjectMap[code] = { title, conducted: 0, attended: 0, od: 0, internship: 0, medical: 0 };
+  // Helper to derive daily status from multiple periods
+  const deriveDailyStatus = (statuses: string[]): string => {
+    if (statuses.includes("ABSENT") || statuses.includes("LONG_ABSENT")) {
+      return "Absent";
     }
-
-    subjectMap[code].conducted += 1;
-    if (att.status === "PRESENT" || att.status === "LATE") subjectMap[code].attended += 1;
-    else if (att.status === "OD") {
-      subjectMap[code].od += 1;
-      subjectMap[code].attended += 1; // policy counts OD as present
-    } else if (att.status === "INTERNSHIP") {
-      subjectMap[code].internship += 1;
-      subjectMap[code].attended += 1; // policy counts Internship as present
-    } else if (att.status === "MEDICAL_LEAVE") {
-      subjectMap[code].medical += 1;
+    if (statuses.includes("MEDICAL_LEAVE")) {
+      return "Medical";
     }
+    if (statuses.includes("INTERNSHIP")) {
+      return "Internship";
+    }
+    if (statuses.includes("OD")) {
+      return "OD";
+    }
+    return "Present";
+  };
+
+  // Timezone-safe date formatter
+  const formatDate = (dateStr: string): string => {
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const year = parts[0];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    return `${day} ${monthNames[monthIdx] || parts[1]} ${year}`;
+  };
+
+  // Group attendance by date for the selected semester
+  const filteredAttendances = attendances.filter((att: any) => att.course?.semester === selectedSem);
+
+  const dailyMap: Record<string, string[]> = {};
+  filteredAttendances.forEach((att: any) => {
+    const d = att.date;
+    if (!dailyMap[d]) {
+      dailyMap[d] = [];
+    }
+    dailyMap[d].push(att.status);
   });
 
-  const subjectRows = Object.keys(subjectMap).map((code) => {
-    const data = subjectMap[code];
-    const pct = data.conducted > 0 ? Number(((data.attended / data.conducted) * 100).toFixed(1)) : 100.0;
-    return {
-      code,
-      title: data.title,
-      conducted: data.conducted,
-      attended: data.attended,
-      od: data.od,
-      internship: data.internship,
-      medical: data.medical,
-      percentage: pct,
-      isShortage: pct < minRequired,
-    };
-  });
+  const dailyRows = Object.keys(dailyMap)
+    .sort((a, b) => b.localeCompare(a)) // Sort descending (newest first)
+    .map((dateStr) => {
+      const statuses = dailyMap[dateStr];
+      const status = deriveDailyStatus(statuses);
+      return {
+        date: dateStr,
+        status,
+      };
+    });
 
   const overallPct = studentData?.attendancePercentage || 100.0;
   const isOverallShortage = overallPct < minRequired;
@@ -172,7 +184,7 @@ export default function StudentAttendancePage() {
             <span className="text-xs text-slate-500 font-semibold">Institutional Policy Minimum: {minRequired}%</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
               <label className="block text-slate-500 font-semibold mb-1">Semester</label>
               <select
@@ -187,70 +199,53 @@ export default function StudentAttendancePage() {
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="block text-slate-500 font-semibold mb-1">Filter Course</label>
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                <option value="">All Subjects</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.code}>
-                    {c.code}: {c.title}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
 
-        {/* Subject-Wise Attendance Breakdown Table */}
+        {/* Day-Wise Attendance Log Table */}
         <div className="ui-card overflow-hidden space-y-4 p-6">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Subject-Wise Attendance Breakdown</span>
+            <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Day-Wise Attendance Log</span>
           </h3>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                  <th className="p-3">Course Code & Title</th>
-                  <th className="p-3">Conducted</th>
-                  <th className="p-3">Attended</th>
-                  <th className="p-3">Approved OD</th>
-                  <th className="p-3">Internship</th>
-                  <th className="p-3">Attendance %</th>
-                  <th className="p-3">Shortage Status</th>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Daily Attendance Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {subjectRows.length === 0 ? (
+                {dailyRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-6">
-                      <EmptyState title="No Attendance Records" description="No attendance records are available yet." />
+                    <td colSpan={2} className="p-6">
+                      <EmptyState title="No Attendance Records" description={`No attendance records are logged for Semester ${selectedSem}.`} />
                     </td>
                   </tr>
                 ) : (
-                  subjectRows.map((r) => (
-                    <tr key={r.code} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                      <td className="p-3">
-                        <span className="font-bold text-slate-900 dark:text-white block">{r.code}</span>
-                        <span className="text-slate-500 text-[11px]">{r.title}</span>
+                  dailyRows.map((r) => (
+                    <tr key={r.date} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                      <td className="p-3 font-semibold text-slate-900 dark:text-white">
+                        {formatDate(r.date)}
                       </td>
-                      <td className="p-3 font-semibold">{r.conducted}</td>
-                      <td className="p-3 font-bold text-emerald-600 dark:text-emerald-400">{r.attended}</td>
-                      <td className="p-3">{r.od}</td>
-                      <td className="p-3">{r.internship}</td>
-                      <td className="p-3 font-black text-sm text-indigo-600 dark:text-indigo-400">{r.percentage}%</td>
                       <td className="p-3">
-                        {r.isShortage ? (
-                          <Badge variant="danger">ATTENTION REQUIRED</Badge>
-                        ) : (
-                          <Badge variant="success">Satisfactory ({minRequired}%)</Badge>
-                        )}
+                        <Badge
+                          variant={
+                            r.status === "Present"
+                              ? "success"
+                              : r.status === "Absent"
+                              ? "danger"
+                              : r.status === "OD"
+                              ? "purple"
+                              : r.status === "Internship"
+                              ? "info"
+                              : "warning" // Medical
+                          }
+                        >
+                          {r.status}
+                        </Badge>
                       </td>
                     </tr>
                   ))

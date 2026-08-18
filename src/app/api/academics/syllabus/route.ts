@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       return apiError("Unauthorized", 401);
     }
 
-    const { code, title, semester, academicYearCode, credits, subjectType } = await req.json();
+    const { code, title, semester, academicYearCode, credits, subjectType, syllabusUrl } = await req.json();
 
     if (!code || !title || !semester) {
       return apiError("Subject Code, Subject Name, and Semester are required.", 400);
@@ -72,6 +72,7 @@ export async function POST(req: Request) {
         credits: parseInt(credits, 10) || 3,
         subjectType: subjectType || "CORE",
         departmentId: dept.id,
+        syllabusUrl: syllabusUrl || null,
       },
     });
 

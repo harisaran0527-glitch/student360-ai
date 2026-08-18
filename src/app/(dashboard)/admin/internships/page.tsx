@@ -44,6 +44,7 @@ export default function AdminInternshipsPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [status, setStatus] = useState<string>("COMPLETED");
+  const [semester, setSemester] = useState<string>("1");
 
   // Edit Internship state
   const [editInternship, setEditInternship] = useState<any | null>(null);
@@ -55,6 +56,7 @@ export default function AdminInternshipsPage() {
   const [editStartDate, setEditStartDate] = useState<string>("");
   const [editEndDate, setEditEndDate] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("COMPLETED");
+  const [editSemester, setEditSemester] = useState<string>("1");
 
   const handleEditClick = (item: any) => {
     setEditInternship(item);
@@ -66,6 +68,7 @@ export default function AdminInternshipsPage() {
     setEditStartDate(item.startDate || "");
     setEditEndDate(item.endDate || "");
     setEditStatus(item.status || "COMPLETED");
+    setEditSemester(item.semester ? String(item.semester) : "1");
   };
 
   const handleEditInternshipSubmit = async (e: React.FormEvent) => {
@@ -90,7 +93,8 @@ export default function AdminInternshipsPage() {
           location: editLocation,
           startDate: editStartDate,
           endDate: editEndDate,
-          status: editStatus
+          status: editStatus,
+          semester: editSemester,
         }),
       });
 
@@ -170,6 +174,7 @@ export default function AdminInternshipsPage() {
         body: JSON.stringify({
           studentId: selectedStudentId,
           academicYearCode: selectedAcademicYear,
+          semester,
           companyName,
           domain,
           role,
@@ -451,7 +456,7 @@ export default function AdminInternshipsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Domain</label>
               <input
@@ -460,6 +465,14 @@ export default function AdminInternshipsPage() {
                 onChange={(e) => setDomain(e.target.value)}
                 className="ui-input w-full p-2"
               />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Semester *</label>
+              <select value={semester} onChange={(e) => setSemester(e.target.value)} required className="ui-input w-full p-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                  <option key={s} value={String(s)}>Semester {s}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mode</label>
@@ -564,7 +577,7 @@ export default function AdminInternshipsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Domain</label>
                 <input
@@ -573,6 +586,14 @@ export default function AdminInternshipsPage() {
                   onChange={(e) => setEditDomain(e.target.value)}
                   className="ui-input w-full p-2"
                 />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Semester *</label>
+                <select value={editSemester} onChange={(e) => setEditSemester(e.target.value)} required className="ui-input w-full p-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                    <option key={s} value={String(s)}>Semester {s}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mode</label>

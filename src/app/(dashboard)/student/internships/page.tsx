@@ -193,68 +193,133 @@ export default function StudentInternshipsPage() {
               {loading ? (
                 <Skeleton className="h-48 rounded-2xl" />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => {
-                    const semInternship = internships.find((i) => i.semester === sem);
-                    const isCurrent = student?.currentSemester === sem;
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => {
+                      const semInternships = internships.filter((i) => i.semester === sem);
+                      const isCurrent = student?.currentSemester === sem;
 
-                    return (
-                      <div
-                        key={sem}
-                        className={`p-5 rounded-2xl border transition space-y-3 flex flex-col justify-between ${
-                          isCurrent
-                            ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 shadow-md"
-                            : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
-                        }`}
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                              Semester {sem}
-                            </span>
-                            {isCurrent && <Badge variant="info">Current Term</Badge>}
+                      return (
+                        <div
+                          key={sem}
+                          className={`p-5 rounded-2xl border transition space-y-3 flex flex-col justify-between ${
+                            isCurrent
+                              ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 shadow-md"
+                              : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                                Semester {sem}
+                              </span>
+                              {isCurrent && <Badge variant="info">Current Term</Badge>}
+                            </div>
+
+                            {semInternships.length > 0 ? (
+                              <div className="space-y-3">
+                                {semInternships.map((semInternship: any) => (
+                                  <div key={semInternship.id} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs shadow-sm">
+                                    <div className="font-bold text-slate-900 dark:text-white">{semInternship.companyName}</div>
+                                    <div className="text-sky-600 dark:text-sky-400 font-semibold">{semInternship.role}</div>
+                                    <div className="text-[11px] text-slate-500">
+                                      {semInternship.startDate} to {semInternship.endDate}
+                                    </div>
+                                    <div className="pt-1.5 flex items-center justify-between gap-2 flex-wrap">
+                                      <Badge
+                                        variant={
+                                          semInternship.status === "VERIFIED" || semInternship.status === "APPROVED"
+                                            ? "success"
+                                            : semInternship.status === "NEEDS_CHANGES"
+                                            ? "warning"
+                                            : "info"
+                                        }
+                                      >
+                                        {semInternship.status.replace("_", " ")}
+                                      </Badge>
+                                      {semInternship.status === "APPROVED" && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setCompletionModalItem(semInternship)}
+                                          className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shrink-0"
+                                        >
+                                          Verify Completion
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="py-4 text-center text-xs text-slate-400">
+                                No Internship Record
+                              </div>
+                            )}
                           </div>
-
-                          {semInternship ? (
-                            <div className="space-y-1 text-xs">
-                              <div className="font-bold text-slate-900 dark:text-white">{semInternship.companyName}</div>
-                              <div className="text-sky-600 dark:text-sky-400 font-semibold">{semInternship.role}</div>
-                              <div className="text-[11px] text-slate-500">
-                                {semInternship.startDate} to {semInternship.endDate}
-                              </div>
-                              <div className="pt-2">
-                                <Badge
-                                  variant={
-                                    semInternship.status === "VERIFIED" || semInternship.status === "APPROVED"
-                                      ? "success"
-                                      : semInternship.status === "NEEDS_CHANGES"
-                                      ? "warning"
-                                      : "info"
-                                  }
-                                >
-                                  {semInternship.status.replace("_", " ")}
-                                </Badge>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="py-4 text-center text-xs text-slate-400">
-                              No Internship Record
-                            </div>
-                          )}
                         </div>
+                      );
+                    })}
+                  </div>
 
-                        {semInternship && semInternship.status === "APPROVED" && (
-                          <button
-                            onClick={() => setCompletionModalItem(semInternship)}
-                            className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition"
-                          >
-                            Submit Completion Proof →
-                          </button>
-                        )}
+                  {(() => {
+                    const unassignedInternships = internships.filter((i) => !i.semester || i.semester < 1 || i.semester > 8);
+                    if (unassignedInternships.length === 0) return null;
+                    return (
+                      <div className="mt-8 space-y-4">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                          <Briefcase className="w-4 h-4 text-rose-500" />
+                          <span>Semester Not Assigned / Archive Records</span>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {unassignedInternships.map((semInternship: any) => (
+                            <div
+                              key={semInternship.id}
+                              className="p-5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10 space-y-3 flex flex-col justify-between"
+                            >
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-xs text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                                    Unassigned Record
+                                  </span>
+                                </div>
+                                <div className="space-y-1 text-xs">
+                                  <div className="font-bold text-slate-900 dark:text-white">{semInternship.companyName}</div>
+                                  <div className="text-sky-600 dark:text-sky-400 font-semibold">{semInternship.role}</div>
+                                  <div className="text-[11px] text-slate-500">
+                                    {semInternship.startDate} to {semInternship.endDate}
+                                  </div>
+                                  <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
+                                    <Badge
+                                      variant={
+                                        semInternship.status === "VERIFIED" || semInternship.status === "APPROVED"
+                                          ? "success"
+                                          : semInternship.status === "NEEDS_CHANGES"
+                                          ? "warning"
+                                          : "info"
+                                      }
+                                    >
+                                      {semInternship.status.replace("_", " ")}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {semInternship.status === "APPROVED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCompletionModalItem(semInternship)}
+                                  className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition mt-2"
+                                >
+                                  Submit Completion Proof →
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
-                  })}
-                </div>
+                  })()}
+                </>
               )}
             </div>
           )}

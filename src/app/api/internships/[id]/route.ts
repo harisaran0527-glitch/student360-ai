@@ -17,7 +17,7 @@ export async function PUT(
 
     const internshipId = params.id;
     const body = await req.json();
-    const { status, companyName, role, domain, mode, location, startDate, endDate } = body;
+    const { status, companyName, role, domain, mode, location, startDate, endDate, semester } = body;
 
     const existing = await prisma.internship.findUnique({
       where: { id: internshipId },
@@ -39,6 +39,7 @@ export async function PUT(
         ...(location ? { location } : {}),
         ...(startDate ? { startDate } : {}),
         ...(endDate ? { endDate } : {}),
+        ...(semester !== undefined && semester !== null ? { semester: parseInt(semester, 10) } : {}),
       },
     });
 

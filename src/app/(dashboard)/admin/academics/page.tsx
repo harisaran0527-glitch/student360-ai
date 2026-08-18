@@ -30,6 +30,10 @@ export default function AdminSyllabusPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Timetable State
+  const [timetable, setTimetable] = useState<any | null>(null);
+  const [timetableLoading, setTimetableLoading] = useState<boolean>(false);
+
   // Modal State
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [isDeletePanelOpen, setIsDeletePanelOpen] = useState<boolean>(false);
@@ -62,6 +66,78 @@ export default function AdminSyllabusPage() {
     }
   };
 
+  const fetchTimetable = async () => {
+    if (!selectedAcademicYear || !selectedSemester) {
+      setTimetable(null);
+      return;
+    }
+    setTimetableLoading(true);
+    try {
+      const res = await fetch(`/api/academics/timetable?academicYear=${selectedAcademicYear}&semester=${selectedSemester}`);
+      const data = await res.json();
+      setTimetable(data.data?.timetable || data.timetable || null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimetableLoading(false);
+    }
+  };
+
+  const handleTimetableUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedAcademicYear || !selectedSemester) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setTimetableLoading(true);
+    try {
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+
+      const res = await fetch("/api/academics/timetable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          academicYearCode: selectedAcademicYear,
+          semester: parseInt(selectedSemester, 10),
+          documentUrl: uploadData.url,
+          fileName: file.name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || "Failed to save timetable");
+
+      alert("Timetable uploaded successfully!");
+      fetchTimetable();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setTimetableLoading(false);
+    }
+  };
+
+  const handleTimetableDelete = async () => {
+    if (!timetable || !confirm("Are you sure you want to delete this timetable?")) return;
+    setTimetableLoading(true);
+    try {
+      const res = await fetch(`/api/academics/timetable?id=${timetable.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete timetable");
+      alert("Timetable deleted successfully!");
+      setTimetable(null);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setTimetableLoading(false);
+    }
+  };
+
   useEffect(() => {
     getAcademicOptions()
       .then((opts) => {
@@ -87,6 +163,7 @@ export default function AdminSyllabusPage() {
 
   useEffect(() => {
     fetchSyllabus();
+    fetchTimetable();
   }, [selectedAcademicYear, selectedSemester]);
 
   const handleAddSyllabus = async (e: React.FormEvent) => {
@@ -104,6 +181,7 @@ export default function AdminSyllabusPage() {
           credits: parseInt(credits, 10),
           subjectType,
           academicYearCode: selectedAcademicYear,
+          syllabusUrl: syllabusUrl || null,
         }),
       });
 
@@ -238,6 +316,68 @@ export default function AdminSyllabusPage() {
           </div>
         </div>
 
+        {/* Class Timetable Card */}
+        {selectedSemester ? (
+          <div className="ui-card p-6 bg-gradient-to-r from-indigo-50/50 dark:from-indigo-950/20 to-slate-50 dark:to-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-indigo-600" />
+                  <span>Class Timetable — Semester {selectedSemester} ({selectedAcademicYear})</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Upload the primary schedule / class timetable PDF or image for this specific semester.
+                </p>
+              </div>
+
+              {timetableLoading ? (
+                <div className="text-xs font-semibold text-slate-500 animate-pulse">Processing...</div>
+              ) : timetable ? (
+                <div className="flex items-center gap-2">
+                  <a
+                    href={timetable.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>View Class Timetable</span>
+                  </a>
+                  <button
+                    onClick={handleTimetableDelete}
+                    className="p-1.5 rounded-lg border border-rose-300 hover:bg-rose-50 text-rose-600 dark:border-rose-900 dark:hover:bg-rose-950/30 transition"
+                    title="Delete Timetable"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Class Timetable</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp"
+                      onChange={handleTimetableUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+            {timetable && (
+              <p className="text-[11px] text-slate-500">
+                Current timetable: <span className="font-mono text-indigo-600 dark:text-indigo-400">{timetable.fileName || "timetable_document.pdf"}</span> (Uploaded {new Date(timetable.updatedAt).toLocaleDateString()})
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="ui-card p-4 bg-slate-50 dark:bg-slate-900/50 text-center text-xs text-slate-500">
+            Select a specific semester in the filter above to view and manage the Class Timetable.
+          </div>
+        )}
+
         {/* Subjects & Syllabus Grid */}
         <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
@@ -287,6 +427,7 @@ export default function AdminSyllabusPage() {
                     <th className="p-3.5">Credits</th>
                     <th className="p-3.5">Subject Type</th>
                     <th className="p-3.5">Academic Year</th>
+                    <th className="p-3.5">Syllabus</th>
                     <th className="p-3.5">Actions</th>
                   </tr>
                 </thead>
@@ -305,6 +446,21 @@ export default function AdminSyllabusPage() {
                         <Badge variant="purple">{c.subjectType}</Badge>
                       </td>
                       <td className="p-3.5 font-mono text-slate-500">{c.academicYearCode}</td>
+                      <td className="p-3.5">
+                        {c.syllabusUrl ? (
+                          <a
+                            href={c.syllabusUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-100 transition flex items-center gap-1 w-fit"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>View Syllabus</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 italic">No document</span>
+                        )}
+                      </td>
                       <td className="p-3.5">
                         <div className="flex items-center gap-1">
                           <button
@@ -441,6 +597,52 @@ export default function AdminSyllabusPage() {
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
             <span className="font-bold block text-slate-800 dark:text-slate-200">Department Assignment:</span>
             Department is automatically set to <strong>AI & ML</strong>. Academic Year: <strong>{selectedAcademicYear}</strong>.
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Syllabus PDF / Document (Optional)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  const formData = new FormData();
+                  formData.append("file", file);
+                  
+                  try {
+                    setSubmitting(true);
+                    const res = await fetch("/api/upload", {
+                      method: "POST",
+                      body: formData,
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Upload failed");
+                    setSyllabusUrl(data.url);
+                    setSyllabusTitle(file.name);
+                    alert("Syllabus uploaded successfully!");
+                  } catch (err: any) {
+                    alert(err.message);
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                className="ui-input w-full p-1.5"
+              />
+              {syllabusUrl && (
+                <a
+                  href={syllabusUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 font-bold shrink-0 text-[11px]"
+                >
+                  View
+                </a>
+              )}
+            </div>
+            {syllabusTitle && <p className="text-[11px] text-slate-500 mt-1">Uploaded: {syllabusTitle}</p>}
           </div>
 
           <div className="pt-3 border-t flex justify-end gap-2">

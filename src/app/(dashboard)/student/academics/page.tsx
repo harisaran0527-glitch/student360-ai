@@ -13,6 +13,7 @@ export default async function StudentAcademicsPage() {
 
   let student: any = null;
   let departmentCourses: any[] = [];
+  let timetable: any = null;
 
   if (session?.id) {
     try {
@@ -33,6 +34,15 @@ export default async function StudentAcademicsPage() {
           orderBy: [{ semester: "asc" }, { code: "asc" }],
         });
       }
+
+      if (student?.academicYear && student?.currentSemester) {
+        timetable = await prisma.timetable.findFirst({
+          where: {
+            academicYearCode: student.academicYear,
+            semester: student.currentSemester,
+          },
+        });
+      }
     } catch (err) {
       console.error("[STUDENT_ACADEMICS_DB_ERROR]", err);
     }
@@ -51,6 +61,34 @@ export default async function StudentAcademicsPage() {
       />
 
       <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto w-full">
+        {/* Class Timetable Card */}
+        {timetable ? (
+          <div className="ui-card p-6 bg-gradient-to-r from-indigo-50/50 dark:from-indigo-950/20 to-slate-50 dark:to-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-indigo-600" />
+                <span>Class Timetable — Semester {student?.currentSemester} ({student?.academicYear})</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Your official class timetable document is available. Click below to view or download it.
+              </p>
+            </div>
+            <a
+              href={timetable.documentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5 w-fit"
+            >
+              <FileText className="w-4 h-4" />
+              <span>View Class Timetable</span>
+            </a>
+          </div>
+        ) : (
+          <div className="ui-card p-4 bg-slate-50 dark:bg-slate-900/50 text-center text-xs text-slate-500">
+            No class timetable document uploaded yet for your current semester (Semester {student?.currentSemester || 1}, {student?.academicYear || "2025-2029"}).
+          </div>
+        )}
+
         {/* Cumulative Performance Summary */}
         <div className="ui-card p-6 border-l-4 border-l-emerald-600 bg-gradient-to-r from-emerald-50/50 dark:from-emerald-950/30 to-slate-50 dark:to-slate-900 flex items-center justify-between">
           <div>

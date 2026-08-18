@@ -138,6 +138,7 @@ model Course {
   subjectType      String     @default("CORE")
   isActive         Boolean    @default(true)
   isArchived       Boolean    @default(false)
+  syllabusUrl      String?
   archivedAt       DateTime?
   archivedReason   String?
   archivedBy       String?
@@ -970,6 +971,18 @@ model ScheduledReportConfig {
   createdBy  String
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+}
+
+model Timetable {
+  id               String   @id @default(uuid())
+  academicYearCode String
+  semester         Int
+  documentUrl      String
+  fileName         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([academicYearCode, semester])
 }
 
 
