@@ -254,61 +254,16 @@ export default function StudentInternshipsPage() {
                             </div>
 
                             {semInternships.length > 0 ? (
-                              <div className="space-y-3 pt-1">
-                                {semInternships.map((internship: any) => {
-                                  const itemCompleted = isCompletedStatus(internship.status);
-                                  return (
-                                    <div
-                                      key={internship.id}
-                                      className={`p-3 rounded-xl bg-white dark:bg-slate-900 border space-y-2 text-xs shadow-sm ${
-                                        itemCompleted
-                                          ? "border-emerald-100 dark:border-emerald-950"
-                                          : "border-sky-100 dark:border-sky-950"
-                                      }`}
-                                    >
-                                      <div className="font-bold text-slate-900 dark:text-white">{internship.companyName}</div>
-                                      <div className="text-slate-600 dark:text-slate-400 font-medium">Role / Course: <strong>{internship.role}</strong></div>
-                                      <div className="text-slate-600 dark:text-slate-400 font-medium">Mode: <strong>{internship.mode || "ONLINE"}</strong></div>
-                                      <div className="text-slate-600 dark:text-slate-400 font-medium">Dates: <strong>{internship.startDate} to {internship.endDate}</strong></div>
-                                      
-                                      <div className="pt-1.5 flex items-center justify-between gap-2 flex-wrap border-t border-slate-100 dark:border-slate-800/80">
-                                        <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                          Status:{" "}
-                                          {itemCompleted ? (
-                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">COMPLETED ✓</span>
-                                          ) : (
-                                            <span className="text-sky-600 dark:text-sky-400 font-bold">
-                                              {internship.status && internship.status.toUpperCase() === "ONGOING" ? "ONGOING" : String(internship.status || '').replace("_", " ").toUpperCase()}
-                                            </span>
-                                          )}
-                                        </span>
-
-                                        {internship.status === "APPROVED" && (
-                                          <button
-                                            type="button"
-                                            onClick={() => setCompletionModalItem(internship)}
-                                            className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shrink-0"
-                                          >
-                                            Verify Completion
-                                          </button>
-                                        )}
-                                      </div>
-
-                                      <div className="flex gap-2 pt-1 flex-wrap">
-                                        {internship.offerLetterUrl && (
-                                          <a href={internship.offerLetterUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-sky-600 hover:underline">
-                                            Offer Letter
-                                          </a>
-                                        )}
-                                        {internship.certificateUrl && (
-                                          <a href={internship.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-emerald-600 hover:underline">
-                                            Certificate
-                                          </a>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                              <div className="pt-2">
+                                {isCompleted ? (
+                                  <div className="py-3 text-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs shadow-sm">
+                                    COMPLETED ✓
+                                  </div>
+                                ) : (
+                                  <div className="py-3 text-center rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-xs shadow-sm">
+                                    ONGOING
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <div className="py-3 text-center text-[11px] text-slate-400/60 dark:text-slate-500/60 italic border border-dashed border-slate-200/60 dark:border-slate-800/60 rounded-xl bg-slate-50/20">
