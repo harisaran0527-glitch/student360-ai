@@ -45,6 +45,7 @@ export default function AdminInternshipsPage() {
   const [endDate, setEndDate] = useState<string>("");
   const [status, setStatus] = useState<string>("COMPLETED");
   const [semester, setSemester] = useState<string>("1");
+  const [certificateUrl, setCertificateUrl] = useState<string>("");
 
   // Edit Internship state
   const [editInternship, setEditInternship] = useState<any | null>(null);
@@ -57,6 +58,7 @@ export default function AdminInternshipsPage() {
   const [editEndDate, setEditEndDate] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("COMPLETED");
   const [editSemester, setEditSemester] = useState<string>("1");
+  const [editCertificateUrl, setEditCertificateUrl] = useState<string>("");
 
   const handleEditClick = (item: any) => {
     setEditInternship(item);
@@ -69,6 +71,7 @@ export default function AdminInternshipsPage() {
     setEditEndDate(item.endDate || "");
     setEditStatus(item.status || "COMPLETED");
     setEditSemester(item.semester ? String(item.semester) : "1");
+    setEditCertificateUrl(item.certificateUrl || "");
   };
 
   const handleEditInternshipSubmit = async (e: React.FormEvent) => {
@@ -95,6 +98,7 @@ export default function AdminInternshipsPage() {
           endDate: editEndDate,
           status: editStatus,
           semester: editSemester,
+          certificateUrl: editCertificateUrl,
         }),
       });
 
@@ -183,6 +187,7 @@ export default function AdminInternshipsPage() {
           startDate: startDate || new Date().toISOString().split("T")[0],
           endDate: endDate || new Date().toISOString().split("T")[0],
           status,
+          certificateUrl,
         }),
       });
 
@@ -194,6 +199,7 @@ export default function AdminInternshipsPage() {
       alert("Internship record added successfully!");
       setModalOpen(false);
       setCompanyName("");
+      setCertificateUrl("");
       fetchData();
     } catch (err: any) {
       alert(err.message);
@@ -444,7 +450,7 @@ export default function AdminInternshipsPage() {
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Internship Role *</label>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Course / Internship Title *</label>
               <input
                 type="text"
                 required
@@ -522,6 +528,17 @@ export default function AdminInternshipsPage() {
             </div>
           </div>
 
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Certificate / Document URL</label>
+            <input
+              type="text"
+              value={certificateUrl}
+              onChange={(e) => setCertificateUrl(e.target.value)}
+              placeholder="https://example.com/certificate.pdf"
+              className="ui-input w-full p-2"
+            />
+          </div>
+
           <div className="pt-3 border-t flex justify-end gap-2">
             <button
               type="button"
@@ -565,7 +582,7 @@ export default function AdminInternshipsPage() {
                 />
               </div>
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Internship Role *</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Course / Internship Title *</label>
                 <input
                   type="text"
                   required
@@ -652,6 +669,17 @@ export default function AdminInternshipsPage() {
                   className="ui-input w-full p-2"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Certificate / Document URL</label>
+              <input
+                type="text"
+                value={editCertificateUrl}
+                onChange={(e) => setEditCertificateUrl(e.target.value)}
+                placeholder="https://example.com/certificate.pdf"
+                className="ui-input w-full p-2"
+              />
             </div>
 
             <div className="pt-3 border-t flex justify-end gap-2">

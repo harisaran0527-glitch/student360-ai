@@ -2,60 +2,35 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Fetch all non-archived internships to extract real company directory info
-    const verifiedInternships = await prisma.internship.findMany({
-      where: { isArchived: false },
+    const studentId = session.role === "STUDENT" ? session.studentProfileId : undefined;
+    if (session.role === "STUDENT" && !studentId) {
+      return NextResponse.json({ companies: [] });
+    }
+
+    const where: any = { isArchived: false };
+    if (studentId) {
+      where.studentId = studentId;
+    }
+
+    const records = await prisma.internship.findMany({
+      where,
       select: {
+        id: true,
         companyName: true,
-        industry: true,
-        domain: true,
+        role: true,
         mode: true,
+        domain: true,
         location: true,
       },
+      orderBy: { createdAt: "desc" },
     });
 
-    const companyMap = new Map<string, {
-      name: string;
-      industry: string;
-      domains: Set<string>;
-      modes: Set<string>;
-      locations: Set<string>;
-    }>();
-
-    verifiedInternships.forEach((i) => {
-      const normalizedName = i.companyName.trim().toLowerCase();
-      if (!normalizedName) return;
-
-      if (!companyMap.has(normalizedName)) {
-        companyMap.set(normalizedName, {
-          name: i.companyName.trim(), // Keep original display name
-          industry: i.industry || "Software & IT",
-          domains: new Set<string>(),
-          modes: new Set<string>(),
-          locations: new Set<string>(),
-        });
-      }
-
-      const comp = companyMap.get(normalizedName)!;
-      if (i.domain) comp.domains.add(i.domain.trim());
-      if (i.mode) comp.modes.add(i.mode.trim());
-      if (i.location) comp.locations.add(i.location.trim());
-    });
-
-    const companies = Array.from(companyMap.values()).map((c) => ({
-      name: c.name,
-      industry: c.industry,
-      domains: Array.from(c.domains),
-      modes: Array.from(c.modes),
-      locations: Array.from(c.locations),
-    }));
-
-    return NextResponse.json({ companies });
+    return NextResponse.json({ companies: records });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
