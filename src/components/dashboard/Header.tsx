@@ -124,16 +124,15 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, action }) => {
               setIsShareOpen(!isShareOpen);
               setIsDrawerOpen(false);
             }}
-            className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center justify-center"
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center justify-center border border-indigo-300 dark:border-indigo-600 shadow-md"
             title="Share Student360"
           >
             <Share2 className="w-5 h-5" />
           </button>
-
           {isShareOpen && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 mt-3 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col p-2 gap-1 animate-in fade-in slide-in-from-top-2 duration-200"
+              className="absolute right-0 mt-3 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-60 overflow-hidden flex flex-col p-2 gap-1 animate-in fade-in slide-in-from-top-2 duration-200"
             >
               <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 mb-1">
                 Share Portal
