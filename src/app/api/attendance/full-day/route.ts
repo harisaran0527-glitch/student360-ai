@@ -15,6 +15,59 @@ export async function GET(req: Request) {
     const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
     const departmentId = searchParams.get("departmentId") || "";
 
+    if (searchParams.get("history") === "true") {
+      const records = await prisma.fullDayAttendance.findMany({
+        where: {
+          student: {
+            isArchived: false,
+            ...(departmentId ? { departmentId } : {}),
+            ...(academicYearParam ? { academicYear: academicYearParam } : {}),
+          },
+        },
+        select: {
+          date: true,
+          status: true,
+        },
+      });
+
+      const historyMap: Record<string, {
+        date: string;
+        marked: number;
+        present: number;
+        absent: number;
+        od: number;
+        ml: number;
+        longAbsent: number;
+      }> = {};
+
+      for (const rec of records) {
+        if (!historyMap[rec.date]) {
+          historyMap[rec.date] = {
+            date: rec.date,
+            marked: 0,
+            present: 0,
+            absent: 0,
+            od: 0,
+            ml: 0,
+            longAbsent: 0,
+          };
+        }
+        const summary = historyMap[rec.date];
+        summary.marked++;
+        const s = rec.status.toUpperCase();
+        if (s === "PRESENT") summary.present++;
+        else if (s === "ABSENT") summary.absent++;
+        else if (s === "OD") summary.od++;
+        else if (s === "MEDICAL_LEAVE" || s === "ML") summary.ml++;
+        else if (s === "LONG_ABSENT") summary.longAbsent++;
+      }
+
+      const historyList = Object.values(historyMap).sort((a, b) => b.date.localeCompare(a.date));
+
+      logApiPerf("GET /api/attendance/full-day?history=true", startTime);
+      return apiSuccess({ history: historyList });
+    }
+
     const studentWhere: any = {
       isArchived: false,
     };
@@ -35,6 +88,11 @@ export async function GET(req: Request) {
         batchId: true,
         academicYear: true,
         attendancePercentage: true,
+        department: {
+          select: {
+            code: true,
+          },
+        },
       },
     });
 

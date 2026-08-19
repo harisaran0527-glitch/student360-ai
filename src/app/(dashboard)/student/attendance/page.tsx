@@ -125,14 +125,18 @@ export default function StudentAttendancePage() {
   // Full Day Calculations
   const fullDayRecords = studentData?.fullDayAttendances || [];
   const totalWorkingDays = fullDayRecords.length;
-  const presentDays = fullDayRecords.filter((r: any) => {
+  const presentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "PRESENT").length;
+  const absentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "ABSENT").length;
+  const odDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "OD").length;
+  const mlDays = fullDayRecords.filter((r: any) => {
     const s = r.status.toUpperCase();
-    return s === "PRESENT" || s === "OD" || s === "MEDICAL_LEAVE" || s === "ML";
+    return s === "MEDICAL_LEAVE" || s === "ML";
   }).length;
-  const absentDays = fullDayRecords.filter((r: any) => {
-    const s = r.status.toUpperCase();
-    return s === "ABSENT" || s === "LONG_ABSENT";
-  }).length;
+  const longAbsentDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "LONG_ABSENT").length;
+
+  const presentDays = presentOnly + odDays + mlDays;
+  const absentDays = absentOnly + longAbsentDays;
+
   const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 0;
 
   const getDayOfWeek = (dateStr: string): string => {
@@ -312,28 +316,28 @@ export default function StudentAttendancePage() {
               <StatCard
                 title="Overall Full Day Attendance %"
                 value={totalWorkingDays > 0 ? `${fullDayPct}%` : "No Data"}
-                subtitle={`Total Working Days: ${totalWorkingDays}`}
+                subtitle={`Total Saved Days: ${totalWorkingDays}`}
                 icon={Clock}
                 color={totalWorkingDays > 0 && fullDayPct < minRequired ? "rose" : "emerald"}
               />
               <StatCard
-                title="Total Working Days"
+                title="Total Saved Days"
                 value={totalWorkingDays}
-                subtitle={`Present: ${presentDays} | Absent: ${absentDays}`}
+                subtitle={`Present: ${presentOnly} | Absent: ${absentOnly}`}
                 icon={Calendar}
                 color="indigo"
               />
               <StatCard
-                title="Present Days"
-                value={presentDays}
-                subtitle="Fully attended school days"
+                title="Approved OD & ML"
+                value={odDays + mlDays}
+                subtitle={`OD: ${odDays} | ML: ${mlDays}`}
                 icon={CheckCircle2}
-                color="emerald"
+                color="purple"
               />
               <StatCard
-                title="Absent Days"
-                value={absentDays}
-                subtitle="Missed / unmarked school days"
+                title="Long Absent"
+                value={longAbsentDays}
+                subtitle={`Denom: ${totalWorkingDays} days`}
                 icon={AlertTriangle}
                 color="rose"
               />

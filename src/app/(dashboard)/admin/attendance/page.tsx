@@ -32,7 +32,7 @@ export default function AdminTakeAttendancePage() {
   const [courses, setCourses] = useState<any[]>([]);
 
   // Tab mode state
-  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT">("FULL_DAY");
+  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT" | "ABSENTEES" | "HISTORY">("FULL_DAY");
 
   // Selection state
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(DEFAULT_ACADEMIC_YEAR);
@@ -44,6 +44,41 @@ export default function AdminTakeAttendancePage() {
   );
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // History tab state
+  const [historyList, setHistoryList] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+  const [absenteesSearchTerm, setAbsenteesSearchTerm] = useState<string>("");
+
+  const loadHistory = React.useCallback(async () => {
+    if (!selectedAcademicYear) return;
+    setHistoryLoading(true);
+    try {
+      const params = new URLSearchParams({
+        academicYear: selectedAcademicYear,
+        departmentId: selectedDepartmentId,
+        history: "true",
+      });
+      const res = await fetch(`/api/attendance/full-day?${params.toString()}`);
+      const data = await res.json();
+      setHistoryList(data.data?.history || data.history || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [selectedAcademicYear, selectedDepartmentId]);
+
+  useEffect(() => {
+    if (attendanceMode === "HISTORY") {
+      loadHistory();
+    }
+  }, [attendanceMode, loadHistory]);
+
+  const handleOpenHistoryDate = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    setAttendanceMode("FULL_DAY");
+  };
 
   // Student list & status state
   const [students, setStudents] = useState<any[]>([]);
@@ -67,6 +102,19 @@ export default function AdminTakeAttendancePage() {
       rollNo.includes(term) ||
       institutionalEmail.includes(term)
     );
+  });
+
+  const absenteesList = students.filter((st) => {
+    const status = attendanceState[st.id];
+    return status === "ABSENT" || status === "LONG_ABSENT" || status === "ML" || status === "MEDICAL_LEAVE";
+  });
+
+  const filteredAbsentees = absenteesList.filter((st) => {
+    if (!absenteesSearchTerm) return true;
+    const term = absenteesSearchTerm.toLowerCase().trim();
+    const fullName = (st.fullName || "").toLowerCase();
+    const registerNo = (st.registerNo || "").toLowerCase();
+    return fullName.includes(term) || registerNo.includes(term);
   });
 
   // Fetch initial options
@@ -108,7 +156,7 @@ export default function AdminTakeAttendancePage() {
 
   // Fetch students and existing attendance when filters change
   const loadStudentsAndAttendance = React.useCallback(async () => {
-    if (!selectedAcademicYear) return;
+    if (!selectedAcademicYear || attendanceMode === "HISTORY") return;
     setLoading(true);
     setMessage(null);
     try {
@@ -326,14 +374,16 @@ export default function AdminTakeAttendancePage() {
         subtitle={`Academic Year: ${selectedAcademicYear} | Department: AI & ML`}
         action={
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleSave}
-              disabled={saving || students.length === 0}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{saving ? "Saving..." : "Save Attendance"}</span>
-            </button>
+            {(attendanceMode === "FULL_DAY" || attendanceMode === "SUBJECT") && (
+              <button
+                onClick={handleSave}
+                disabled={saving || students.length === 0}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save Attendance"}</span>
+              </button>
+            )}
 
             {attendanceMode === "SUBJECT" && (
               <button
@@ -365,6 +415,26 @@ export default function AdminTakeAttendancePage() {
             Full Day Attendance
           </button>
           <button
+            onClick={() => setAttendanceMode("ABSENTEES")}
+            className={`py-3 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
+              attendanceMode === "ABSENTEES"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Absentees
+          </button>
+          <button
+            onClick={() => setAttendanceMode("HISTORY")}
+            className={`py-3 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
+              attendanceMode === "HISTORY"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Attendance History
+          </button>
+          <button
             onClick={() => setAttendanceMode("SUBJECT")}
             className={`py-3 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
               attendanceMode === "SUBJECT"
@@ -384,15 +454,21 @@ export default function AdminTakeAttendancePage() {
               <span>
                 {attendanceMode === "FULL_DAY"
                   ? "Full Day Attendance Selector"
+                  : attendanceMode === "ABSENTEES"
+                  ? "Absentees Log Selector"
+                  : attendanceMode === "HISTORY"
+                  ? "History Report Selector"
                   : "Attendance Selector (Single Class Context)"}
               </span>
             </h2>
-            {isEditMode ? (
-              <Badge variant="warning">
-                <Edit3 className="w-3 h-3 mr-1" /> Editing Saved Attendance
-              </Badge>
-            ) : (
-              <Badge variant="success">New Attendance Session</Badge>
+            {(attendanceMode === "FULL_DAY" || attendanceMode === "SUBJECT") && (
+              isEditMode ? (
+                <Badge variant="warning">
+                  <Edit3 className="w-3 h-3 mr-1" /> Editing Saved Attendance
+                </Badge>
+              ) : (
+                <Badge variant="success">New Attendance Session</Badge>
+              )
             )}
           </div>
 
@@ -437,17 +513,19 @@ export default function AdminTakeAttendancePage() {
 
             {/* Batch filter dropdown removed */}
 
-            <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Date *
-              </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="ui-input w-full p-2 font-semibold"
-              />
-            </div>
+            {attendanceMode !== "HISTORY" && (
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="ui-input w-full p-2 font-semibold"
+                />
+              </div>
+            )}
 
             {attendanceMode === "SUBJECT" && (
               <div>
@@ -489,70 +567,73 @@ export default function AdminTakeAttendancePage() {
         )}
 
         {/* Summary Counter Bar */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-8"} gap-3`}>
-          <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-slate-500">Total</div>
-            <div className="text-lg font-bold text-slate-900 dark:text-white">{totalStudents}</div>
+        {(attendanceMode === "FULL_DAY" || attendanceMode === "SUBJECT") && (
+          <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-8"} gap-3`}>
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+              <div className="text-[10px] uppercase font-bold text-slate-500">Total</div>
+              <div className="text-lg font-bold text-slate-900 dark:text-white">{totalStudents}</div>
+            </div>
+            {attendanceMode === "FULL_DAY" && (
+              <>
+                <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 text-center">
+                  <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Marked</div>
+                  <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{markedCount}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-slate-500">Unmarked</div>
+                  <div className="text-lg font-bold text-slate-700 dark:text-slate-350">{unmarkedCount}</div>
+                </div>
+              </>
+            )}
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center">
+              <div className="text-[10px] uppercase font-bold text-emerald-600">Present</div>
+              <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{presentCount}</div>
+            </div>
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-center">
+              <div className="text-[10px] uppercase font-bold text-rose-600">Absent</div>
+              <div className="text-lg font-bold text-rose-700 dark:text-rose-400">{absentCount}</div>
+            </div>
+            {attendanceMode === "FULL_DAY" ? (
+              <>
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
+                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-amber-600">ML</div>
+                  <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{mlCount}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-red-600">Long Absent</div>
+                  <div className="text-lg font-bold text-red-700 dark:text-red-400">{longAbsentCount}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
+                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-purple-600">Internship</div>
+                  <div className="text-lg font-bold text-purple-700 dark:text-purple-400">{internshipCount}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-amber-600">Medical</div>
+                  <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{medicalCount}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 text-center">
+                  <div className="text-[10px] uppercase font-bold text-sky-600">Late</div>
+                  <div className="text-lg font-bold text-sky-700 dark:text-sky-400">{lateCount}</div>
+                </div>
+              </>
+            )}
           </div>
-          {attendanceMode === "FULL_DAY" && (
-            <>
-              <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 text-center">
-                <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Marked</div>
-                <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{markedCount}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-slate-500">Unmarked</div>
-                <div className="text-lg font-bold text-slate-700 dark:text-slate-350">{unmarkedCount}</div>
-              </div>
-            </>
-          )}
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-emerald-600">Present</div>
-            <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{presentCount}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-center">
-            <div className="text-[10px] uppercase font-bold text-rose-600">Absent</div>
-            <div className="text-lg font-bold text-rose-700 dark:text-rose-400">{absentCount}</div>
-          </div>
-          {attendanceMode === "FULL_DAY" ? (
-            <>
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
-                <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-amber-600">ML</div>
-                <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{mlCount}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-red-600">Long Absent</div>
-                <div className="text-lg font-bold text-red-700 dark:text-red-400">{longAbsentCount}</div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-blue-600">OD</div>
-                <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{odCount}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-purple-600">Internship</div>
-                <div className="text-lg font-bold text-purple-700 dark:text-purple-400">{internshipCount}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-amber-600">Medical</div>
-                <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{medicalCount}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 text-center">
-                <div className="text-[10px] uppercase font-bold text-sky-600">Late</div>
-                <div className="text-lg font-bold text-sky-700 dark:text-sky-400">{lateCount}</div>
-              </div>
-            </>
-          )}
-        </div>
+        )}
 
         {/* Quick Batch Actions & Student List */}
-        <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm space-y-4 p-6">
+        {(attendanceMode === "FULL_DAY" || attendanceMode === "SUBJECT") && (
+          <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm space-y-4 p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-indigo-600" />
@@ -745,7 +826,205 @@ export default function AdminTakeAttendancePage() {
               </button>
             </div>
           )}
-        </div>
+          </div>
+        )}
+
+        {/* Absentees Tab */}
+        {attendanceMode === "ABSENTEES" && (
+          <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm space-y-4 p-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+                <span>Absentees List ({filteredAbsentees.length} Records)</span>
+              </h3>
+              <div className="relative w-full sm:w-80 text-xs">
+                <input
+                  type="text"
+                  placeholder="Search absentee by name or register number..."
+                  value={absenteesSearchTerm}
+                  onChange={(e) => setAbsenteesSearchTerm(e.target.value)}
+                  className="ui-input w-full pl-9 pr-8 py-2 font-medium"
+                />
+                <span className="absolute left-3 top-2.5 text-slate-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+                {absenteesSearchTerm && (
+                  <button
+                    onClick={() => setAbsenteesSearchTerm("")}
+                    className="absolute right-3 top-1.5 text-slate-400 hover:text-slate-650 text-lg font-bold"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Main Absentees Table (Absent & Long Absent) */}
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-3">Absentees & Long Absentees</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-rose-50/50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 font-bold uppercase tracking-wider border-b border-rose-100 dark:border-rose-900">
+                        <th className="p-3.5">Register Number</th>
+                        <th className="p-3.5">Student Name</th>
+                        <th className="p-3.5">Department</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {filteredAbsentees.filter(st => {
+                        const status = attendanceState[st.id];
+                        return status === "ABSENT" || status === "LONG_ABSENT";
+                      }).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-slate-500 font-medium">
+                            No absentees found for the selected filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAbsentees
+                          .filter(st => {
+                            const status = attendanceState[st.id];
+                            return status === "ABSENT" || status === "LONG_ABSENT";
+                          })
+                          .map((st) => (
+                            <tr key={st.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                              <td className="p-3.5 font-bold font-mono text-indigo-600 dark:text-indigo-400">{st.registerNo}</td>
+                              <td className="p-3.5 font-bold text-slate-900 dark:text-white">{st.fullName}</td>
+                              <td className="p-3.5 text-slate-600 dark:text-slate-400 font-semibold">{st.department?.code || selectedDepartmentId || "AI&ML"}</td>
+                              <td className="p-3.5">
+                                <Badge variant={attendanceState[st.id] === "LONG_ABSENT" ? "danger" : "warning"}>
+                                  {attendanceState[st.id] === "LONG_ABSENT" ? "Long Absent" : "Absent"}
+                                </Badge>
+                              </td>
+                              <td className="p-3.5 font-medium text-slate-500">{selectedDate}</td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Medical Leave (ML) Table */}
+              <div>
+                <h4 className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-3">Medical Leave (ML)</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider border-b border-amber-100 dark:border-amber-900">
+                        <th className="p-3.5">Register Number</th>
+                        <th className="p-3.5">Student Name</th>
+                        <th className="p-3.5">Department</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {filteredAbsentees.filter(st => {
+                        const status = attendanceState[st.id];
+                        return status === "ML" || status === "MEDICAL_LEAVE";
+                      }).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-slate-500 font-medium">
+                            No students on Medical Leave (ML) for the selected filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAbsentees
+                          .filter(st => {
+                            const status = attendanceState[st.id];
+                            return status === "ML" || status === "MEDICAL_LEAVE";
+                          })
+                          .map((st) => (
+                            <tr key={st.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                              <td className="p-3.5 font-bold font-mono text-indigo-600 dark:text-indigo-400">{st.registerNo}</td>
+                              <td className="p-3.5 font-bold text-slate-900 dark:text-white">{st.fullName}</td>
+                              <td className="p-3.5 text-slate-600 dark:text-slate-400 font-semibold">{st.department?.code || selectedDepartmentId || "AI&ML"}</td>
+                              <td className="p-3.5">
+                                <Badge variant="warning">Medical Leave (ML)</Badge>
+                              </td>
+                              <td className="p-3.5 font-medium text-slate-500">{selectedDate}</td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Tab */}
+        {attendanceMode === "HISTORY" && (
+          <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm space-y-4 p-6">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <Calendar className="w-4 h-4 text-indigo-600" />
+              <span>Saved Attendance History</span>
+            </h3>
+
+            {historyLoading ? (
+              <div className="space-y-3 py-4">
+                <Skeleton className="h-12 rounded-xl" />
+                <Skeleton className="h-12 rounded-xl" />
+                <Skeleton className="h-12 rounded-xl" />
+              </div>
+            ) : historyList.length === 0 ? (
+              <EmptyState
+                title="No Attendance History Found"
+                description="Save attendance records first to display history logs."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <th className="p-3.5">Date</th>
+                      <th className="p-3.5">Total Marked</th>
+                      <th className="p-3.5">Present</th>
+                      <th className="p-3.5">Absent</th>
+                      <th className="p-3.5">OD</th>
+                      <th className="p-3.5">ML</th>
+                      <th className="p-3.5">Long Absent</th>
+                      <th className="p-3.5">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {historyList.map((item) => (
+                      <tr key={item.date} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                          {item.date}
+                        </td>
+                        <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                          {item.marked}
+                        </td>
+                        <td className="p-3.5 text-emerald-600 font-bold">{item.present}</td>
+                        <td className="p-3.5 text-rose-600 font-bold">{item.absent}</td>
+                        <td className="p-3.5 text-blue-600 font-bold">{item.od}</td>
+                        <td className="p-3.5 text-amber-600 font-bold">{item.ml}</td>
+                        <td className="p-3.5 text-red-600 font-bold">{item.longAbsent}</td>
+                        <td className="p-3.5">
+                          <button
+                            onClick={() => handleOpenHistoryDate(item.date)}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold transition text-[11px]"
+                          >
+                            Open / Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Top-Level Delete Management Panel */}
