@@ -129,7 +129,10 @@ export default function StudentAttendancePage() {
     const s = r.status.toUpperCase();
     return s === "PRESENT" || s === "OD" || s === "MEDICAL_LEAVE" || s === "ML";
   }).length;
-  const absentDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "ABSENT").length;
+  const absentDays = fullDayRecords.filter((r: any) => {
+    const s = r.status.toUpperCase();
+    return s === "ABSENT" || s === "LONG_ABSENT";
+  }).length;
   const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 0;
 
   const getDayOfWeek = (dateStr: string): string => {
@@ -376,7 +379,7 @@ export default function StudentAttendancePage() {
                                   (() => {
                                     const s = r.status.toUpperCase();
                                     if (s === "PRESENT") return "success";
-                                    if (s === "ABSENT") return "danger";
+                                    if (s === "ABSENT" || s === "LONG_ABSENT") return "danger";
                                     if (s === "OD") return "purple";
                                     return "warning"; // MEDICAL_LEAVE / ML
                                   })()
@@ -388,6 +391,7 @@ export default function StudentAttendancePage() {
                                   if (s === "ABSENT") return "Absent";
                                   if (s === "OD") return "OD";
                                   if (s === "MEDICAL_LEAVE" || s === "ML") return "ML";
+                                  if (s === "LONG_ABSENT") return "Long Absent";
                                   return r.status;
                                 })()}
                               </Badge>

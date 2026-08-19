@@ -86,7 +86,7 @@ export async function POST(req: Request) {
         status = "MEDICAL_LEAVE";
       }
 
-      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE"].includes(status)) {
+      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE", "LONG_ABSENT"].includes(status)) {
         throw new Error(`Invalid attendance status '${status}'`);
       }
 

@@ -24,7 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE" | "ML";
+type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE" | "ML" | "LONG_ABSENT";
 
 export default function AdminTakeAttendancePage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -291,12 +291,13 @@ export default function AdminTakeAttendancePage() {
   // Summary counts
   const totalStudents = students.length;
   const presentCount = students.filter((st) => attendanceState[st.id] === "PRESENT").length;
-  const absentCount = students.filter((st) => attendanceState[st.id] === "ABSENT").length;
+  const absentCount = students.filter((st) => attendanceState[st.id] === "ABSENT" || attendanceState[st.id] === "LONG_ABSENT").length;
   const odCount = students.filter((st) => attendanceState[st.id] === "OD").length;
   const internshipCount = students.filter((st) => attendanceState[st.id] === "INTERNSHIP").length;
   const medicalCount = students.filter((st) => attendanceState[st.id] === "MEDICAL_LEAVE").length;
   const lateCount = students.filter((st) => attendanceState[st.id] === "LATE").length;
   const mlCount = students.filter((st) => attendanceState[st.id] === "ML" || attendanceState[st.id] === "MEDICAL_LEAVE").length;
+  const longAbsentCount = students.filter((st) => attendanceState[st.id] === "LONG_ABSENT").length;
 
   // Delete Management State
   const [isDeletePanelOpen, setIsDeletePanelOpen] = useState(false);
@@ -485,7 +486,7 @@ export default function AdminTakeAttendancePage() {
         )}
 
         {/* Summary Counter Bar */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-5"} gap-3`}>
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-6"} gap-3`}>
           <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
             <div className="text-[10px] uppercase font-bold text-slate-500">Total</div>
             <div className="text-lg font-bold text-slate-900 dark:text-white">{totalStudents}</div>
@@ -507,6 +508,10 @@ export default function AdminTakeAttendancePage() {
               <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
                 <div className="text-[10px] uppercase font-bold text-amber-600">ML</div>
                 <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{mlCount}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-red-600">Long Absent</div>
+                <div className="text-lg font-bold text-red-700 dark:text-red-400">{longAbsentCount}</div>
               </div>
             </>
           ) : (
@@ -642,7 +647,7 @@ export default function AdminTakeAttendancePage() {
                         <td className="p-3.5">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(attendanceMode === "FULL_DAY"
-                              ? ["PRESENT", "ABSENT", "OD", "ML"]
+                              ? ["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT"]
                               : [
                                   "PRESENT",
                                   "ABSENT",
@@ -670,6 +675,10 @@ export default function AdminTakeAttendancePage() {
                                   ? isSel
                                     ? "bg-amber-600 text-white"
                                     : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                  : stKey === "LONG_ABSENT"
+                                  ? isSel
+                                    ? "bg-red-600 text-white"
+                                    : "bg-red-50 text-red-700 hover:bg-red-100"
                                   : stKey === "INTERNSHIP"
                                   ? isSel
                                     ? "bg-purple-600 text-white"
