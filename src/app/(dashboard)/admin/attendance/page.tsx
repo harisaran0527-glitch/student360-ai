@@ -24,7 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE" | "ML" | "LONG_ABSENT";
+type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE" | "ML" | "LONG_ABSENT" | "UNMARKED";
 
 export default function AdminTakeAttendancePage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -168,6 +168,11 @@ export default function AdminTakeAttendancePage() {
         const existingMap: Record<string, AttendanceStatus> = {};
         const existingRecords = data.data?.existingAttendance || data.existingAttendance || [];
 
+        // Set all to UNMARKED initially
+        studentList.forEach((st: any) => {
+          existingMap[st.id] = "UNMARKED";
+        });
+
         if (existingRecords.length > 0) {
           setIsEditMode(true);
           existingRecords.forEach((rec: any) => {
@@ -179,10 +184,6 @@ export default function AdminTakeAttendancePage() {
           });
         } else {
           setIsEditMode(false);
-          // Default all to PRESENT
-          studentList.forEach((st: any) => {
-            existingMap[st.id] = "PRESENT";
-          });
         }
 
         setAttendanceState(existingMap);
@@ -261,7 +262,7 @@ export default function AdminTakeAttendancePage() {
       try {
         const records = students.map((st) => ({
           studentId: st.id,
-          status: attendanceState[st.id] || "PRESENT",
+          status: attendanceState[st.id] || "UNMARKED",
         }));
 
         const res = await fetch("/api/attendance/full-day", {
@@ -290,6 +291,8 @@ export default function AdminTakeAttendancePage() {
 
   // Summary counts
   const totalStudents = students.length;
+  const markedCount = students.filter((st) => attendanceState[st.id] && attendanceState[st.id] !== "UNMARKED").length;
+  const unmarkedCount = totalStudents - markedCount;
   const presentCount = students.filter((st) => attendanceState[st.id] === "PRESENT").length;
   const absentCount = students.filter((st) => attendanceState[st.id] === "ABSENT" || attendanceState[st.id] === "LONG_ABSENT").length;
   const odCount = students.filter((st) => attendanceState[st.id] === "OD").length;
@@ -486,11 +489,23 @@ export default function AdminTakeAttendancePage() {
         )}
 
         {/* Summary Counter Bar */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-6"} gap-3`}>
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${attendanceMode === "SUBJECT" ? "md:grid-cols-7" : "md:grid-cols-8"} gap-3`}>
           <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
             <div className="text-[10px] uppercase font-bold text-slate-500">Total</div>
             <div className="text-lg font-bold text-slate-900 dark:text-white">{totalStudents}</div>
           </div>
+          {attendanceMode === "FULL_DAY" && (
+            <>
+              <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 text-center">
+                <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Marked</div>
+                <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{markedCount}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-[10px] uppercase font-bold text-slate-500">Unmarked</div>
+                <div className="text-lg font-bold text-slate-700 dark:text-slate-350">{unmarkedCount}</div>
+              </div>
+            </>
+          )}
           <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center">
             <div className="text-[10px] uppercase font-bold text-emerald-600">Present</div>
             <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{presentCount}</div>
@@ -647,7 +662,7 @@ export default function AdminTakeAttendancePage() {
                         <td className="p-3.5">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(attendanceMode === "FULL_DAY"
-                              ? ["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT"]
+                              ? ["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT", "UNMARKED"]
                               : [
                                   "PRESENT",
                                   "ABSENT",
@@ -679,6 +694,10 @@ export default function AdminTakeAttendancePage() {
                                   ? isSel
                                     ? "bg-red-600 text-white"
                                     : "bg-red-50 text-red-700 hover:bg-red-100"
+                                  : stKey === "UNMARKED"
+                                  ? isSel
+                                    ? "bg-slate-600 text-white"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                                   : stKey === "INTERNSHIP"
                                   ? isSel
                                     ? "bg-purple-600 text-white"
@@ -694,7 +713,7 @@ export default function AdminTakeAttendancePage() {
                                   onClick={() => handleStatusChange(st.id, stKey as AttendanceStatus)}
                                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition border border-transparent ${btnColor}`}
                                 >
-                                  {stKey.replace("_", " ")}
+                                  {stKey === "UNMARKED" ? "Unmarked" : stKey.replace("_", " ")}
                                 </button>
                               );
                             })}

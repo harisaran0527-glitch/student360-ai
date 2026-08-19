@@ -86,29 +86,38 @@ export async function POST(req: Request) {
         status = "MEDICAL_LEAVE";
       }
 
-      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE", "LONG_ABSENT"].includes(status)) {
+      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE", "LONG_ABSENT", "UNMARKED"].includes(status)) {
         throw new Error(`Invalid attendance status '${status}'`);
       }
 
-      // Upsert record sequentially outside interactive transaction
-      await prisma.fullDayAttendance.upsert({
-        where: {
-          studentId_date: {
+      if (status === "UNMARKED") {
+        await prisma.fullDayAttendance.deleteMany({
+          where: {
             studentId,
             date,
           },
-        },
-        update: {
-          status,
-          remarks: remarks || null,
-        },
-        create: {
-          studentId,
-          date,
-          status,
-          remarks: remarks || null,
-        },
-      });
+        });
+      } else {
+        // Upsert record sequentially outside interactive transaction
+        await prisma.fullDayAttendance.upsert({
+          where: {
+            studentId_date: {
+              studentId,
+              date,
+            },
+          },
+          update: {
+            status,
+            remarks: remarks || null,
+          },
+          create: {
+            studentId,
+            date,
+            status,
+            remarks: remarks || null,
+          },
+        });
+      }
     }
 
     // Write Audit Log
