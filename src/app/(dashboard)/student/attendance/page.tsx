@@ -125,9 +125,12 @@ export default function StudentAttendancePage() {
   // Full Day Calculations
   const fullDayRecords = studentData?.fullDayAttendances || [];
   const totalWorkingDays = fullDayRecords.length;
-  const presentDays = fullDayRecords.filter((r: any) => r.status === "PRESENT" || r.status === "OD" || r.status === "MEDICAL_LEAVE" || r.status === "ML").length;
-  const absentDays = fullDayRecords.filter((r: any) => r.status === "ABSENT").length;
-  const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 100;
+  const presentDays = fullDayRecords.filter((r: any) => {
+    const s = r.status.toUpperCase();
+    return s === "PRESENT" || s === "OD" || s === "MEDICAL_LEAVE" || s === "ML";
+  }).length;
+  const absentDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "ABSENT").length;
+  const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 0;
 
   const getDayOfWeek = (dateStr: string): string => {
     const parts = dateStr.split("-");
@@ -305,10 +308,10 @@ export default function StudentAttendancePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Overall Full Day Attendance %"
-                value={`${fullDayPct}%`}
+                value={totalWorkingDays > 0 ? `${fullDayPct}%` : "No Data"}
                 subtitle={`Total Working Days: ${totalWorkingDays}`}
                 icon={Clock}
-                color={fullDayPct < minRequired ? "rose" : "emerald"}
+                color={totalWorkingDays > 0 && fullDayPct < minRequired ? "rose" : "emerald"}
               />
               <StatCard
                 title="Total Working Days"
@@ -370,16 +373,23 @@ export default function StudentAttendancePage() {
                             <td className="p-3">
                               <Badge
                                 variant={
-                                  r.status === "PRESENT" || r.status === "Present"
-                                    ? "success"
-                                    : r.status === "ABSENT" || r.status === "Absent"
-                                    ? "danger"
-                                    : r.status === "OD"
-                                    ? "purple"
-                                    : "warning" // ML / MEDICAL_LEAVE
+                                  (() => {
+                                    const s = r.status.toUpperCase();
+                                    if (s === "PRESENT") return "success";
+                                    if (s === "ABSENT") return "danger";
+                                    if (s === "OD") return "purple";
+                                    return "warning"; // MEDICAL_LEAVE / ML
+                                  })()
                                 }
                               >
-                                {r.status === "MEDICAL_LEAVE" ? "ML" : r.status}
+                                {(() => {
+                                  const s = r.status.toUpperCase();
+                                  if (s === "PRESENT") return "Present";
+                                  if (s === "ABSENT") return "Absent";
+                                  if (s === "OD") return "OD";
+                                  if (s === "MEDICAL_LEAVE" || s === "ML") return "ML";
+                                  return r.status;
+                                })()}
                               </Badge>
                             </td>
                           </tr>

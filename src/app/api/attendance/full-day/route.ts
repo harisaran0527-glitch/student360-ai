@@ -34,6 +34,7 @@ export async function GET(req: Request) {
         email: true,
         batchId: true,
         academicYear: true,
+        attendancePercentage: true,
       },
     });
 
@@ -71,57 +72,89 @@ export async function POST(req: Request) {
       return apiError("Date and attendanceRecords are required.", 400);
     }
 
-    await prisma.$transaction(async (tx) => {
-      for (const rec of attendanceRecords) {
-        const { studentId, remarks } = rec;
-        let status = rec.status;
-        if (!studentId) continue;
+    const studentIds: string[] = [];
 
-        if (status === "ML") {
-          status = "MEDICAL_LEAVE";
-        }
+    // Save attendance sequentially outside a transaction (pool-safe)
+    for (const rec of attendanceRecords) {
+      const { studentId, remarks } = rec;
+      let status = rec.status;
+      if (!studentId) continue;
 
-        if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE"].includes(status)) {
-          throw new Error(`Invalid attendance status '${status}'`);
-        }
+      studentIds.push(studentId);
 
-        // Upsert record sequentially
-        await tx.fullDayAttendance.upsert({
-          where: {
-            studentId_date: {
-              studentId,
-              date,
-            },
-          },
-          update: {
-            status,
-            remarks: remarks || null,
-          },
-          create: {
-            studentId,
-            date,
-            status,
-            remarks: remarks || null,
-          },
-        });
+      if (status === "ML") {
+        status = "MEDICAL_LEAVE";
       }
 
-      // Write Audit Log
-      await tx.auditLog.create({
-        data: {
-          userId: session.id,
-          userEmail: session.email,
-          userRole: session.role,
-          action: "SAVE_FULL_DAY_ATTENDANCE",
-          entityType: "FullDayAttendance",
-          details: `Saved full day attendance for Date ${date}, Total Students: ${attendanceRecords.length}`,
+      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE"].includes(status)) {
+        throw new Error(`Invalid attendance status '${status}'`);
+      }
+
+      // Upsert record sequentially outside interactive transaction
+      await prisma.fullDayAttendance.upsert({
+        where: {
+          studentId_date: {
+            studentId,
+            date,
+          },
+        },
+        update: {
+          status,
+          remarks: remarks || null,
+        },
+        create: {
+          studentId,
+          date,
+          status,
+          remarks: remarks || null,
         },
       });
+    }
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userEmail: session.email,
+        userRole: session.role,
+        action: "SAVE_FULL_DAY_ATTENDANCE",
+        entityType: "FullDayAttendance",
+        details: `Saved full day attendance for Date ${date}, Total Students: ${attendanceRecords.length}`,
+      },
     });
+
+    // Recalculate percentages for all affected students based on actual full day attendance
+    const allFullDayRecords = await prisma.fullDayAttendance.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, status: true },
+    });
+
+    const countsMap = new Map<string, { present: number; total: number }>();
+    for (const att of allFullDayRecords) {
+      if (!countsMap.has(att.studentId)) {
+        countsMap.set(att.studentId, { present: 0, total: 0 });
+      }
+      const item = countsMap.get(att.studentId)!;
+      item.total++;
+      if (att.status === "PRESENT" || att.status === "OD" || att.status === "MEDICAL_LEAVE" || att.status === "ML") {
+        item.present++;
+      }
+    }
+
+    // Update student profiles sequentially (outside transaction, pool-safe)
+    for (const studentId of studentIds) {
+      const item = countsMap.get(studentId) || { present: 0, total: 0 };
+      const percentage = item.total > 0 ? Math.round((item.present / item.total) * 100 * 10) / 10 : 0.0;
+      await prisma.studentProfile.update({
+        where: { id: studentId },
+        data: { attendancePercentage: percentage },
+      });
+    }
 
     logApiPerf("POST /api/attendance/full-day", startTime);
     return apiSuccess({ count: attendanceRecords.length }, "Full day attendance saved successfully.", 200);
   } catch (error: any) {
-    return apiError(error.message || "Failed to save full day attendance", 500);
+    console.error("Error saving full day attendance:", error);
+    return apiError("An error occurred while saving full day attendance. Please try again.", 500);
   }
 }
