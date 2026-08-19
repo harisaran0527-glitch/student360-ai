@@ -106,7 +106,7 @@ export default function AdminTakeAttendancePage() {
 
   const absenteesList = students.filter((st) => {
     const status = attendanceState[st.id];
-    return status === "ABSENT" || status === "LONG_ABSENT" || status === "ML" || status === "MEDICAL_LEAVE";
+    return status === "ABSENT" || status === "LONG_ABSENT";
   });
 
   const filteredAbsentees = absenteesList.filter((st) => {
@@ -911,52 +911,7 @@ export default function AdminTakeAttendancePage() {
                 </div>
               </div>
 
-              {/* Medical Leave (ML) Table */}
-              <div>
-                <h4 className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-3">Medical Leave (ML)</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider border-b border-amber-100 dark:border-amber-900">
-                        <th className="p-3.5">Register Number</th>
-                        <th className="p-3.5">Student Name</th>
-                        <th className="p-3.5">Department</th>
-                        <th className="p-3.5">Status</th>
-                        <th className="p-3.5">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                      {filteredAbsentees.filter(st => {
-                        const status = attendanceState[st.id];
-                        return status === "ML" || status === "MEDICAL_LEAVE";
-                      }).length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-6 text-center text-slate-500 font-medium">
-                            No students on Medical Leave (ML) for the selected filters.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAbsentees
-                          .filter(st => {
-                            const status = attendanceState[st.id];
-                            return status === "ML" || status === "MEDICAL_LEAVE";
-                          })
-                          .map((st) => (
-                            <tr key={st.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                              <td className="p-3.5 font-bold font-mono text-indigo-600 dark:text-indigo-400">{st.registerNo}</td>
-                              <td className="p-3.5 font-bold text-slate-900 dark:text-white">{st.fullName}</td>
-                              <td className="p-3.5 text-slate-600 dark:text-slate-400 font-semibold">{st.department?.code || selectedDepartmentId || "AI&ML"}</td>
-                              <td className="p-3.5">
-                                <Badge variant="warning">Medical Leave (ML)</Badge>
-                              </td>
-                              <td className="p-3.5 font-medium text-slate-500">{selectedDate}</td>
-                            </tr>
-                          ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+
             </div>
           </div>
         )}

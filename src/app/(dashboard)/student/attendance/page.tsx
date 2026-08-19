@@ -123,7 +123,9 @@ export default function StudentAttendancePage() {
   const isOverallShortage = overallPct < minRequired;
 
   // Full Day Calculations
-  const fullDayRecords = studentData?.fullDayAttendances || [];
+  const fullDayRecords = (studentData?.fullDayAttendances || []).filter(
+    (r: any) => r.status && r.status.toUpperCase() !== "UNMARKED"
+  );
   const totalWorkingDays = fullDayRecords.length;
   const presentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "PRESENT").length;
   const absentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "ABSENT").length;
@@ -137,7 +139,7 @@ export default function StudentAttendancePage() {
   const presentDays = presentOnly + odDays + mlDays;
   const absentDays = absentOnly + longAbsentDays;
 
-  const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 0;
+  const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100 * 100) / 100 : 0.0;
 
   const getDayOfWeek = (dateStr: string): string => {
     const parts = dateStr.split("-");

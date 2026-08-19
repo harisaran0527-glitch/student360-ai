@@ -42,6 +42,7 @@ async function runBackup() {
     const internships = await prisma.internship.findMany();
     const projects = await prisma.project.findMany();
     const placementRecords = await prisma.placementRecord.findMany();
+    const fullDayAttendances = await prisma.fullDayAttendance.findMany();
     const notifications = await prisma.notification.findMany();
     const auditLogs = await prisma.auditLog.findMany();
 
@@ -54,6 +55,7 @@ async function runBackup() {
       courses,
       attendances,
       attendanceSessions,
+      fullDayAttendances,
       certificates,
       internships,
       projects,

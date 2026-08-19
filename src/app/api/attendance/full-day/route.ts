@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { calculateAttendancePercentage } from "@/lib/attendancePercentage";
 
 export async function GET(req: Request) {
   const startTime = Date.now();
@@ -41,6 +42,8 @@ export async function GET(req: Request) {
       }> = {};
 
       for (const rec of records) {
+        const s = rec.status.toUpperCase();
+        if (s === "UNMARKED") continue;
         if (!historyMap[rec.date]) {
           historyMap[rec.date] = {
             date: rec.date,
@@ -54,7 +57,6 @@ export async function GET(req: Request) {
         }
         const summary = historyMap[rec.date];
         summary.marked++;
-        const s = rec.status.toUpperCase();
         if (s === "PRESENT") summary.present++;
         else if (s === "ABSENT") summary.absent++;
         else if (s === "OD") summary.od++;
@@ -196,22 +198,19 @@ export async function POST(req: Request) {
       select: { studentId: true, status: true },
     });
 
-    const countsMap = new Map<string, { present: number; total: number }>();
+    const studentRecordsMap = new Map<string, { status: string }[]>();
     for (const att of allFullDayRecords) {
-      if (!countsMap.has(att.studentId)) {
-        countsMap.set(att.studentId, { present: 0, total: 0 });
+      if (att.status === "UNMARKED") continue;
+      if (!studentRecordsMap.has(att.studentId)) {
+        studentRecordsMap.set(att.studentId, []);
       }
-      const item = countsMap.get(att.studentId)!;
-      item.total++;
-      if (att.status === "PRESENT" || att.status === "OD" || att.status === "MEDICAL_LEAVE" || att.status === "ML") {
-        item.present++;
-      }
+      studentRecordsMap.get(att.studentId)!.push({ status: att.status });
     }
 
     // Update student profiles sequentially (outside transaction, pool-safe)
     for (const studentId of studentIds) {
-      const item = countsMap.get(studentId) || { present: 0, total: 0 };
-      const percentage = item.total > 0 ? Math.round((item.present / item.total) * 100 * 10) / 10 : 0.0;
+      const records = studentRecordsMap.get(studentId) || [];
+      const percentage = calculateAttendancePercentage(records);
       await prisma.studentProfile.update({
         where: { id: studentId },
         data: { attendancePercentage: percentage },
