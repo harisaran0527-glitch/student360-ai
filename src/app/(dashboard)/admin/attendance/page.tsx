@@ -392,7 +392,7 @@ export default function AdminTakeAttendancePage() {
             )}
           </div>
 
-          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${attendanceMode === "SUBJECT" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4 text-xs`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${attendanceMode === "SUBJECT" ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4 text-xs`}>
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                 Academic Year *
@@ -431,23 +431,7 @@ export default function AdminTakeAttendancePage() {
               </select>
             </div>
 
-            <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Batch
-              </label>
-              <select
-                value={selectedBatchId}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                <option value="">All Batches</option>
-                {batches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Batch filter dropdown removed */}
 
             <div>
               <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
@@ -610,8 +594,8 @@ export default function AdminTakeAttendancePage() {
             </div>
           ) : students.length === 0 ? (
             <EmptyState
-              title={`No students found for Academic Year ${selectedAcademicYear} and Batch ${batches.find((b) => b.id === selectedBatchId)?.name || selectedBatchId}.`}
-              description="Ensure students have been added to this batch and academic year in the Batches & Progression page."
+              title={`No students found for Academic Year ${selectedAcademicYear}.`}
+              description="Ensure students have been added to this academic year in the Batches & Progression page."
             />
           ) : (
             <div className="overflow-x-auto">
