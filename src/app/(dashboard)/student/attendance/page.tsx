@@ -119,7 +119,7 @@ export default function StudentAttendancePage() {
       };
     });
 
-  const overallPct = studentData?.attendancePercentage || 100.0;
+  const overallPct = studentData?.attendancePercentage ?? 100.0;
   const isOverallShortage = overallPct < minRequired;
 
   // Full Day Calculations

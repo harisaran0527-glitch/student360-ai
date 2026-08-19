@@ -1,7 +1,7 @@
 export function calculateAttendancePercentage(records: { status: string }[]): number {
   const activeRecords = records.filter(r => r.status && r.status.toUpperCase() !== "UNMARKED");
   const total = activeRecords.length;
-  if (total === 0) return 0.0;
+  if (total === 0) return 100.0;
 
   const present = activeRecords.filter(r => {
     const s = r.status.toUpperCase();

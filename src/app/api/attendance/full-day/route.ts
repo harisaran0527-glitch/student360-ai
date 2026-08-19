@@ -132,53 +132,36 @@ export async function POST(req: Request) {
       return apiError("Date and attendanceRecords are required.", 400);
     }
 
-    const studentIds: string[] = [];
+    const studentIds: string[] = attendanceRecords.map((r: any) => r.studentId).filter(Boolean);
 
-    // Save attendance sequentially outside a transaction (pool-safe)
+    // Validate statuses first
     for (const rec of attendanceRecords) {
-      const { studentId, remarks } = rec;
       let status = rec.status;
-      if (!studentId) continue;
-
-      studentIds.push(studentId);
-
-      if (status === "ML") {
-        status = "MEDICAL_LEAVE";
-      }
-
+      if (status === "ML") status = "MEDICAL_LEAVE";
       if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE", "LONG_ABSENT", "UNMARKED"].includes(status)) {
         throw new Error(`Invalid attendance status '${status}'`);
       }
-
-      if (status === "UNMARKED") {
-        await prisma.fullDayAttendance.deleteMany({
-          where: {
-            studentId,
-            date,
-          },
-        });
-      } else {
-        // Upsert record sequentially outside interactive transaction
-        await prisma.fullDayAttendance.upsert({
-          where: {
-            studentId_date: {
-              studentId,
-              date,
-            },
-          },
-          update: {
-            status,
-            remarks: remarks || null,
-          },
-          create: {
-            studentId,
-            date,
-            status,
-            remarks: remarks || null,
-          },
-        });
-      }
     }
+
+    // Atomic two-step operation: delete existing records for date and studentIds, then insert marked records
+    await prisma.$transaction([
+      prisma.fullDayAttendance.deleteMany({
+        where: {
+          date,
+          studentId: { in: studentIds },
+        },
+      }),
+      prisma.fullDayAttendance.createMany({
+        data: attendanceRecords
+          .filter((r: any) => r.status && r.status !== "UNMARKED")
+          .map((r: any) => ({
+            studentId: r.studentId,
+            date,
+            status: r.status === "ML" ? "MEDICAL_LEAVE" : r.status,
+            remarks: r.remarks || null,
+          })),
+      }),
+    ]);
 
     // Write Audit Log
     await prisma.auditLog.create({
