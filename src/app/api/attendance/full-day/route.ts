@@ -143,7 +143,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Atomic two-step operation: delete existing records for date and studentIds, then insert marked records
+    // Atomic two-step bulk operation: delete existing records for date and studentIds, then insert marked records
     await prisma.$transaction([
       prisma.fullDayAttendance.deleteMany({
         where: {
@@ -190,20 +190,34 @@ export async function POST(req: Request) {
       studentRecordsMap.get(att.studentId)!.push({ status: att.status });
     }
 
-    // Update student profiles sequentially (outside transaction, pool-safe)
+    // Group student profile updates by calculated percentage
+    const pctToStudentIds = new Map<number, string[]>();
     for (const studentId of studentIds) {
       const records = studentRecordsMap.get(studentId) || [];
       const percentage = calculateAttendancePercentage(records);
-      await prisma.studentProfile.update({
-        where: { id: studentId },
-        data: { attendancePercentage: percentage },
-      });
+      if (!pctToStudentIds.has(percentage)) {
+        pctToStudentIds.set(percentage, []);
+      }
+      pctToStudentIds.get(percentage)!.push(studentId);
     }
 
-    logApiPerf("POST /api/attendance/full-day", startTime);
-    return apiSuccess({ count: attendanceRecords.length }, "Full day attendance saved successfully.", 200);
+    const studentUpdateQueries = Array.from(pctToStudentIds.entries()).map(([pct, ids]) =>
+      prisma.studentProfile.updateMany({
+        where: { id: { in: ids } },
+        data: { attendancePercentage: pct },
+      })
+    );
+
+    if (studentUpdateQueries.length > 0) {
+      await prisma.$transaction(studentUpdateQueries);
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`[PERF] POST /api/attendance/full-day completed in ${durationMs}ms for ${attendanceRecords.length} students.`);
+
+    return apiSuccess({ count: attendanceRecords.length, executionTimeMs: durationMs }, "Full day attendance saved successfully.", 200);
   } catch (error: any) {
-    console.error("Error saving full day attendance:", error);
+    console.error("[POST /api/attendance/full-day Error]", error);
     return apiError("An error occurred while saving full day attendance. Please try again.", 500);
   }
 }

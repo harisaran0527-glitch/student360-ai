@@ -114,9 +114,17 @@ export async function generateStatusReportImageCanvas(params: ShareStatusReportP
     badgeColor = "#6b21a8";
     badgeBorder = "#e9d5ff";
   } else if (sLower.includes("long") || sLower.includes("la")) {
-    badgeBg = "#f4f4f5";
-    badgeColor = "#27272a";
-    badgeBorder = "#e4e4e7";
+    badgeBg = "#fee2e2";
+    badgeColor = "#991b1b";
+    badgeBorder = "#fca5a5";
+  } else if (sLower.includes("internship")) {
+    badgeBg = "#fae8ff";
+    badgeColor = "#86198f";
+    badgeBorder = "#f5d0fe";
+  } else if (sLower.includes("late")) {
+    badgeBg = "#e0f2fe";
+    badgeColor = "#0369a1";
+    badgeBorder = "#bae6fd";
   }
 
   // Draw Rounded Status Badge Pill

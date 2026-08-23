@@ -39,23 +39,11 @@ export async function GET(req: Request) {
       isArchived: false,
     };
 
-    if (batchId) {
-      studentWhere.batchId = batchId;
-    }
+    if (batchId) studentWhere.batchId = batchId;
+    if (departmentId) studentWhere.departmentId = departmentId;
+    if (sectionId) studentWhere.sectionId = sectionId;
+    if (academicYearParam) studentWhere.academicYear = academicYearParam;
 
-    if (departmentId) {
-      studentWhere.departmentId = departmentId;
-    }
-
-    if (sectionId) {
-      studentWhere.sectionId = sectionId;
-    }
-
-    if (academicYearParam) {
-      studentWhere.academicYear = academicYearParam;
-    }
-
-    // Fetch students & existing attendance sequentially to respect connection_limit=1
     const students = await prisma.studentProfile.findMany({
       where: studentWhere,
       orderBy: { registerNo: "asc" },
@@ -124,31 +112,40 @@ export async function POST(req: Request) {
     }
 
     const targetSession = sessionName || "FN";
+    const studentIds = attendanceRecords.map((r: any) => r.studentId).filter(Boolean) as string[];
 
-    // Use transaction to upsert attendance and update student attendance percentages
-    await prisma.$transaction(async (tx) => {
-      const studentIds = attendanceRecords.map((r) => r.studentId).filter(Boolean) as string[];
+    // 1. Fetch all existing attendance records for these students in ONE query
+    const existingAtts = await prisma.attendance.findMany({
+      where: {
+        courseId,
+        date,
+        session: targetSession,
+        studentId: { in: studentIds },
+      },
+    });
 
-      // 1. Fetch all existing attendance records for these students on this course, date & session
-      const existingAtts = await tx.attendance.findMany({
-        where: {
-          courseId,
-          date,
-          session: targetSession,
-          studentId: { in: studentIds },
-        },
-      });
+    const existingMap = new Map(existingAtts.map((a) => [a.studentId, a]));
 
-      const existingMap = new Map(existingAtts.map((a) => [a.studentId, a]));
+    const toCreate: any[] = [];
+    const toUpdateQueries: any[] = [];
+    const toDeleteIds: string[] = [];
 
-      // 2. Perform bulk upsert sequentially
-      for (const rec of attendanceRecords) {
-        const { studentId, status, remarks } = rec;
-        if (!studentId) continue;
+    for (const rec of attendanceRecords) {
+      const { studentId, status, remarks } = rec;
+      if (!studentId) continue;
 
-        const existing = existingMap.get(studentId);
+      const existing = existingMap.get(studentId);
+
+      if (status === "UNMARKED" || status === "NOT_MARKED") {
         if (existing) {
-          await tx.attendance.update({
+          toDeleteIds.push(existing.id);
+        }
+        continue;
+      }
+
+      if (existing) {
+        toUpdateQueries.push(
+          prisma.attendance.update({
             where: { id: existing.id },
             data: {
               status: status || "PRESENT",
@@ -156,67 +153,95 @@ export async function POST(req: Request) {
               facultyId: session.id,
               remarks: remarks || null,
             },
-          });
-        } else {
-          await tx.attendance.create({
-            data: {
-              studentId,
-              courseId,
-              date,
-              session: targetSession,
-              status: status || "PRESENT",
-              academicYearCode: academicYear,
-              facultyId: session.id,
-              remarks: remarks || null,
-            },
-          });
-        }
-      }
-
-      // 3. Fetch all attendance records for the affected students in a single query to compute percentages
-      const allAttRecords = await tx.attendance.findMany({
-        where: { studentId: { in: studentIds } },
-        select: { studentId: true, status: true },
-      });
-
-      const countsMap = new Map<string, { present: number; total: number }>();
-      for (const att of allAttRecords) {
-        if (!countsMap.has(att.studentId)) {
-          countsMap.set(att.studentId, { present: 0, total: 0 });
-        }
-        const item = countsMap.get(att.studentId)!;
-        item.total++;
-        if (att.status === "PRESENT" || att.status === "OD" || att.status === "INTERNSHIP") {
-          item.present++;
-        }
-      }
-
-      // 4. Update student profile attendance percentages sequentially
-      for (const [studentId, item] of Array.from(countsMap.entries())) {
-        const percentage = Math.round((item.present / item.total) * 100 * 10) / 10;
-        await tx.studentProfile.update({
-          where: { id: studentId },
-          data: { attendancePercentage: percentage },
+          })
+        );
+      } else {
+        toCreate.push({
+          studentId,
+          courseId,
+          date,
+          session: targetSession,
+          status: status || "PRESENT",
+          academicYearCode: academicYear,
+          facultyId: session.id,
+          remarks: remarks || null,
         });
       }
+    }
 
-      // Write Audit Log
-      await tx.auditLog.create({
-        data: {
-          userId: session.id,
-          userEmail: session.email,
-          userRole: session.role,
-          action: "SAVE_ATTENDANCE",
-          entityType: "Attendance",
-          details: `Saved attendance for Course ID ${courseId}, Date ${date}, Academic Year ${academicYear}, Total Students: ${attendanceRecords.length}`,
-        },
-      });
+    // Execute bulk DB operations inside a single transaction
+    const batchOperations: any[] = [];
+    if (toDeleteIds.length > 0) {
+      batchOperations.push(prisma.attendance.deleteMany({ where: { id: { in: toDeleteIds } } }));
+    }
+    if (toCreate.length > 0) {
+      batchOperations.push(prisma.attendance.createMany({ data: toCreate }));
+    }
+    if (toUpdateQueries.length > 0) {
+      batchOperations.push(...toUpdateQueries);
+    }
+
+    if (batchOperations.length > 0) {
+      await prisma.$transaction(batchOperations);
+    }
+
+    // 2. Fetch all attendance records for affected students in a single query to compute percentages
+    const allAttRecords = await prisma.attendance.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, status: true },
     });
 
-    logApiPerf("POST /api/attendance", startTime);
-    return apiSuccess({ count: attendanceRecords.length }, "Attendance saved successfully.", 200);
+    const countsMap = new Map<string, { present: number; total: number }>();
+    for (const att of allAttRecords) {
+      if (!countsMap.has(att.studentId)) {
+        countsMap.set(att.studentId, { present: 0, total: 0 });
+      }
+      const item = countsMap.get(att.studentId)!;
+      item.total++;
+      if (att.status === "PRESENT" || att.status === "OD" || att.status === "INTERNSHIP") {
+        item.present++;
+      }
+    }
+
+    // Group student profile updates by rounded percentage
+    const pctToStudentIds = new Map<number, string[]>();
+    for (const [studentId, item] of Array.from(countsMap.entries())) {
+      const percentage = Math.round((item.present / item.total) * 100 * 10) / 10;
+      if (!pctToStudentIds.has(percentage)) {
+        pctToStudentIds.set(percentage, []);
+      }
+      pctToStudentIds.get(percentage)!.push(studentId);
+    }
+
+    const studentUpdateQueries = Array.from(pctToStudentIds.entries()).map(([pct, ids]) =>
+      prisma.studentProfile.updateMany({
+        where: { id: { in: ids } },
+        data: { attendancePercentage: pct },
+      })
+    );
+
+    if (studentUpdateQueries.length > 0) {
+      await prisma.$transaction(studentUpdateQueries);
+    }
+
+    // Audit Log Entry
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userEmail: session.email,
+        userRole: session.role,
+        action: "SAVE_ATTENDANCE",
+        entityType: "Attendance",
+        details: `Saved attendance for Course ID ${courseId}, Date ${date}, Academic Year ${academicYear}, Total Students: ${attendanceRecords.length}`,
+      },
+    });
+
+    const durationMs = Date.now() - startTime;
+    console.log(`[PERF] POST /api/attendance completed in ${durationMs}ms for ${attendanceRecords.length} students.`);
+
+    return apiSuccess({ count: attendanceRecords.length, executionTimeMs: durationMs }, "Attendance saved successfully.", 200);
   } catch (error: any) {
+    console.error("[POST /api/attendance Error]", error);
     return apiError(error.message || "Failed to save attendance session", 500);
   }
 }
-

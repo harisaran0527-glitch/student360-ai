@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       orderBy: { registerNo: "asc" },
     });
 
-    // Fetch Active Approved ODs & Internships covering this date sequentially to respect connection_limit=1
+    // Fetch Active Approved ODs & Internships covering this date in single queries
     const approvedOds = await prisma.oDRecord.findMany({
       where: {
         status: "APPROVED",
@@ -96,6 +96,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
   try {
     const session = await getSession(req);
     if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN" && session.role !== "FACULTY")) {
@@ -117,6 +118,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "courseId, date, and attendances array are required" }, { status: 400 });
     }
 
+    // 1. Compute totals in memory (single pass)
     let presentCount = 0;
     let absentCount = 0;
     let odCount = 0;
@@ -129,7 +131,7 @@ export async function POST(req: Request) {
       else if (a.status === "INTERNSHIP") internshipCount++;
     });
 
-    // 1. Create or Update AttendanceSession
+    // 2. Create or Update AttendanceSession ONCE
     let attSession = await prisma.attendanceSession.findFirst({
       where: {
         courseId,
@@ -170,7 +172,7 @@ export async function POST(req: Request) {
 
     const policy = await getAttendancePolicy();
 
-    // 2. Fetch all existing attendance records for these students on this course, date & period in a single query
+    // 3. Fetch all existing attendance records for these students on this course, date & period in ONE query
     const studentIds = attendances.map((a: any) => a.studentId).filter(Boolean) as string[];
     const existingAtts = await prisma.attendance.findMany({
       where: {
@@ -183,61 +185,87 @@ export async function POST(req: Request) {
 
     const existingMap = new Map(existingAtts.map((a) => [a.studentId, a]));
 
-    // 3. Save / Update individual Student Attendance rows & record Corrections sequentially
+    // 4. Batch DB queries for Creates, Updates, Deletions (Unmarked), and Corrections
+    const toCreate: any[] = [];
+    const toUpdateQueries: any[] = [];
+    const toDeleteIds: string[] = [];
+    const correctionAudits: any[] = [];
+
     for (const item of attendances) {
       if (!item.studentId) continue;
       const existingRecord = existingMap.get(item.studentId);
 
+      if (item.status === "UNMARKED" || item.status === "NOT_MARKED") {
+        if (existingRecord) {
+          toDeleteIds.push(existingRecord.id);
+        }
+        continue;
+      }
+
       if (existingRecord) {
         if (existingRecord.status !== item.status) {
-          // Record Attendance Correction Audit Entry
-          await prisma.attendanceCorrection.create({
-            data: {
-              attendanceId: existingRecord.id,
-              sessionId: attSession.id,
-              studentId: item.studentId,
-              oldStatus: existingRecord.status,
-              newStatus: item.status,
-              reason: reasonForUpdate || "Faculty Correction",
-              changedBy: session.email,
-            },
+          correctionAudits.push({
+            attendanceId: existingRecord.id,
+            sessionId: attSession.id,
+            studentId: item.studentId,
+            oldStatus: existingRecord.status,
+            newStatus: item.status,
+            reason: reasonForUpdate || "Faculty Correction",
+            changedBy: session.email,
           });
         }
-
-        await prisma.attendance.update({
-          where: { id: existingRecord.id },
-          data: {
-            status: item.status,
-            remarks: item.remarks,
-            facultyId: session.id,
-            sessionId: attSession.id,
-          },
-        });
+        toUpdateQueries.push(
+          prisma.attendance.update({
+            where: { id: existingRecord.id },
+            data: {
+              status: item.status,
+              remarks: item.remarks || null,
+              facultyId: session.id,
+              sessionId: attSession.id,
+            },
+          })
+        );
       } else {
-        await prisma.attendance.create({
-          data: {
-            studentId: item.studentId,
-            courseId,
-            sessionId: attSession.id,
-            academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
-            semester: semester || 1,
-            date,
-            session: `Period_${period || 1}`,
-            status: item.status,
-            remarks: item.remarks,
-            facultyId: session.id,
-          },
+        toCreate.push({
+          studentId: item.studentId,
+          courseId,
+          sessionId: attSession.id,
+          academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
+          semester: semester || 1,
+          date,
+          session: `Period_${period || 1}`,
+          status: item.status,
+          remarks: item.remarks || null,
+          facultyId: session.id,
         });
       }
     }
 
-    // 4. Batch query all attendance records for ALL affected students to calculate percentages in a single trip
+    // Execute bulk DB operations in a single fast transaction batch
+    const batchOperations: any[] = [];
+    if (toDeleteIds.length > 0) {
+      batchOperations.push(prisma.attendance.deleteMany({ where: { id: { in: toDeleteIds } } }));
+    }
+    if (toCreate.length > 0) {
+      batchOperations.push(prisma.attendance.createMany({ data: toCreate }));
+    }
+    if (correctionAudits.length > 0) {
+      batchOperations.push(prisma.attendanceCorrection.createMany({ data: correctionAudits }));
+    }
+    if (toUpdateQueries.length > 0) {
+      batchOperations.push(...toUpdateQueries);
+    }
+
+    if (batchOperations.length > 0) {
+      await prisma.$transaction(batchOperations);
+    }
+
+    // 5. Bulk calculate attendance percentages for affected students
     const allAttRecords = await prisma.attendance.findMany({
       where: { studentId: { in: studentIds } },
       select: { studentId: true, status: true },
     });
 
-    // Group in memory
     const studentRecordsMap = new Map<string, Array<{ status: string }>>();
     for (const att of allAttRecords) {
       if (!studentRecordsMap.has(att.studentId)) {
@@ -246,23 +274,40 @@ export async function POST(req: Request) {
       studentRecordsMap.get(att.studentId)!.push({ status: att.status });
     }
 
-    // Update percentages sequentially
+    // Group student profile updates by calculated percentage value
+    const pctToStudentIds = new Map<number, string[]>();
     for (const studentId of studentIds) {
       const records = studentRecordsMap.get(studentId) || [];
       const stats = computeAttendanceStats(records, policy);
-
-      await prisma.studentProfile.update({
-        where: { id: studentId },
-        data: { attendancePercentage: stats.percentage },
-      });
+      const pct = stats.percentage;
+      if (!pctToStudentIds.has(pct)) {
+        pctToStudentIds.set(pct, []);
+      }
+      pctToStudentIds.get(pct)!.push(studentId);
     }
+
+    const studentUpdateQueries = Array.from(pctToStudentIds.entries()).map(([pct, ids]) =>
+      prisma.studentProfile.updateMany({
+        where: { id: { in: ids } },
+        data: { attendancePercentage: pct },
+      })
+    );
+
+    if (studentUpdateQueries.length > 0) {
+      await prisma.$transaction(studentUpdateQueries);
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`[PERF] POST /api/attendance/session completed in ${durationMs}ms for ${attendances.length} students.`);
 
     return NextResponse.json({
       success: true,
       message: `Successfully saved attendance session for ${date} (Period ${period || 1}).`,
       session: attSession,
+      executionTimeMs: durationMs,
     });
   } catch (error: any) {
+    console.error("[POST /api/attendance/session Error]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
