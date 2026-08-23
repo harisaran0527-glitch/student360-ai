@@ -8,8 +8,46 @@ import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 export const dynamic = "force-dynamic";
 
 /**
+ * Helper to resolve a faculty name or ID to a User record ID.
+ * Matches existing FACULTY users case-insensitively, or auto-creates a FACULTY record if new.
+ */
+async function resolveFacultyId(facultyNameOrId: string | null | undefined): Promise<string | null> {
+  if (!facultyNameOrId || !facultyNameOrId.trim()) return null;
+  const trimmed = facultyNameOrId.trim();
+
+  // Check if existing user matches ID or fullName case-insensitively
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: trimmed },
+        { fullName: { equals: trimmed, mode: "insensitive" } },
+      ],
+    },
+  });
+
+  if (existing) {
+    return existing.id;
+  }
+
+  // Create a new FACULTY user record for new staff name
+  const slug = trimmed.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const email = `faculty_${slug}_${Date.now()}@student360.ai`;
+  const newUser = await prisma.user.create({
+    data: {
+      fullName: trimmed,
+      email,
+      passwordHash: "N/A",
+      role: "FACULTY",
+      isActive: true,
+    },
+  });
+  return newUser.id;
+}
+
+/**
  * GET /api/academics/syllabus
- * Returns active syllabus/courses filtered by academicYear and semester.
+ * Returns active syllabus/courses filtered by academicYear and semester,
+ * plus a deduplicated list of saved faculty names from real DB assignments.
  */
 export async function GET(req: NextRequest) {
   const startTime = Date.now();
@@ -53,8 +91,31 @@ export async function GET(req: NextRequest) {
       orderBy: [{ semester: "asc" }, { code: "asc" }],
     });
 
+    // Collect deduplicated list of saved faculty names from existing DB courses (NO fake/demo data)
+    const allCoursesWithFaculty = await prisma.course.findMany({
+      where: { isArchived: false, facultyId: { not: null } },
+      include: { faculty: { select: { fullName: true } } },
+    });
+
+    const savedFacultiesSet = new Set<string>();
+    allCoursesWithFaculty.forEach((c) => {
+      if (c.faculty?.fullName) {
+        const trimmedName = c.faculty.fullName.trim();
+        if (trimmedName) {
+          const alreadyExists = Array.from(savedFacultiesSet).some(
+            (f) => f.toLowerCase() === trimmedName.toLowerCase()
+          );
+          if (!alreadyExists) {
+            savedFacultiesSet.add(trimmedName);
+          }
+        }
+      }
+    });
+
+    const savedFaculties = Array.from(savedFacultiesSet);
+
     logApiPerf("GET /api/academics/syllabus", startTime);
-    return apiSuccess({ courses });
+    return apiSuccess({ courses, savedFaculties });
   } catch (error: any) {
     console.error("[GET /api/academics/syllabus Error]", error);
     return apiError(error.message || "Failed to load syllabus", 500);
@@ -73,7 +134,7 @@ export async function POST(req: NextRequest) {
       return apiError("Unauthorized", 401);
     }
 
-    const { code, title, semester, academicYearCode, credits, subjectType, facultyId, description } = await req.json();
+    const { code, title, semester, academicYearCode, credits, subjectType, facultyId, facultyName, description, syllabusUrl } = await req.json();
 
     if (!code || !title || !semester) {
       return apiError("Subject Code, Subject Name, and Semester are required.", 400);
@@ -93,6 +154,8 @@ export async function POST(req: NextRequest) {
       return apiError(`Subject with code "${code.trim()}" already exists.`, 400);
     }
 
+    const targetFacultyId = await resolveFacultyId(facultyName || facultyId);
+
     const course = await prisma.course.create({
       data: {
         code: code.trim().toUpperCase(),
@@ -102,8 +165,9 @@ export async function POST(req: NextRequest) {
         credits: parseInt(credits, 10) || 3,
         subjectType: subjectType || "CORE",
         departmentId: dept.id,
-        facultyId: facultyId || null,
+        facultyId: targetFacultyId,
         description: description || null,
+        syllabusUrl: syllabusUrl || null,
         isActive: true,
         isArchived: false,
       },
@@ -122,7 +186,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * PUT /api/academics/syllabus
- * Edits an individual subject's details (Code, Name, Type, Credits, Semester, Faculty, Description)
+ * Edits an individual subject's details (Code, Name, Type, Credits, Semester, Faculty, Syllabus URL)
  * while preserving internal Course ID and rejecting duplicate subject codes.
  */
 export async function PUT(req: NextRequest) {
@@ -133,7 +197,7 @@ export async function PUT(req: NextRequest) {
       return apiError("Unauthorized", 401);
     }
 
-    const { id, code, title, semester, academicYearCode, credits, subjectType, facultyId, description, syllabusUrl, isActive } = await req.json();
+    const { id, code, title, semester, academicYearCode, credits, subjectType, facultyId, facultyName, description, syllabusUrl, isActive } = await req.json();
 
     if (!id) {
       return apiError("Subject ID is required for editing", 400);
@@ -163,6 +227,12 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    // Resolve faculty ID from input name/ID (supports manual typing + suggestions)
+    let targetFacultyId = existing.facultyId;
+    if (facultyName !== undefined || facultyId !== undefined) {
+      targetFacultyId = await resolveFacultyId(facultyName !== undefined ? facultyName : facultyId);
+    }
+
     const updatedCourse = await prisma.course.update({
       where: { id },
       data: {
@@ -172,7 +242,7 @@ export async function PUT(req: NextRequest) {
         academicYearCode: academicYearCode || existing.academicYearCode,
         credits: credits !== undefined ? parseInt(credits, 10) : existing.credits,
         subjectType: subjectType || existing.subjectType,
-        facultyId: facultyId !== undefined ? facultyId : existing.facultyId,
+        facultyId: targetFacultyId,
         description: description !== undefined ? description : existing.description,
         syllabusUrl: syllabusUrl !== undefined ? syllabusUrl : existing.syllabusUrl,
         isActive: typeof isActive === "boolean" ? isActive : existing.isActive,

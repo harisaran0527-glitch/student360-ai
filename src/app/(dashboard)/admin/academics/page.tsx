@@ -29,7 +29,7 @@ export default function AdminSyllabusPage() {
   const [selectedSemester, setSelectedSemester] = useState<string>("");
 
   const [courses, setCourses] = useState<any[]>([]);
-  const [faculties, setFaculties] = useState<any[]>([]);
+  const [savedFaculties, setSavedFaculties] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Modal State
@@ -46,7 +46,7 @@ export default function AdminSyllabusPage() {
   const [semester, setSemester] = useState("1");
   const [credits, setCredits] = useState("3");
   const [subjectType, setSubjectType] = useState("CORE");
-  const [facultyId, setFacultyId] = useState("");
+  const [facultyName, setFacultyName] = useState("");
   const [syllabusUrl, setSyllabusUrl] = useState("");
   const [syllabusFileName, setSyllabusFileName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -61,22 +61,11 @@ export default function AdminSyllabusPage() {
       const res = await fetch(`/api/academics/syllabus?${params.toString()}`);
       const data = await res.json();
       setCourses(data.data?.courses || data.courses || []);
+      setSavedFaculties(data.data?.savedFaculties || data.savedFaculties || []);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchFaculties = async () => {
-    try {
-      const res = await fetch("/api/students/options");
-      const data = await res.json();
-      if (data.success && data.data?.faculties) {
-        setFaculties(data.data.faculties);
-      }
-    } catch (err) {
-      console.error("Failed to load faculties", err);
     }
   };
 
@@ -97,8 +86,6 @@ export default function AdminSyllabusPage() {
       })
       .catch((e) => console.error(e));
 
-    fetchFaculties();
-
     const handleAYChange = (e: any) => {
       if (e.detail?.academicYear) setSelectedAcademicYear(e.detail.academicYear);
     };
@@ -117,7 +104,7 @@ export default function AdminSyllabusPage() {
     setSemester("1");
     setCredits("3");
     setSubjectType("CORE");
-    setFacultyId("");
+    setFacultyName("");
     setSyllabusUrl("");
     setSyllabusFileName("");
     setModalOpen(true);
@@ -131,7 +118,7 @@ export default function AdminSyllabusPage() {
     setSemester(String(c.semester || 1));
     setCredits(String(c.credits || 3));
     setSubjectType(c.subjectType || "CORE");
-    setFacultyId(c.facultyId || "");
+    setFacultyName(c.faculty?.fullName || "");
     setSyllabusUrl(c.syllabusUrl || "");
     setSyllabusFileName(c.syllabusUrl ? (c.syllabusUrl.split("/").pop() || "Syllabus Document") : "");
     setIsActive(c.isActive !== false);
@@ -187,7 +174,7 @@ export default function AdminSyllabusPage() {
           credits: parseInt(credits, 10),
           subjectType,
           academicYearCode: selectedAcademicYear,
-          facultyId: facultyId || null,
+          facultyName: facultyName.trim() || null,
           syllabusUrl: syllabusUrl || null,
         }),
       });
@@ -230,7 +217,7 @@ export default function AdminSyllabusPage() {
           credits: parseInt(credits, 10),
           subjectType,
           academicYearCode: selectedAcademicYear,
-          facultyId: facultyId || null,
+          facultyName: facultyName.trim() || null,
           syllabusUrl: syllabusUrl || null,
           isActive,
         }),
@@ -362,7 +349,7 @@ export default function AdminSyllabusPage() {
           ) : courses.length === 0 ? (
             <EmptyState
               title={`No Syllabus Records for Academic Year ${selectedAcademicYear}`}
-              description="Click '+ Add Subject' or '+ Upload Syllabus' to add curriculum records for AI & ML."
+              description="Click 'Add Subject' or 'Upload Syllabus' to add curriculum records for AI & ML."
               action={
                 <div className="flex items-center gap-2">
                   <button
@@ -404,7 +391,7 @@ export default function AdminSyllabusPage() {
                       <td className="p-3.5">
                         <Badge variant="purple">{c.subjectType}</Badge>
                       </td>
-                      <td className="p-3.5 text-slate-600 dark:text-slate-300">
+                      <td className="p-3.5 text-slate-600 dark:text-slate-300 font-semibold">
                         {c.faculty?.fullName || <span className="text-slate-400 italic">Unassigned</span>}
                       </td>
                       <td className="p-3.5">
@@ -542,19 +529,37 @@ export default function AdminSyllabusPage() {
           </div>
 
           <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Faculty Assignment</label>
-            <select
-              value={facultyId}
-              onChange={(e) => setFacultyId(e.target.value)}
-              className="ui-input w-full p-2"
-            >
-              <option value="">Unassigned</option>
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.fullName}
-                </option>
-              ))}
-            </select>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Assigned Faculty
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                list="add-faculty-suggestions-list"
+                value={facultyName}
+                onChange={(e) => setFacultyName(e.target.value)}
+                placeholder="Type staff name or pick from suggestions..."
+                className="ui-input w-full p-2 pr-8 text-xs font-semibold"
+              />
+              {facultyName && (
+                <button
+                  type="button"
+                  onClick={() => setFacultyName("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold p-1"
+                  title="Clear assigned faculty"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <datalist id="add-faculty-suggestions-list">
+                {savedFaculties.map((fName) => (
+                  <option key={fName} value={fName} />
+                ))}
+              </datalist>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Type any new faculty name or choose from previously saved staff suggestions.
+            </p>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
@@ -651,23 +656,42 @@ export default function AdminSyllabusPage() {
             </div>
           </div>
 
+          {/* Hybrid Type-and-Suggest Assigned Faculty Field */}
           <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Assigned Faculty</label>
-            <select
-              value={facultyId}
-              onChange={(e) => setFacultyId(e.target.value)}
-              className="ui-input w-full p-2"
-            >
-              <option value="">Unassigned</option>
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.fullName}
-                </option>
-              ))}
-            </select>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Assigned Faculty
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                list="edit-faculty-suggestions-list"
+                value={facultyName}
+                onChange={(e) => setFacultyName(e.target.value)}
+                placeholder="Type staff name or pick from suggestions..."
+                className="ui-input w-full p-2 pr-8 text-xs font-semibold"
+              />
+              {facultyName && (
+                <button
+                  type="button"
+                  onClick={() => setFacultyName("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold p-1"
+                  title="Clear assigned faculty"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <datalist id="edit-faculty-suggestions-list">
+                {savedFaculties.map((fName) => (
+                  <option key={fName} value={fName} />
+                ))}
+              </datalist>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Type any new faculty name or select from previously saved staff suggestions.
+            </p>
           </div>
 
-          {/* Subject Material / Syllabus Document Section (Replaces Description) */}
+          {/* Subject Material / Syllabus Document Section */}
           <div className="space-y-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
             <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-xs">
               <FileText className="w-4 h-4 text-indigo-600" />
