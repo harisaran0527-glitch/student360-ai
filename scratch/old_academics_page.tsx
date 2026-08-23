@@ -18,9 +18,7 @@ import {
   Archive,
   Calendar,
   Layers,
-  Edit3,
-  ExternalLink,
-  X,
+  Sparkles,
 } from "lucide-react";
 
 export default function AdminSyllabusPage() {
@@ -29,27 +27,22 @@ export default function AdminSyllabusPage() {
   const [selectedSemester, setSelectedSemester] = useState<string>("");
 
   const [courses, setCourses] = useState<any[]>([]);
-  const [faculties, setFaculties] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
-  const [editingCourse, setEditingCourse] = useState<any | null>(null);
   const [isDeletePanelOpen, setIsDeletePanelOpen] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [uploading, setUploading] = useState<boolean>(false);
 
-  // Form Fields (Add & Edit)
+  // Form Fields
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [semester, setSemester] = useState("1");
   const [credits, setCredits] = useState("3");
   const [subjectType, setSubjectType] = useState("CORE");
-  const [facultyId, setFacultyId] = useState("");
+  const [syllabusTitle, setSyllabusTitle] = useState("");
   const [syllabusUrl, setSyllabusUrl] = useState("");
-  const [syllabusFileName, setSyllabusFileName] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [notes, setNotes] = useState("");
 
   const fetchSyllabus = async () => {
     setLoading(true);
@@ -65,18 +58,6 @@ export default function AdminSyllabusPage() {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchFaculties = async () => {
-    try {
-      const res = await fetch("/api/students/options");
-      const data = await res.json();
-      if (data.success && data.data?.faculties) {
-        setFaculties(data.data.faculties);
-      }
-    } catch (err) {
-      console.error("Failed to load faculties", err);
     }
   };
 
@@ -97,8 +78,6 @@ export default function AdminSyllabusPage() {
       })
       .catch((e) => console.error(e));
 
-    fetchFaculties();
-
     const handleAYChange = (e: any) => {
       if (e.detail?.academicYear) setSelectedAcademicYear(e.detail.academicYear);
     };
@@ -109,68 +88,6 @@ export default function AdminSyllabusPage() {
   useEffect(() => {
     fetchSyllabus();
   }, [selectedAcademicYear, selectedSemester]);
-
-  // Open Add Subject Modal
-  const handleOpenAddModal = () => {
-    setCode("");
-    setTitle("");
-    setSemester("1");
-    setCredits("3");
-    setSubjectType("CORE");
-    setFacultyId("");
-    setSyllabusUrl("");
-    setSyllabusFileName("");
-    setModalOpen(true);
-  };
-
-  // Open Edit Subject Modal for Individual Subject
-  const handleOpenEditModal = (c: any) => {
-    setEditingCourse(c);
-    setCode(c.code || "");
-    setTitle(c.title || "");
-    setSemester(String(c.semester || 1));
-    setCredits(String(c.credits || 3));
-    setSubjectType(c.subjectType || "CORE");
-    setFacultyId(c.facultyId || "");
-    setSyllabusUrl(c.syllabusUrl || "");
-    setSyllabusFileName(c.syllabusUrl ? (c.syllabusUrl.split("/").pop() || "Syllabus Document") : "");
-    setIsActive(c.isActive !== false);
-    setEditModalOpen(true);
-  };
-
-  // File Upload Handler
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-    if (![".pdf", ".doc", ".docx"].includes(ext)) {
-      alert("Invalid file type. Only .pdf, .doc, and .docx documents are permitted.");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "File upload failed");
-      }
-
-      setSyllabusUrl(data.url);
-      setSyllabusFileName(file.name);
-    } catch (err: any) {
-      alert(err.message || "Failed to upload file");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleAddSyllabus = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,8 +104,6 @@ export default function AdminSyllabusPage() {
           credits: parseInt(credits, 10),
           subjectType,
           academicYearCode: selectedAcademicYear,
-          facultyId: facultyId || null,
-          syllabusUrl: syllabusUrl || null,
         }),
       });
 
@@ -199,6 +114,11 @@ export default function AdminSyllabusPage() {
 
       alert("Semester subject & syllabus record added successfully!");
       setModalOpen(false);
+      setCode("");
+      setTitle("");
+      setSyllabusTitle("");
+      setSyllabusUrl("");
+      setNotes("");
       fetchSyllabus();
     } catch (err: any) {
       alert(err.message);
@@ -207,48 +127,14 @@ export default function AdminSyllabusPage() {
     }
   };
 
-  // Save Edits for an Individual Subject (Preserves internal Course ID)
-  const handleSaveEditSubject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCourse || submitting) return;
-
-    if (syllabusUrl && syllabusUrl.trim() !== "" && !syllabusUrl.startsWith("/") && !syllabusUrl.startsWith("http://") && !syllabusUrl.startsWith("https://")) {
-      alert("Syllabus URL must start with https:// (or http://)");
-      return;
-    }
-
-    setSubmitting(true);
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this syllabus record?")) return;
     try {
-      const res = await fetch("/api/academics/syllabus", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingCourse.id,
-          code,
-          title,
-          semester: parseInt(semester, 10),
-          credits: parseInt(credits, 10),
-          subjectType,
-          academicYearCode: selectedAcademicYear,
-          facultyId: facultyId || null,
-          syllabusUrl: syllabusUrl || null,
-          isActive,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.success === false) {
-        throw new Error(data.message || data.error || "Failed to update subject record");
-      }
-
-      alert(`Subject '${title}' updated successfully.`);
-      setEditModalOpen(false);
-      setEditingCourse(null);
+      const res = await fetch(`/api/academics/syllabus?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove syllabus record");
       fetchSyllabus();
     } catch (err: any) {
       alert(err.message);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -260,14 +146,14 @@ export default function AdminSyllabusPage() {
         action={
           <div className="flex items-center gap-2">
             <button
-              onClick={handleOpenAddModal}
+              onClick={() => setModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               <span>+ Add Subject</span>
             </button>
             <button
-              onClick={handleOpenAddModal}
+              onClick={() => setModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
             >
               <Upload className="w-4 h-4 text-indigo-400" />
@@ -316,10 +202,10 @@ export default function AdminSyllabusPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Mandatory Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={handleOpenAddModal}
+              onClick={() => setModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -327,7 +213,7 @@ export default function AdminSyllabusPage() {
             </button>
 
             <button
-              onClick={handleOpenAddModal}
+              onClick={() => setModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-bold text-xs shadow-md flex items-center gap-1.5"
             >
               <Upload className="w-4 h-4 text-indigo-400" />
@@ -341,10 +227,18 @@ export default function AdminSyllabusPage() {
               <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
               <span>Delete Subject</span>
             </button>
+
+            <button
+              onClick={() => (window.location.href = "/admin/archive")}
+              className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 hover:bg-amber-100 text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <Archive className="w-4 h-4" />
+              <span>Archived Subjects</span>
+            </button>
           </div>
         </div>
 
-        {/* Subjects & Syllabus Table Grid */}
+        {/* Subjects & Syllabus Grid */}
         <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
@@ -366,11 +260,18 @@ export default function AdminSyllabusPage() {
               action={
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleOpenAddModal}
+                    onClick={() => setModalOpen(true)}
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     <span>+ Add Subject</span>
+                  </button>
+                  <button
+                    onClick={() => setModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
+                  >
+                    <Upload className="w-4 h-4 text-indigo-400" />
+                    <span>+ Upload Syllabus</span>
                   </button>
                 </div>
               }
@@ -385,8 +286,7 @@ export default function AdminSyllabusPage() {
                     <th className="p-3.5">Subject Name</th>
                     <th className="p-3.5">Credits</th>
                     <th className="p-3.5">Subject Type</th>
-                    <th className="p-3.5">Faculty</th>
-                    <th className="p-3.5">Syllabus / Material</th>
+                    <th className="p-3.5">Academic Year</th>
                     <th className="p-3.5">Actions</th>
                   </tr>
                 </thead>
@@ -404,36 +304,9 @@ export default function AdminSyllabusPage() {
                       <td className="p-3.5">
                         <Badge variant="purple">{c.subjectType}</Badge>
                       </td>
-                      <td className="p-3.5 text-slate-600 dark:text-slate-300">
-                        {c.faculty?.fullName || <span className="text-slate-400 italic">Unassigned</span>}
-                      </td>
+                      <td className="p-3.5 font-mono text-slate-500">{c.academicYearCode}</td>
                       <td className="p-3.5">
-                        {c.syllabusUrl ? (
-                          <a
-                            href={c.syllabusUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 font-bold flex items-center gap-1 text-[11px] w-fit border border-indigo-200 dark:border-indigo-800"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>View Syllabus / Material</span>
-                          </a>
-                        ) : (
-                          <span className="text-slate-400 italic text-[11px]">No Material</span>
-                        )}
-                      </td>
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-2">
-                          {/* Individual Subject Edit Button */}
-                          <button
-                            onClick={() => handleOpenEditModal(c)}
-                            className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition flex items-center gap-1 text-[11px] font-bold border border-indigo-200 dark:border-indigo-800"
-                            title="Edit Individual Subject"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" /> Edit
-                          </button>
-
-                          {/* Individual Subject Archive Button */}
+                        <div className="flex items-center gap-1">
                           <button
                             onClick={async () => {
                               if (!confirm(`Are you sure you want to archive subject '${c.title}'?`)) return;
@@ -469,7 +342,7 @@ export default function AdminSyllabusPage() {
         </div>
       </div>
 
-      {/* MODAL 1: ADD SUBJECT MODAL */}
+      {/* Add Subject / Upload Syllabus Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add Semester Subject & Upload Syllabus" maxWidth="lg">
         <form onSubmit={handleAddSyllabus} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -541,22 +414,6 @@ export default function AdminSyllabusPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Faculty Assignment</label>
-            <select
-              value={facultyId}
-              onChange={(e) => setFacultyId(e.target.value)}
-              className="ui-input w-full p-2"
-            >
-              <option value="">Unassigned</option>
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.fullName}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
             <span className="font-bold block text-slate-800 dark:text-slate-200">Department Assignment:</span>
             Department is automatically set to <strong>AI & ML</strong>. Academic Year: <strong>{selectedAcademicYear}</strong>.
@@ -581,207 +438,7 @@ export default function AdminSyllabusPage() {
         </form>
       </Modal>
 
-      {/* MODAL 2: EDIT INDIVIDUAL SUBJECT MODAL */}
-      <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title={`Edit Subject: ${editingCourse?.code || ""}`} maxWidth="lg">
-        <form onSubmit={handleSaveEditSubject} className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Subject Code *</label>
-              <input
-                type="text"
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="ui-input w-full p-2 font-mono uppercase font-bold"
-              />
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Subject Name *</label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="ui-input w-full p-2 font-bold"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Semester *</label>
-              <select
-                value={semester}
-                onChange={(e) => setSemester(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                  <option key={s} value={s}>
-                    Semester {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Credits</label>
-              <select
-                value={credits}
-                onChange={(e) => setCredits(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                {[1, 2, 3, 4, 6].map((cr) => (
-                  <option key={cr} value={cr}>
-                    {cr} Credits
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Subject Type</label>
-              <select
-                value={subjectType}
-                onChange={(e) => setSubjectType(e.target.value)}
-                className="ui-input w-full p-2"
-              >
-                <option value="CORE">CORE</option>
-                <option value="ELECTIVE">ELECTIVE</option>
-                <option value="LAB">LAB</option>
-                <option value="PROJECT">PROJECT</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Assigned Faculty</label>
-            <select
-              value={facultyId}
-              onChange={(e) => setFacultyId(e.target.value)}
-              className="ui-input w-full p-2"
-            >
-              <option value="">Unassigned</option>
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.fullName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Subject Material / Syllabus Document Section (Replaces Description) */}
-          <div className="space-y-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
-            <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-xs">
-              <FileText className="w-4 h-4 text-indigo-600" />
-              <span>Subject Material / Syllabus Document</span>
-            </h4>
-
-            {/* External Link Input */}
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
-                Material / Syllabus Link (External HTTPS URL)
-              </label>
-              <input
-                type="url"
-                value={syllabusUrl}
-                onChange={(e) => {
-                  setSyllabusUrl(e.target.value);
-                  if (e.target.value.startsWith("http")) {
-                    setSyllabusFileName(e.target.value.split("/").pop() || "External Link");
-                  }
-                }}
-                placeholder="https://example.com/syllabus.pdf"
-                className="ui-input w-full p-2 font-mono text-xs"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Accepts valid https:// web links.</p>
-            </div>
-
-            {/* Document Upload (.pdf, .doc, .docx) */}
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
-                Document Upload (.pdf, .doc, .docx only)
-              </label>
-
-              {syllabusUrl ? (
-                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <FileText className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                    <span className="font-semibold text-slate-900 dark:text-white truncate">
-                      {syllabusFileName || syllabusUrl.split("/").pop() || "Document"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 font-bold">
-                    <a
-                      href={syllabusUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-indigo-600 hover:underline px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-950 text-[11px]"
-                    >
-                      View / Open
-                    </a>
-                    <label className="cursor-pointer text-slate-600 hover:underline px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[11px]">
-                      <span>Replace</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSyllabusUrl("");
-                        setSyllabusFileName("");
-                      }}
-                      className="text-rose-600 hover:underline px-2 py-1 rounded bg-rose-50 dark:bg-rose-950 text-[11px]"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800 flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    <span>{uploading ? "Uploading..." : "Upload PDF / DOC Document"}</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      disabled={uploading}
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                  </label>
-                  <span className="text-[11px] text-slate-400">Max size 10MB (.pdf, .doc, .docx)</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
-            <span className="font-bold block text-slate-800 dark:text-slate-200">Data Preservation Notice:</span>
-            Editing this subject retains the exact same internal record ID. Student attendance sessions, marks, and historical logs remain fully connected.
-          </div>
-
-          <div className="pt-3 border-t flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setEditModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-semibold"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold shadow-md shadow-indigo-500/20"
-            >
-              {submitting ? "Updating..." : "Save Subject Changes"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Management Panel */}
+      {/* Top-Level Delete Management Panel */}
       <DeleteManagementPanel
         isOpen={isDeletePanelOpen}
         onClose={() => setIsDeletePanelOpen(false)}
