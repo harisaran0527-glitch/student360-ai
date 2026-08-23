@@ -76,8 +76,8 @@ async function runSaveVerificationTests() {
   const isMatch = await bcrypt.compare("Student@360", verifiedUser.passwordHash);
   console.log("--> Login Password Verification Result:", isMatch ? "SUCCESS (Password Matches)" : "FAILED");
 
-  // TEST 2: Add Subject & Syllabus
-  console.log("\n[TEST 2] Testing Add Subject & Syllabus persistence...");
+  // TEST 2: Add Subject
+  console.log("\n[TEST 2] Testing Add Subject persistence...");
   const testSubCode = "AIML101";
   await prisma.course.deleteMany({ where: { code: testSubCode } });
 

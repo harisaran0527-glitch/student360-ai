@@ -44,7 +44,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: "Executive Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Central Report Center", href: "/admin/reports", icon: FileText },
     { name: "Take Attendance", href: "/admin/attendance", icon: UserCheck },
-    { name: "Batches & Progression", href: "/admin/batches", icon: Layers },
     { name: "Student Master Directory", href: "/admin/master-records", icon: Users },
     { name: "Bus Management", href: "/admin/bus", icon: Bus },
     { name: "Semester Subjects & Syllabus", href: "/admin/academics", icon: GraduationCap },

@@ -432,7 +432,7 @@ export default function AdminInternshipsPage() {
             </select>
             {yearStudents.length === 0 && (
               <p className="text-[11px] text-rose-500 mt-1">
-                No students enrolled under Academic Year {selectedAcademicYear}. Add students first in Batches & Progression page.
+                No students enrolled under Academic Year {selectedAcademicYear}. Add students first in Student Master Directory.
               </p>
             )}
           </div>

@@ -1,7 +1,6 @@
 const http = require("http");
 
 const routes = [
-  "/admin/batches",
   "/admin/attendance",
   "/admin/academics",
   "/admin/internships",

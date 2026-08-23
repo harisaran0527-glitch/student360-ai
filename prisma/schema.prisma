@@ -68,6 +68,7 @@ model Batch {
   students               StudentProfile[]
   semesterConfigs        SemesterConfig[]
   placementDrives        PlacementDrive[]
+  batchSemesterSyllabus  BatchSemesterSyllabus[]
 }
 
 model Section {
@@ -105,10 +106,12 @@ model SemesterConfig {
   id                           String   @id @default(uuid())
   batchId                      String
   semesterNumber               Int
+  semesterName                 String?
   academicYearCode             String
   startDate                    String?
   endDate                      String?
   status                       String   @default("UPCOMING")
+  notes                        String?
   internshipRequired           Boolean  @default(false)
   internshipRequirement        String   @default("OPTIONAL")
   submissionDeadline           String?
@@ -127,29 +130,80 @@ model SemesterConfig {
 }
 
 model Course {
-  id               String     @id @default(uuid())
-  code             String     @unique
-  title            String
-  credits          Int        @default(3)
-  semester         Int
-  departmentId     String
-  facultyId        String?
-  academicYearCode String     @default("2025-2029")
-  subjectType      String     @default("CORE")
-  isActive         Boolean    @default(true)
-  isArchived       Boolean    @default(false)
-  syllabusUrl      String?
-  archivedAt       DateTime?
-  archivedReason   String?
-  archivedBy       String?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id                      String     @id @default(uuid())
+  code                    String     @unique
+  title                   String
+  description             String?
+  credits                 Int        @default(3)
+  semester                Int
+  departmentId            String
+  facultyId               String?
+  academicYearCode        String     @default("2025-2029")
+  subjectType             String     @default("CORE")
+  isActive                Boolean    @default(true)
+  isArchived              Boolean    @default(false)
+  syllabusUrl             String?
+  activeSyllabusVersionId String?
+  archivedAt              DateTime?
+  archivedReason          String?
+  archivedBy              String?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
-  department       Department @relation(fields: [departmentId], references: [id])
-  faculty          User?      @relation("FacultyCourses", fields: [facultyId], references: [id])
-  attendances      Attendance[]
-  sessions         AttendanceSession[]
-  academicRecords  AcademicRecord[]
+  department              Department @relation(fields: [departmentId], references: [id])
+  faculty                 User?      @relation("FacultyCourses", fields: [facultyId], references: [id])
+  attendances             Attendance[]
+  sessions                AttendanceSession[]
+  academicRecords         AcademicRecord[]
+  syllabusVersions        SyllabusVersion[]
+  batchSemesterMappings   BatchSemesterSyllabus[]
+}
+
+model SyllabusVersion {
+  id                    String   @id @default(uuid())
+  courseId              String
+  versionNumber         String   // e.g. "1.0", "2.0"
+  syllabusTitle         String
+  regulation            String   @default("Regulation 2026")
+  academicYearCode      String
+  semester              Int
+  effectiveFrom         String?
+  status                String   @default("ACTIVE") // DRAFT, ACTIVE, ARCHIVED
+  changeSummary         String?
+  previousVersionId     String?
+  createdBy             String?
+  createdById           String?
+  units                 Json     // [{ unitNumber, title, topics, description, hours }]
+  courseObjectives      Json?    // Array of strings
+  courseOutcomes        Json?    // Array of strings
+  textBooks             Json?    // Array of strings
+  referenceBooks        Json?    // Array of strings
+  practicalDetails      String?
+  assessmentInfo        String?
+  additionalNotes       String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  course                Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  previousVersion       SyllabusVersion? @relation("SyllabusVersionHistory", fields: [previousVersionId], references: [id], onDelete: SetNull)
+  nextVersions          SyllabusVersion[] @relation("SyllabusVersionHistory")
+  batchSemesterMappings BatchSemesterSyllabus[]
+}
+
+model BatchSemesterSyllabus {
+  id                String   @id @default(uuid())
+  batchId           String
+  semesterNumber    Int
+  courseId          String
+  syllabusVersionId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  batch             Batch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  syllabusVersion   SyllabusVersion @relation(fields: [syllabusVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, semesterNumber, courseId])
 }
 
 model AttendanceSession {

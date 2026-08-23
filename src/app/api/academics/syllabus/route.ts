@@ -1,130 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-import { getOrCreateDefaultDepartment } from "@/lib/departmentEngine";
-import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
 
-export async function GET(req: Request) {
+/**
+ * GET /api/academics/syllabus
+ * Returns active syllabus details for a course.
+ */
+export async function GET(req: NextRequest) {
   const startTime = Date.now();
   try {
-    const session = await getSession(req);
-    if (!session) return apiError("Unauthorized", 401);
-
     const { searchParams } = new URL(req.url);
-    const academicYear = searchParams.get("academicYear") || "";
-    const semester = searchParams.get("semester");
+    const courseId = searchParams.get("courseId");
 
-    const dept = await getOrCreateDefaultDepartment();
-
-    const where: any = {
-      departmentId: dept.id,
-      isActive: true,
-    };
-
-    if (academicYear && academicYear !== "ALL") {
-      where.academicYearCode = academicYear;
+    if (!courseId) {
+      return apiError("Course ID is required", 400);
     }
 
-    if (semester) {
-      where.semester = parseInt(semester, 10);
-    }
-
-    const courses = await prisma.course.findMany({
-      where,
-      orderBy: [{ semester: "asc" }, { code: "asc" }],
+    const version = await prisma.syllabusVersion.findFirst({
+      where: { courseId, status: "ACTIVE" },
+      include: { course: true },
+      orderBy: { createdAt: "desc" },
     });
 
     logApiPerf("GET /api/academics/syllabus", startTime);
-    return apiSuccess({ courses });
-  } catch (error: any) {
-    return apiError(error.message || "Failed to load syllabus", 500);
-  }
-}
-
-export async function POST(req: Request) {
-  const startTime = Date.now();
-  try {
-    const session = await getSession(req);
-    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
-      return apiError("Unauthorized", 401);
-    }
-
-    const { code, title, semester, academicYearCode, credits, subjectType, syllabusUrl } = await req.json();
-
-    if (!code || !title || !semester) {
-      return apiError("Subject Code, Subject Name, and Semester are required.", 400);
-    }
-
-    const dept = await getOrCreateDefaultDepartment();
-
-    const existing = await prisma.course.findUnique({ where: { code } });
-    if (existing) {
-      return apiError(`Subject with code ${code} already exists.`, 400);
-    }
-
-    const course = await prisma.course.create({
-      data: {
-        code,
-        title,
-        semester: parseInt(semester, 10),
-        academicYearCode: academicYearCode || DEFAULT_ACADEMIC_YEAR,
-        credits: parseInt(credits, 10) || 3,
-        subjectType: subjectType || "CORE",
-        departmentId: dept.id,
-        syllabusUrl: syllabusUrl || null,
-      },
-    });
-
-    logApiPerf("POST /api/academics/syllabus", startTime);
-    return apiSuccess({ course }, "Subject & Syllabus record added successfully.", 201);
-  } catch (error: any) {
-    return apiError(error.message || "Failed to add subject record", 500);
-  }
-}
-
-export async function DELETE(req: Request) {
-  const startTime = Date.now();
-  try {
-    const session = await getSession(req);
-    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
-      return apiError("Unauthorized", 401);
-    }
-
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) return apiError("Course ID required", 400);
-
-    const course = await prisma.course.findUnique({
-      where: { id },
-      include: {
-        _count: { select: { attendances: true, academicRecords: true } },
-      },
-    });
-
-    if (!course) return apiError("Course record not found", 404);
-
-    if (course._count.attendances > 0 || course._count.academicRecords > 0) {
-      return apiError(`Cannot delete course '${course.code}': linked student attendance or academic records exist. Archive the subject instead.`, 400);
-    }
-
-    await prisma.course.delete({ where: { id } });
-
-    await prisma.auditLog.create({
-      data: {
-        userId: session.id,
-        userEmail: session.email,
-        userRole: session.role,
-        action: "PERMANENT_DELETE_SUBJECT",
-        entityType: "Course",
-        entityId: id,
-        details: JSON.stringify({ code: course.code, title: course.title, deletedBy: session.email }),
-      },
-    });
-
-    logApiPerf("DELETE /api/academics/syllabus", startTime);
-    return apiSuccess({ id }, "Syllabus record permanently deleted successfully.");
-  } catch (error: any) {
-    return apiError(error.message || "Failed to delete syllabus record", 500);
+    return apiSuccess(version);
+  } catch (err: any) {
+    console.error("[GET /api/academics/syllabus Error]", err);
+    return apiError(err.message || "Failed to fetch active syllabus", 500);
   }
 }

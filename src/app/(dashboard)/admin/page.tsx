@@ -200,9 +200,6 @@ export default function AdminDashboardPage() {
                 <CalendarDays className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Batch Student Distribution (AI & ML)</span>
               </h2>
-              <Link href="/admin/batches" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                Manage Batches →
-              </Link>
             </div>
             <div className="h-64 w-full">
               {batchChartData.length === 0 ? (
@@ -254,10 +251,10 @@ export default function AdminDashboardPage() {
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/admin/batches"
+                href="/admin/master-records"
                 className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 font-semibold text-indigo-700 dark:text-indigo-300 transition border border-indigo-200 dark:border-indigo-800"
               >
-                <span>Batches & Progression (Add Students)</span>
+                <span>Student Master Directory</span>
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
               <Link

@@ -26,7 +26,6 @@ function verifyPasswordVisibilityImplementation() {
   console.log("\n[TEST 3] Verifying Page Integrations...");
   const pagesToTest = [
     { name: "Login Page", relativePath: "../src/app/login/page.tsx" },
-    { name: "Admin Batches & Progression", relativePath: "../src/app/(dashboard)/admin/batches/page.tsx" },
     { name: "Admin Master Directory", relativePath: "../src/app/(dashboard)/admin/master-records/page.tsx" },
     { name: "Admin Account Settings", relativePath: "../src/app/(dashboard)/admin/settings/page.tsx" },
   ];

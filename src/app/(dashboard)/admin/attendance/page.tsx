@@ -22,7 +22,9 @@ import {
   Square,
   Sparkles,
   Trash2,
+  Share2,
 } from "lucide-react";
+import { shareStatusCardAsImage } from "@/lib/nativeShare";
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "OD" | "INTERNSHIP" | "MEDICAL_LEAVE" | "LATE" | "ML" | "LONG_ABSENT" | "UNMARKED";
 
@@ -78,6 +80,69 @@ export default function AdminTakeAttendancePage() {
   const handleOpenHistoryDate = (dateStr: string) => {
     setSelectedDate(dateStr);
     setAttendanceMode("FULL_DAY");
+  };
+
+  const [openShareDate, setOpenShareDate] = useState<string | null>(null);
+  const [sharingKey, setSharingKey] = useState<string | null>(null);
+
+  const handleShareHistoryStatus = async (
+    dateStr: string,
+    statusType: "Present" | "Absent" | "OD" | "ML" | "Long Absent"
+  ) => {
+    const key = `${dateStr}_${statusType}`;
+    setSharingKey(key);
+    try {
+      const params = new URLSearchParams({
+        academicYear: selectedAcademicYear,
+        departmentId: selectedDepartmentId,
+        date: dateStr,
+      });
+      const res = await fetch(`/api/attendance/full-day?${params.toString()}`);
+      const data = await res.json();
+      const studentList: any[] = data.data?.students || data.students || [];
+      const existingRecords: any[] = data.data?.existingAttendance || data.existingAttendance || [];
+
+      const existingMap: Record<string, string> = {};
+      existingRecords.forEach((rec: any) => {
+        let st = rec.status;
+        if (st === "MEDICAL_LEAVE") st = "ML";
+        existingMap[rec.studentId] = st;
+      });
+
+      const filtered = studentList.filter((st: any) => {
+        const s = existingMap[st.id];
+        if (statusType === "Present") return s === "PRESENT";
+        if (statusType === "Absent") return s === "ABSENT";
+        if (statusType === "OD") return s === "OD";
+        if (statusType === "ML") return s === "ML" || s === "MEDICAL_LEAVE";
+        if (statusType === "Long Absent") return s === "LONG_ABSENT";
+        return false;
+      });
+
+      const reportStudents = filtered.map((st: any) => ({
+        id: st.id,
+        studentName: st.fullName || "Student",
+        registerNumber: st.registerNo || "N/A",
+        status: statusType,
+      }));
+
+      const fileName = `Attendance_${statusType}_${dateStr}.png`;
+
+      await shareStatusCardAsImage({
+        date: dateStr,
+        subject: "Full-Day Session",
+        status: statusType,
+        totalStudentsCount: reportStudents.length,
+        studentList: reportStudents,
+        fileName,
+      });
+    } catch (err: any) {
+      console.error("[Share Error]", err);
+      setMessage({ text: err.message || "Failed to share attendance report image", type: "error" });
+    } finally {
+      setSharingKey(null);
+      setOpenShareDate(null);
+    }
   };
 
   // Student list & status state
@@ -696,7 +761,7 @@ export default function AdminTakeAttendancePage() {
           ) : students.length === 0 ? (
             <EmptyState
               title={`No students found for Academic Year ${selectedAcademicYear}.`}
-              description="Ensure students have been added to this academic year in the Batches & Progression page."
+              description="Ensure students have been added to this academic year in the Student Master Directory."
             />
           ) : (
             <div className="overflow-x-auto">
