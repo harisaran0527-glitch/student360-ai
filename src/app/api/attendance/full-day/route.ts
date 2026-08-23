@@ -138,7 +138,7 @@ export async function POST(req: Request) {
     for (const rec of attendanceRecords) {
       let status = rec.status;
       if (status === "ML") status = "MEDICAL_LEAVE";
-      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE", "LONG_ABSENT", "UNMARKED"].includes(status)) {
+      if (!["PRESENT", "ABSENT", "OD", "MEDICAL_LEAVE", "LONG_ABSENT", "INTERNSHIP", "LATE", "UNMARKED", "NOT_MARKED"].includes(status)) {
         throw new Error(`Invalid attendance status '${status}'`);
       }
     }

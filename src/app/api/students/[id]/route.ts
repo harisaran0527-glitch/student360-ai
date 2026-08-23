@@ -43,7 +43,20 @@ export async function GET(
     }
 
     logApiPerf("GET /api/students/[id]", startTime);
-    return apiSuccess({ student });
+    return new NextResponse(
+      JSON.stringify({
+        success: true,
+        data: { student },
+        student,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, max-age=0, must-revalidate",
+        },
+      }
+    );
   } catch (error: any) {
     return apiError(error.message || "Failed to fetch student profile", 500);
   }

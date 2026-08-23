@@ -26,25 +26,29 @@ export default function StudentAttendancePage() {
   const [activeTab, setActiveTab] = useState<"SUBJECT" | "FULL_DAY">("SUBJECT");
 
   // Filters
-  const [selectedSem, setSelectedSem] = useState(1);
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedSem, setSelectedSem] = useState<number>(1);
 
   const fetchAttendance = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/me");
+      const timestamp = Date.now();
+      const res = await fetch(`/api/auth/me?t=${timestamp}`, { cache: "no-store" });
       const meData = await res.json();
 
-      if (meData.user?.studentProfile) {
-        const sRes = await fetch(`/api/students/${meData.user.studentProfile.id}`);
+      if (meData.user?.studentProfileId || meData.user?.studentProfile?.id) {
+        const studentId = meData.user?.studentProfileId || meData.user?.studentProfile?.id;
+        const sRes = await fetch(`/api/students/${studentId}?t=${timestamp}`, { cache: "no-store" });
         const sData = await sRes.json();
-        setStudentData(sData.student);
-        setSelectedSem(sData.student.currentSemester || 1);
+        const profile = sData.student || sData.data?.student;
+        setStudentData(profile);
+        if (profile?.currentSemester) {
+          setSelectedSem(profile.currentSemester);
+        }
       }
 
-      const cRes = await fetch("/api/courses");
+      const cRes = await fetch(`/api/courses?t=${timestamp}`, { cache: "no-store" });
       const cData = await cRes.json();
-      setCourses(cData.courses || []);
+      setCourses(cData.courses || cData.data?.courses || []);
     } catch (err) {
       console.error("Failed to load student attendance", err);
     } finally {
@@ -65,28 +69,43 @@ export default function StudentAttendancePage() {
     );
   }
 
-  const attendances = studentData?.attendances || [];
+  const attendances: any[] = studentData?.attendances || [];
+  const fullDayAttendances: any[] = studentData?.fullDayAttendances || [];
   const minRequired = 75.0; // Institutional policy threshold
 
-  // Helper to derive daily status from multiple periods
-  const deriveDailyStatus = (statuses: string[]): string => {
-    if (statuses.includes("ABSENT") || statuses.includes("LONG_ABSENT")) {
-      return "Absent";
+  // Helper to map saved attendance status string to badge variant and display label
+  const renderStatusBadge = (statusStr: string) => {
+    const s = (statusStr || "").toUpperCase();
+    if (s === "PRESENT") {
+      return <Badge variant="success">Present</Badge>;
     }
-    if (statuses.includes("MEDICAL_LEAVE")) {
-      return "Medical";
+    if (s === "ABSENT") {
+      return <Badge variant="danger">Absent</Badge>;
     }
-    if (statuses.includes("INTERNSHIP")) {
-      return "Internship";
+    if (s === "OD") {
+      return <Badge variant="purple">OD</Badge>;
     }
-    if (statuses.includes("OD")) {
-      return "OD";
+    if (s === "MEDICAL_LEAVE" || s === "ML") {
+      return <Badge variant="warning">Medical Leave</Badge>;
     }
-    return "Present";
+    if (s === "LONG_ABSENT") {
+      return <Badge variant="danger">Long Absent</Badge>;
+    }
+    if (s === "INTERNSHIP") {
+      return <Badge variant="info">Internship</Badge>;
+    }
+    if (s === "LATE") {
+      return <Badge variant="warning">Late</Badge>;
+    }
+    if (s === "UNMARKED" || s === "NOT_MARKED") {
+      return <Badge variant="default">Not Marked</Badge>;
+    }
+    return <Badge variant="info">{statusStr}</Badge>;
   };
 
   // Timezone-safe date formatter
   const formatDate = (dateStr: string): string => {
+    if (!dateStr) return "N/A";
     const parts = dateStr.split("-");
     if (parts.length !== 3) return dateStr;
     const year = parts[0];
@@ -96,36 +115,28 @@ export default function StudentAttendancePage() {
     return `${day} ${monthNames[monthIdx] || parts[1]} ${year}`;
   };
 
-  // Group attendance by date for the selected semester
-  const filteredAttendances = attendances.filter((att: any) => att.course?.semester === selectedSem);
+  const getDayOfWeek = (dateStr: string): string => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return "";
+    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return days[date.getDay()];
+  };
 
-  const dailyMap: Record<string, string[]> = {};
-  filteredAttendances.forEach((att: any) => {
-    const d = att.date;
-    if (!dailyMap[d]) {
-      dailyMap[d] = [];
-    }
-    dailyMap[d].push(att.status);
-  });
-
-  const dailyRows = Object.keys(dailyMap)
-    .sort((a, b) => b.localeCompare(a)) // Sort descending (newest first)
-    .map((dateStr) => {
-      const statuses = dailyMap[dateStr];
-      const status = deriveDailyStatus(statuses);
-      return {
-        date: dateStr,
-        status,
-      };
-    });
+  // Filter subject-wise attendance by selected semester
+  const filteredAttendances = attendances
+    .filter((att: any) => !selectedSem || att.course?.semester === selectedSem || !att.course?.semester)
+    .sort((a: any, b: any) => (b.date || "").localeCompare(a.date || ""));
 
   const overallPct = studentData?.attendancePercentage ?? 100.0;
   const isOverallShortage = overallPct < minRequired;
 
   // Full Day Calculations
-  const fullDayRecords = (studentData?.fullDayAttendances || []).filter(
-    (r: any) => r.status && r.status.toUpperCase() !== "UNMARKED"
-  );
+  const fullDayRecords = fullDayAttendances
+    .filter((r: any) => r.status && r.status.toUpperCase() !== "UNMARKED" && r.status.toUpperCase() !== "NOT_MARKED")
+    .sort((a: any, b: any) => (b.date || "").localeCompare(a.date || ""));
+
   const totalWorkingDays = fullDayRecords.length;
   const presentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "PRESENT").length;
   const absentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "ABSENT").length;
@@ -137,20 +148,10 @@ export default function StudentAttendancePage() {
   const longAbsentDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "LONG_ABSENT").length;
 
   const presentDays = presentOnly + odDays + mlDays;
-  const absentDays = absentOnly + longAbsentDays;
-
   const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100 * 100) / 100 : 0.0;
 
-  const getDayOfWeek = (dateStr: string): string => {
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return "";
-    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return days[date.getDay()];
-  };
-
   return (
-    <div className="flex-1 flex flex-col min-w-0">
+    <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950">
       <Header
         title="My Institutional Attendance Center"
         subtitle="Subject-wise attendance breakdown, approved OD/Internship logs & shortage alerts"
@@ -223,30 +224,30 @@ export default function StudentAttendancePage() {
               />
               <StatCard
                 title="Medical & Late Sessions"
-                value={attendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "LATE").length}
-                subtitle={`Medical: ${attendances.filter((a: any) => a.status === "MEDICAL_LEAVE").length} | Late: ${attendances.filter((a: any) => a.status === "LATE").length}`}
+                value={attendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "ML" || a.status === "LATE").length}
+                subtitle={`Medical: ${attendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "ML").length} | Late: ${attendances.filter((a: any) => a.status === "LATE").length}`}
                 icon={Briefcase}
                 color="sky"
               />
             </div>
 
-            {/* Filters */}
-            <div className="ui-card p-4 space-y-3">
+            {/* Semester Filter Toolbar */}
+            <div className="ui-card p-4 space-y-3 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <Filter className="w-4 h-4 text-indigo-600" />
-                  <span>Filter Attendance Records</span>
+                  <span>Filter Subject Attendance Records</span>
                 </h3>
                 <span className="text-xs text-slate-500 font-semibold">Institutional Policy Minimum: {minRequired}%</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <label className="block text-slate-500 font-semibold mb-1">Semester</label>
+                  <label className="block text-slate-500 font-semibold mb-1">Select Semester</label>
                   <select
                     value={selectedSem}
                     onChange={(e) => setSelectedSem(parseInt(e.target.value, 10))}
-                    className="ui-input w-full p-2"
+                    className="ui-input w-full p-2 font-bold text-indigo-600"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
                       <option key={s} value={s}>
@@ -258,50 +259,44 @@ export default function StudentAttendancePage() {
               </div>
             </div>
 
-            {/* Day-Wise Attendance Log Table */}
-            <div className="ui-card overflow-hidden space-y-4 p-6">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            {/* Subject Attendance Record Log Table */}
+            <div className="ui-card overflow-hidden space-y-4 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Day-Wise Attendance Log</span>
+                <span>Subject Attendance Log (Semester {selectedSem}) — {filteredAttendances.length} Records</span>
               </h3>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                      <th className="p-3">Date</th>
-                      <th className="p-3">Daily Attendance Status</th>
+                    <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <th className="p-3.5">Date</th>
+                      <th className="p-3.5">Subject / Course</th>
+                      <th className="p-3.5">Session / Period</th>
+                      <th className="p-3.5">Exact Saved Attendance Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {dailyRows.length === 0 ? (
+                    {filteredAttendances.length === 0 ? (
                       <tr>
-                        <td colSpan={2} className="p-6">
+                        <td colSpan={4} className="p-6">
                           <EmptyState title="No Attendance Records" description={`No attendance records are logged for Semester ${selectedSem}.`} />
                         </td>
                       </tr>
                     ) : (
-                      dailyRows.map((r) => (
-                        <tr key={r.date} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                          <td className="p-3 font-semibold text-slate-900 dark:text-white">
-                            {formatDate(r.date)}
+                      filteredAttendances.map((att: any) => (
+                        <tr key={att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                          <td className="p-3.5 font-semibold text-slate-900 dark:text-white">
+                            {formatDate(att.date)}
                           </td>
-                          <td className="p-3">
-                            <Badge
-                              variant={
-                                r.status === "Present"
-                                  ? "success"
-                                  : r.status === "Absent"
-                                  ? "danger"
-                                  : r.status === "OD"
-                                  ? "purple"
-                                  : r.status === "Internship"
-                                  ? "info"
-                                  : "warning" // Medical
-                              }
-                            >
-                              {r.status}
-                            </Badge>
+                          <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                            {att.course ? `${att.course.code}: ${att.course.title}` : "Subject Session"}
+                          </td>
+                          <td className="p-3.5 font-medium text-slate-600 dark:text-slate-400">
+                            {att.session || "FN"}
+                          </td>
+                          <td className="p-3.5">
+                            {renderStatusBadge(att.status)}
                           </td>
                         </tr>
                       ))
@@ -346,19 +341,19 @@ export default function StudentAttendancePage() {
             </div>
 
             {/* Day-Wise Full Day Attendance Log Table */}
-            <div className="ui-card overflow-hidden space-y-4 p-6">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <div className="ui-card overflow-hidden space-y-4 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Day-Wise Full Day Attendance Log</span>
+                <span>Day-Wise Full Day Attendance Log — {fullDayRecords.length} Records</span>
               </h3>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                      <th className="p-3">Date</th>
-                      <th className="p-3">Day</th>
-                      <th className="p-3">Attendance Status</th>
+                    <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <th className="p-3.5">Date</th>
+                      <th className="p-3.5">Day</th>
+                      <th className="p-3.5">Exact Saved Attendance Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -369,41 +364,19 @@ export default function StudentAttendancePage() {
                         </td>
                       </tr>
                     ) : (
-                      [...fullDayRecords]
-                        .sort((a: any, b: any) => b.date.localeCompare(a.date))
-                        .map((r: any) => (
-                          <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                            <td className="p-3 font-semibold text-slate-900 dark:text-white">
-                              {formatDate(r.date)}
-                            </td>
-                            <td className="p-3 font-medium text-slate-600 dark:text-slate-400">
-                              {getDayOfWeek(r.date)}
-                            </td>
-                            <td className="p-3">
-                              <Badge
-                                variant={
-                                  (() => {
-                                    const s = r.status.toUpperCase();
-                                    if (s === "PRESENT") return "success";
-                                    if (s === "ABSENT" || s === "LONG_ABSENT") return "danger";
-                                    if (s === "OD") return "purple";
-                                    return "warning"; // MEDICAL_LEAVE / ML
-                                  })()
-                                }
-                              >
-                                {(() => {
-                                  const s = r.status.toUpperCase();
-                                  if (s === "PRESENT") return "Present";
-                                  if (s === "ABSENT") return "Absent";
-                                  if (s === "OD") return "OD";
-                                  if (s === "MEDICAL_LEAVE" || s === "ML") return "ML";
-                                  if (s === "LONG_ABSENT") return "Long Absent";
-                                  return r.status;
-                                })()}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))
+                      fullDayRecords.map((r: any) => (
+                        <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                          <td className="p-3.5 font-semibold text-slate-900 dark:text-white">
+                            {formatDate(r.date)}
+                          </td>
+                          <td className="p-3.5 font-medium text-slate-600 dark:text-slate-400">
+                            {getDayOfWeek(r.date)}
+                          </td>
+                          <td className="p-3.5">
+                            {renderStatusBadge(r.status)}
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
