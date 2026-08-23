@@ -27,6 +27,8 @@ import {
   Download,
   ArrowLeft,
   ChevronDown,
+  XCircle,
+  X,
 } from "lucide-react";
 
 type AttendanceStatus =
@@ -38,7 +40,8 @@ type AttendanceStatus =
   | "LONG_ABSENT"
   | "INTERNSHIP"
   | "LATE"
-  | "UNMARKED";
+  | "UNMARKED"
+  | "NOT_MARKED";
 
 export default function AdminAttendancePage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -69,8 +72,8 @@ export default function AdminAttendancePage() {
   const [historyDetailMap, setHistoryDetailMap] = useState<Record<string, string>>({});
   const [historyDetailLoading, setHistoryDetailLoading] = useState<boolean>(false);
 
-  // Share menu dropdown state for history list
-  const [openShareDate, setOpenShareDate] = useState<string | null>(null);
+  // Share modal / menu state for history list
+  const [shareModalItem, setShareModalItem] = useState<any | null>(null);
   const [sharingKey, setSharingKey] = useState<string | null>(null);
 
   const loadHistory = React.useCallback(async () => {
@@ -190,7 +193,7 @@ export default function AdminAttendancePage() {
       setMessage({ text: err.message || "Failed to share attendance report image", type: "error" });
     } finally {
       setSharingKey(null);
-      setOpenShareDate(null);
+      setShareModalItem(null);
     }
   };
 
@@ -371,7 +374,7 @@ export default function AdminAttendancePage() {
     fetchAttendanceSessions();
   }, [loadStudentsAndAttendance, fetchAttendanceSessions]);
 
-  // Attendance Status Toggle Handlers for Marking Mode
+  // Attendance Status Toggle Handlers for Marking Mode (Including Individual Student Clear)
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceState((prev) => ({
       ...prev,
@@ -723,10 +726,16 @@ export default function AdminAttendancePage() {
                   <CheckSquare className="w-3.5 h-3.5" /> Mark All Present
                 </button>
                 <button
+                  onClick={() => handleMarkAll("UNMARKED")}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 flex items-center gap-1 border border-slate-300 dark:border-slate-700"
+                >
+                  <XCircle className="w-3.5 h-3.5 text-slate-500" /> Clear All / Reset
+                </button>
+                <button
                   onClick={() => handleMarkAll("ABSENT")}
                   className="px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 font-bold hover:bg-rose-200 flex items-center gap-1"
                 >
-                  <Square className="w-3.5 h-3.5" /> Clear / Mark All Absent
+                  <Square className="w-3.5 h-3.5" /> Mark All Absent
                 </button>
               </div>
             </div>
@@ -796,8 +805,12 @@ export default function AdminAttendancePage() {
                           </td>
                           <td className="p-3.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {(["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT"] as AttendanceStatus[]).map((stKey) => {
-                                const active = currentStatus === stKey || (stKey === "ML" && currentStatus === "MEDICAL_LEAVE");
+                              {(["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT", "UNMARKED"] as AttendanceStatus[]).map((stKey) => {
+                                const isUnmarkedKey = stKey === "UNMARKED";
+                                const active = isUnmarkedKey
+                                  ? (currentStatus === "UNMARKED" || currentStatus === "NOT_MARKED")
+                                  : (currentStatus === stKey || (stKey === "ML" && currentStatus === "MEDICAL_LEAVE"));
+
                                 let btnStyle = "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200";
                                 if (active) {
                                   if (stKey === "PRESENT") btnStyle = "bg-emerald-600 text-white shadow-md shadow-emerald-500/20 font-bold";
@@ -805,19 +818,24 @@ export default function AdminAttendancePage() {
                                   if (stKey === "OD") btnStyle = "bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold";
                                   if (stKey === "ML") btnStyle = "bg-amber-600 text-white shadow-md shadow-amber-500/20 font-bold";
                                   if (stKey === "LONG_ABSENT") btnStyle = "bg-red-700 text-white shadow-md shadow-red-500/20 font-bold";
+                                  if (isUnmarkedKey) btnStyle = "bg-slate-700 text-white shadow-md font-bold dark:bg-slate-600 border border-slate-800";
                                 }
+
                                 return (
                                   <button
                                     key={stKey}
                                     type="button"
-                                    onClick={() => handleStatusChange(st.id, stKey)}
-                                    className={`px-3 py-1.5 rounded-lg transition text-[11px] ${btnStyle}`}
+                                    onClick={() => handleStatusChange(st.id, isUnmarkedKey ? "UNMARKED" : stKey)}
+                                    className={`px-3 py-1.5 rounded-lg transition text-[11px] flex items-center gap-1 ${btnStyle}`}
+                                    title={isUnmarkedKey ? "Clear unsaved status selection for this student only" : undefined}
                                   >
+                                    {isUnmarkedKey && <XCircle className="w-3 h-3 text-slate-300" />}
                                     {stKey === "PRESENT" && "Present"}
                                     {stKey === "ABSENT" && "Absent"}
                                     {stKey === "OD" && "OD"}
                                     {stKey === "ML" && "Medical Leave"}
                                     {stKey === "LONG_ABSENT" && "Long Absent"}
+                                    {isUnmarkedKey && "Clear"}
                                   </button>
                                 );
                               })}
@@ -923,7 +941,7 @@ export default function AdminAttendancePage() {
           </div>
         )}
 
-        {/* History Tab — STRICTLY READ-ONLY VIEW */}
+        {/* History Tab — STRICTLY READ-ONLY VIEW WITH STATUS SHARE */}
         {attendanceMode === "HISTORY" && (
           <div className="space-y-6">
             {selectedHistoryDate ? (
@@ -1004,6 +1022,8 @@ export default function AdminAttendancePage() {
                           { label: "Share Medical Leave PNG", type: "Medical Leave", count: historyDetailStudents.filter((s) => historyDetailMap[s.id] === "ML" || historyDetailMap[s.id] === "MEDICAL_LEAVE").length, bg: "bg-amber-600 text-white" },
                           { label: "Share Long Absent PNG", type: "Long Absent", count: historyDetailStudents.filter((s) => historyDetailMap[s.id] === "LONG_ABSENT").length, bg: "bg-red-700 text-white" },
                           { label: "Share Present PNG", type: "Present", count: historyDetailStudents.filter((s) => historyDetailMap[s.id] === "PRESENT").length, bg: "bg-emerald-600 text-white" },
+                          { label: "Share Internship PNG", type: "Internship", count: historyDetailStudents.filter((s) => historyDetailMap[s.id] === "INTERNSHIP").length, bg: "bg-purple-600 text-white" },
+                          { label: "Share Late PNG", type: "Late", count: historyDetailStudents.filter((s) => historyDetailMap[s.id] === "LATE").length, bg: "bg-sky-600 text-white" },
                         ].map((btn) => (
                           <button
                             key={btn.type}
@@ -1059,7 +1079,7 @@ export default function AdminAttendancePage() {
               </div>
             ) : (
               /* HISTORY LIST VIEW CARD */
-              <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm space-y-4 p-6">
+              <div className="ui-card rounded-2xl bg-white dark:bg-slate-900 shadow-sm space-y-4 p-6">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
                   <Calendar className="w-4 h-4 text-indigo-600" />
                   <span>Saved Attendance History Records (Read-Only)</span>
@@ -1106,79 +1126,24 @@ export default function AdminAttendancePage() {
                             <td className="p-3.5 text-amber-600 font-bold">{item.ml}</td>
                             <td className="p-3.5 text-red-600 font-bold">{item.longAbsent}</td>
                             <td className="p-3.5">
-                              <div className="flex items-center gap-2 relative">
+                              <div className="flex items-center gap-2">
                                 {/* Read-Only View Details Button */}
                                 <button
                                   onClick={() => setSelectedHistoryDate(item.date)}
-                                  className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold transition text-[11px]"
+                                  className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold transition text-[11px] flex items-center gap-1"
                                 >
-                                  View Details
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>View Details</span>
                                 </button>
 
-                                {/* Compact Status-Wise Share Dropdown Button */}
-                                <div className="relative">
-                                  <button
-                                    onClick={() => setOpenShareDate(openShareDate === item.date ? null : item.date)}
-                                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition text-[11px] flex items-center gap-1 border border-slate-300 dark:border-slate-700"
-                                  >
-                                    <Share2 className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Share</span>
-                                    <ChevronDown className="w-3 h-3" />
-                                  </button>
-
-                                  {openShareDate === item.date && (
-                                    <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-30 py-2 space-y-1 text-xs">
-                                      <div className="px-3 py-1 font-bold text-[10px] uppercase text-slate-400 tracking-wider">
-                                        Status Image Share
-                                      </div>
-
-                                      <button
-                                        disabled={item.absent === 0}
-                                        onClick={() => handleShareHistoryStatus(item.date, "Absent")}
-                                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between text-rose-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                                      >
-                                        <span>Share Absent</span>
-                                        <span className="text-[10px] bg-rose-50 px-1.5 py-0.5 rounded text-rose-600">({item.absent})</span>
-                                      </button>
-
-                                      <button
-                                        disabled={item.od === 0}
-                                        onClick={() => handleShareHistoryStatus(item.date, "OD")}
-                                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between text-blue-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                                      >
-                                        <span>Share OD</span>
-                                        <span className="text-[10px] bg-blue-50 px-1.5 py-0.5 rounded text-blue-600">({item.od})</span>
-                                      </button>
-
-                                      <button
-                                        disabled={item.ml === 0}
-                                        onClick={() => handleShareHistoryStatus(item.date, "Medical Leave")}
-                                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between text-amber-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                                      >
-                                        <span>Share Medical Leave</span>
-                                        <span className="text-[10px] bg-amber-50 px-1.5 py-0.5 rounded text-amber-600">({item.ml})</span>
-                                      </button>
-
-                                      <button
-                                        disabled={item.longAbsent === 0}
-                                        onClick={() => handleShareHistoryStatus(item.date, "Long Absent")}
-                                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between text-red-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                                      >
-                                        <span>Share Long Absent</span>
-                                        <span className="text-[10px] bg-red-50 px-1.5 py-0.5 rounded text-red-700">({item.longAbsent})</span>
-                                      </button>
-
-                                      <button
-                                        disabled={item.present === 0}
-                                        onClick={() => handleShareHistoryStatus(item.date, "Present")}
-                                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between text-emerald-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                                      >
-                                        <span>Share Present</span>
-                                        <span className="text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-600">({item.present})</span>
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                {/* Visible Share Button triggering Status Share Modal */}
+                                <button
+                                  onClick={() => setShareModalItem(item)}
+                                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition text-[11px] flex items-center gap-1.5 shadow-sm shadow-indigo-500/20"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                  <span>Share</span>
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1192,6 +1157,66 @@ export default function AdminAttendancePage() {
           </div>
         )}
       </div>
+
+      {/* Status-Wise Share Modal for History Record */}
+      {shareModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Share Attendance Status Image — {shareModalItem.date}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShareModalItem(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 font-medium">
+              Select a status to generate a separate PNG report image and share via WhatsApp / Web Share API:
+            </p>
+
+            <div className="space-y-2 text-xs">
+              {[
+                { label: "Share Absent Students", type: "Absent", count: shareModalItem.absent, color: "text-rose-600 bg-rose-50 border-rose-200" },
+                { label: "Share OD Students", type: "OD", count: shareModalItem.od, color: "text-blue-600 bg-blue-50 border-blue-200" },
+                { label: "Share Medical Leave Students", type: "Medical Leave", count: shareModalItem.ml, color: "text-amber-600 bg-amber-50 border-amber-200" },
+                { label: "Share Long Absent Students", type: "Long Absent", count: shareModalItem.longAbsent, color: "text-red-700 bg-red-50 border-red-200" },
+                { label: "Share Present Students", type: "Present", count: shareModalItem.present, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+              ].map((opt) => (
+                <button
+                  key={opt.type}
+                  disabled={opt.count === 0 || sharingKey === `${shareModalItem.date}_${opt.type}`}
+                  onClick={() => handleShareHistoryStatus(shareModalItem.date, opt.type as any)}
+                  className={`w-full p-3 rounded-xl border font-bold flex items-center justify-between transition ${opt.color} disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Share2 className="w-4 h-4" />
+                    <span>{opt.label}</span>
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md font-extrabold bg-white/80 dark:bg-slate-800">
+                    {opt.count === 0 ? "No Students (0)" : `${opt.count} Student(s)`}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setShareModalItem(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top-Level Delete Management Panel */}
       <DeleteManagementPanel
