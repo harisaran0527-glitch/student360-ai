@@ -4,14 +4,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
 import {
-  GraduationCap,
   Save,
   Search,
   CheckCircle2,
   AlertCircle,
   Loader2,
   FileSpreadsheet,
-  User,
   BookOpen,
 } from "lucide-react";
 import { calculateAcademicGrade } from "@/lib/academic-grading";
@@ -25,6 +23,7 @@ interface StudentOption {
   departmentId: string;
   sectionId?: string | null;
   academicYear: string;
+  cgpa?: number;
   department?: { id: string; code: string; name: string };
   section?: { id: string; name: string };
 }
@@ -35,17 +34,18 @@ interface CourseItem {
   title: string;
   credits: number;
   semester: number;
-  subjectType: string;
 }
 
-interface MarkRowState {
-  courseId: string;
-  code: string;
-  title: string;
-  credits: number;
-  semester: number;
+interface StudentMarkState {
+  studentId: string;
+  registerNo: string;
+  fullName: string;
+  rollNo: string;
+  cgpa?: number;
   internalMarks: number | string;
   externalMarks: number | string;
+  originalInternal: number | string;
+  originalExternal: number | string;
   isSaving?: boolean;
 }
 
@@ -54,15 +54,14 @@ export default function AdminMarksPage() {
   const [academicYear, setAcademicYear] = useState<string>("2025-2029");
   const [departmentId, setDepartmentId] = useState<string>("");
   const [selectedSem, setSelectedSem] = useState<number>(3);
-  const [sectionId, setSectionId] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sectionId, setSectionId] = useState<string>("all");
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("all");
 
   // Data States
   const [departments, setDepartments] = useState<any[]>([]);
-  const [students, setStudents] = useState<StudentOption[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [markRows, setMarkRows] = useState<MarkRowState[]>([]);
+  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [studentMarkStates, setStudentMarkStates] = useState<StudentMarkState[]>([]);
 
   // UI Feedback States
   const [loading, setLoading] = useState<boolean>(true);
@@ -88,7 +87,7 @@ export default function AdminMarksPage() {
     loadInitialData();
   }, []);
 
-  // Fetch Students & Marks Data when filters change
+  // Fetch Course List and Student Roster
   const fetchMarksData = useCallback(async () => {
     setLoading(true);
     try {
@@ -96,73 +95,83 @@ export default function AdminMarksPage() {
       if (departmentId) queryParams.set("departmentId", departmentId);
       if (selectedSem) queryParams.set("semester", selectedSem.toString());
       if (academicYear) queryParams.set("academicYear", academicYear);
-      if (sectionId) queryParams.set("sectionId", sectionId);
-      if (selectedStudentId) queryParams.set("studentId", selectedStudentId);
-      if (searchQuery) queryParams.set("search", searchQuery);
+      if (sectionId && sectionId !== "all") queryParams.set("sectionId", sectionId);
+      if (selectedCourseId) queryParams.set("courseId", selectedCourseId);
 
       const res = await fetch(`/api/admin/academics/marks?${queryParams.toString()}`);
       const data = await res.json();
 
       if (data.success) {
-        setStudents(data.students || []);
-        setSelectedStudent(data.selectedStudent || null);
-        if (data.selectedStudent && !selectedStudentId) {
-          setSelectedStudentId(data.selectedStudent.id);
+        // Set courses
+        const fetchedCourses: CourseItem[] = data.courses || [];
+        setCourses(fetchedCourses);
+
+        // Auto-select first course if none selected
+        let activeCourseId = selectedCourseId;
+        if (fetchedCourses.length > 0 && !selectedCourseId) {
+          activeCourseId = fetchedCourses[0].id;
+          setSelectedCourseId(fetchedCourses[0].id);
         }
 
-        const courses: CourseItem[] = data.courses || [];
+        const students: StudentOption[] = data.students || [];
         const existingRecords: any[] = data.records || [];
 
-        // Build mark rows matrix pre-filling existing marks
-        const rows: MarkRowState[] = courses.map((course) => {
-          const rec = existingRecords.find((r) => r.courseId === course.id);
+        // Build roster mark states
+        const rosterStates: StudentMarkState[] = students.map((s) => {
+          // If we had a specific selectedCourseId, match the record
+          const rec = existingRecords.find((r) => r.studentId === s.id);
           return {
-            courseId: course.id,
-            code: course.code,
-            title: course.title,
-            credits: course.credits || 3,
-            semester: course.semester,
+            studentId: s.id,
+            registerNo: s.registerNo,
+            fullName: s.fullName,
+            rollNo: s.rollNo,
+            cgpa: s.cgpa || 0,
             internalMarks: rec ? rec.internalMarks : "",
             externalMarks: rec ? rec.externalMarks : "",
+            originalInternal: rec ? rec.internalMarks : "",
+            originalExternal: rec ? rec.externalMarks : "",
           };
         });
 
-        setMarkRows(rows);
+        setStudentMarkStates(rosterStates);
       }
     } catch (err) {
-      console.error("Failed to fetch marks data", err);
-      showToast("Failed to fetch marks data", "error");
+      console.error("Failed to fetch marks roster", err);
+      showToast("Failed to fetch marks roster", "error");
     } finally {
       setLoading(false);
     }
-  }, [departmentId, selectedSem, academicYear, sectionId, selectedStudentId, searchQuery]);
+  }, [departmentId, selectedSem, academicYear, sectionId, selectedCourseId]);
 
   useEffect(() => {
-    fetchMarksData();
-  }, [fetchMarksData]);
+    if (departmentId) {
+      fetchMarksData();
+    }
+  }, [fetchMarksData, departmentId]);
 
   const showToast = (text: string, type: "success" | "error") => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Handle Mark Input Change
-  const handleMarkChange = (courseId: string, field: "internalMarks" | "externalMarks", value: string) => {
-    const numVal = value === "" ? "" : Math.min(50, Math.max(0, Number(value) || 0));
-    setMarkRows((prev) =>
-      prev.map((row) => (row.courseId === courseId ? { ...row, [field]: numVal } : row))
+  // Input change handler
+  const handleMarkChange = (studentId: string, field: "internalMarks" | "externalMarks", value: string) => {
+    // Keep blank values as string "", clamp numbers to 0-50
+    const processedValue = value === "" ? "" : Math.min(50, Math.max(0, Number(value) || 0));
+    setStudentMarkStates((prev) =>
+      prev.map((row) => (row.studentId === studentId ? { ...row, [field]: processedValue } : row))
     );
   };
 
-  // Save Individual Subject Mark
-  const saveSingleSubject = async (row: MarkRowState) => {
-    if (!selectedStudentId) {
-      showToast("Please select a student first", "error");
+  // Save Single Student Mark
+  const saveSingleStudentMarks = async (row: StudentMarkState) => {
+    if (!selectedCourseId) {
+      showToast("Please select a subject first", "error");
       return;
     }
 
-    setMarkRows((prev) =>
-      prev.map((r) => (r.courseId === row.courseId ? { ...r, isSaving: true } : r))
+    setStudentMarkStates((prev) =>
+      prev.map((r) => (r.studentId === row.studentId ? { ...r, isSaving: true } : r))
     );
 
     try {
@@ -170,15 +179,14 @@ export default function AdminMarksPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: selectedStudentId,
+          courseId: selectedCourseId,
           semester: selectedSem,
           academicYear,
           marks: [
             {
-              courseId: row.courseId,
-              internalMarks: Number(row.internalMarks) || 0,
-              externalMarks: Number(row.externalMarks) || 0,
-              credits: row.credits,
+              studentId: row.studentId,
+              internalMarks: row.internalMarks,
+              externalMarks: row.externalMarks,
             },
           ],
         }),
@@ -187,68 +195,90 @@ export default function AdminMarksPage() {
       const data = await res.json();
 
       if (data.success) {
-        showToast(`Saved marks for ${row.code} (${row.title})`, "success");
-        if (data.cgpa !== undefined && selectedStudent) {
-          setSelectedStudent((prev: any) => ({ ...prev, cgpa: data.cgpa }));
-        }
+        showToast(`Saved marks for ${row.fullName}`, "success");
+        // Update original marks state so it's no longer marked as unsaved
+        setStudentMarkStates((prev) =>
+          prev.map((r) =>
+            r.studentId === row.studentId
+              ? {
+                  ...r,
+                  originalInternal: row.internalMarks,
+                  originalExternal: row.externalMarks,
+                }
+              : r
+          )
+        );
       } else {
-        showToast(data.error || "Failed to save subject mark", "error");
+        showToast(data.error || "Failed to save student marks", "error");
       }
     } catch (err) {
-      console.error("Save subject error", err);
-      showToast("Network error while saving mark", "error");
+      console.error("Save student error", err);
+      showToast("Network error while saving student mark", "error");
     } finally {
-      setMarkRows((prev) =>
-        prev.map((r) => (r.courseId === row.courseId ? { ...r, isSaving: false } : r))
+      setStudentMarkStates((prev) =>
+        prev.map((r) => (r.studentId === row.studentId ? { ...r, isSaving: false } : r))
       );
     }
   };
 
-  // Save All Subject Marks Together
-  const saveAllSubjects = async () => {
-    if (!selectedStudentId) {
-      showToast("Please select a student first", "error");
+  // Save All Changed Marks in a Single Batch Request
+  const saveAllMarks = async () => {
+    if (!selectedCourseId) {
+      showToast("Please select a subject first", "error");
       return;
     }
 
-    if (markRows.length === 0) {
-      showToast("No active courses available to save", "error");
+    // Filter only modified rows
+    const modifiedRows = studentMarkStates.filter(
+      (r) => r.internalMarks !== r.originalInternal || r.externalMarks !== r.originalExternal
+    );
+
+    if (modifiedRows.length === 0) {
+      showToast("No changes detected to save", "error");
       return;
     }
 
     setSavingAll(true);
     try {
-      const marksPayload = markRows.map((row) => ({
-        courseId: row.courseId,
-        internalMarks: Number(row.internalMarks) || 0,
-        externalMarks: Number(row.externalMarks) || 0,
-        credits: row.credits,
-      }));
-
       const res = await fetch("/api/admin/academics/marks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: selectedStudentId,
+          courseId: selectedCourseId,
           semester: selectedSem,
           academicYear,
-          marks: marksPayload,
+          marks: modifiedRows.map((r) => ({
+            studentId: r.studentId,
+            internalMarks: r.internalMarks,
+            externalMarks: r.externalMarks,
+          })),
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        showToast(`Successfully saved all ${markRows.length} subject marks!`, "success");
-        if (data.cgpa !== undefined && selectedStudent) {
-          setSelectedStudent((prev: any) => ({ ...prev, cgpa: data.cgpa }));
-        }
+        showToast(`Successfully saved marks for ${modifiedRows.length} student(s).`, "success");
+        // Update all original mark states to match
+        setStudentMarkStates((prev) =>
+          prev.map((r) => {
+            const mod = modifiedRows.find((m) => m.studentId === r.studentId);
+            if (mod) {
+              return {
+                ...r,
+                originalInternal: r.internalMarks,
+                originalExternal: r.externalMarks,
+              };
+            }
+            return r;
+          })
+        );
       } else {
-        showToast(data.error || "Failed to save marks", "error");
+        showToast(data.error || "Failed to save all marks", "error");
       }
     } catch (err) {
       console.error("Save all error", err);
-      showToast("Network error while saving all marks", "error");
+      showToast("Network error while saving bulk marks", "error");
     } finally {
       setSavingAll(false);
     }
@@ -285,9 +315,9 @@ export default function AdminMarksPage() {
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>Select Academic Batch & Student Filters</span>
+              <span>Select Academic Batch & Subject Filters</span>
             </h2>
-            <Badge variant="purple">Official Exam Management</Badge>
+            <Badge variant="purple">Class-Wise Bulk Mark Entry</Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -316,7 +346,7 @@ export default function AdminMarksPage() {
                 value={departmentId}
                 onChange={(e) => {
                   setDepartmentId(e.target.value);
-                  setSelectedStudentId("");
+                  setSelectedCourseId("");
                 }}
                 className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
@@ -335,7 +365,10 @@ export default function AdminMarksPage() {
               </label>
               <select
                 value={selectedSem}
-                onChange={(e) => setSelectedSem(Number(e.target.value))}
+                onChange={(e) => {
+                  setSelectedSem(Number(e.target.value));
+                  setSelectedCourseId("");
+                }}
                 className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -346,93 +379,59 @@ export default function AdminMarksPage() {
               </select>
             </div>
 
-            {/* Search Input */}
+            {/* Section Filter */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase">
-                Search Student
-              </label>
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Reg No / Name / Roll No"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Student Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase">
-                Select Student ({students.length})
+                Section
               </label>
               <select
-                value={selectedStudentId}
-                onChange={(e) => setSelectedStudentId(e.target.value)}
+                value={sectionId}
+                onChange={(e) => setSectionId(e.target.value)}
                 className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.registerNo} — {s.fullName} ({s.rollNo})
-                  </option>
-                ))}
+                <option value="all">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+              </select>
+            </div>
+
+            {/* Course/Subject Filter */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase text-indigo-600 dark:text-indigo-400">
+                Select Subject
+              </label>
+              <select
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
+                className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-indigo-300 dark:border-indigo-800 bg-slate-50 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              >
+                {courses.length === 0 ? (
+                  <option value="">No subjects active</option>
+                ) : (
+                  courses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      [{c.code}] {c.title} ({c.credits} Credits)
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Selected Student Banner Card */}
-        {selectedStudent ? (
-          <div className="ui-card p-6 bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-slate-900/5 dark:from-indigo-950/40 dark:to-slate-900 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-500/20">
-                <User className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>{selectedStudent.fullName}</span>
-                  <Badge variant="purple">Reg No: {selectedStudent.registerNo}</Badge>
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">
-                  Roll No: <span className="font-bold">{selectedStudent.rollNo}</span> | Department:{" "}
-                  <span className="font-bold">
-                    {selectedStudent.department?.code === "AIDS"
-                      ? "AI&DS"
-                      : selectedStudent.department?.code || "N/A"}
-                  </span>{" "}
-                  | Current Semester: <span className="font-bold">{selectedStudent.currentSemester}</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <span className="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-                  Current Cumulative CGPA
-                </span>
-                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                  {selectedStudent.cgpa !== undefined ? `${selectedStudent.cgpa} / 10.0` : "0.00 / 10.0"}
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Official Marks Entry Table */}
+        {/* Official Class Roster Marks Entry Table */}
         <div className="ui-card p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>
-                Semester {selectedSem} Course Examination Marks Entry — {markRows.length} Applicable Subjects
+                Class Roster — {studentMarkStates.length} Active Students Listed
               </span>
             </h3>
 
             <button
-              onClick={saveAllSubjects}
-              disabled={savingAll || loading || markRows.length === 0}
+              onClick={saveAllMarks}
+              disabled={savingAll || loading || studentMarkStates.length === 0}
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-500/20 transition disabled:opacity-50"
             >
               {savingAll ? (
@@ -440,55 +439,63 @@ export default function AdminMarksPage() {
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>Save All Subject Marks</span>
+              <span>Save All Student Marks</span>
             </button>
           </div>
 
           {loading ? (
             <div className="p-12 flex flex-col items-center justify-center text-slate-400 space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-              <p className="text-xs font-semibold">Loading applicable semester courses and marks...</p>
+              <p className="text-xs font-semibold">Loading student class roster and existing marks...</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                    <th className="p-3.5">SEM</th>
-                    <th className="p-3.5">COURSE CODE & TITLE</th>
+                    <th className="p-3.5 w-16">S.NO</th>
+                    <th className="p-3.5">REGISTER NO</th>
+                    <th className="p-3.5">STUDENT NAME</th>
                     <th className="p-3.5 w-32">INTERNAL (50)</th>
                     <th className="p-3.5 w-32">EXTERNAL (50)</th>
                     <th className="p-3.5">TOTAL (100)</th>
                     <th className="p-3.5">GRADE</th>
                     <th className="p-3.5">RESULT</th>
-                    <th className="p-3.5 text-right">ACTION</th>
+                    <th className="p-3.5 text-right w-24">ACTION</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {markRows.length === 0 ? (
+                  {studentMarkStates.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500 font-medium">
-                        No active courses configured for Semester {selectedSem} in this department.
+                      <td colSpan={9} className="p-8 text-center text-slate-500 font-medium">
+                        No students matching the selected criteria found in this roster.
                       </td>
                     </tr>
                   ) : (
-                    markRows.map((row) => {
-                      const gradeCalc = calculateAcademicGrade(row.internalMarks, row.externalMarks);
-                      const isUnsaved = row.internalMarks === "" && row.externalMarks === "";
+                    studentMarkStates.map((row, index) => {
+                      const isUnmarked =
+                        row.internalMarks === "" ||
+                        row.externalMarks === "" ||
+                        row.internalMarks === undefined ||
+                        row.externalMarks === undefined;
+
+                      const gradeCalc = isUnmarked
+                        ? null
+                        : calculateAcademicGrade(row.internalMarks, row.externalMarks);
 
                       return (
                         <tr
-                          key={row.courseId}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
+                          key={row.studentId}
+                          className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition border-b border-slate-100 dark:border-slate-800"
                         >
-                          <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
-                            Sem {row.semester}
+                          <td className="p-3.5 font-bold text-slate-500">
+                            {index + 1}
                           </td>
-                          <td className="p-3.5 font-semibold text-slate-900 dark:text-white">
-                            <span className="font-bold text-indigo-600 dark:text-indigo-300">
-                              [{row.code}]
-                            </span>{" "}
-                            {row.title}
+                          <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                            {row.registerNo}
+                          </td>
+                          <td className="p-3.5 font-bold text-slate-900 dark:text-white uppercase">
+                            {row.fullName}
                           </td>
                           <td className="p-3.5">
                             <input
@@ -498,9 +505,9 @@ export default function AdminMarksPage() {
                               placeholder="0-50"
                               value={row.internalMarks}
                               onChange={(e) =>
-                                handleMarkChange(row.courseId, "internalMarks", e.target.value)
+                                handleMarkChange(row.studentId, "internalMarks", e.target.value)
                               }
-                              className="w-24 px-3 py-1.5 font-bold text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                              className="w-24 px-3 py-1.5 font-bold text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                           </td>
                           <td className="p-3.5">
@@ -511,16 +518,16 @@ export default function AdminMarksPage() {
                               placeholder="0-50"
                               value={row.externalMarks}
                               onChange={(e) =>
-                                handleMarkChange(row.courseId, "externalMarks", e.target.value)
+                                handleMarkChange(row.studentId, "externalMarks", e.target.value)
                               }
-                              className="w-24 px-3 py-1.5 font-bold text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                              className="w-24 px-3 py-1.5 font-bold text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                           </td>
                           <td className="p-3.5 font-black text-slate-900 dark:text-white text-sm font-mono">
-                            {isUnsaved ? "-" : gradeCalc.totalMarks}
+                            {isUnmarked || !gradeCalc ? "-" : gradeCalc.totalMarks}
                           </td>
                           <td className="p-3.5">
-                            {isUnsaved ? (
+                            {isUnmarked || !gradeCalc ? (
                               <span className="text-slate-400 font-medium">-</span>
                             ) : (
                               <Badge
@@ -537,7 +544,7 @@ export default function AdminMarksPage() {
                             )}
                           </td>
                           <td className="p-3.5">
-                            {isUnsaved ? (
+                            {isUnmarked || !gradeCalc ? (
                               <span className="text-slate-400 font-medium">-</span>
                             ) : (
                               <Badge
@@ -549,7 +556,7 @@ export default function AdminMarksPage() {
                           </td>
                           <td className="p-3.5 text-right">
                             <button
-                              onClick={() => saveSingleSubject(row)}
+                              onClick={() => saveSingleStudentMarks(row)}
                               disabled={row.isSaving}
                               className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-700 dark:text-slate-300 font-bold text-xs transition flex items-center gap-1.5 ml-auto"
                             >

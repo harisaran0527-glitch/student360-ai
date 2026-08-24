@@ -18,15 +18,33 @@ export async function GET(req: Request) {
     const semesterParam = searchParams.get("semester");
     const academicYear = searchParams.get("academicYear") || "2025-2029";
     const sectionId = searchParams.get("sectionId");
-    const studentId = searchParams.get("studentId");
+    const courseId = searchParams.get("courseId");
     const search = searchParams.get("search");
 
     const semester = semesterParam ? parseInt(semesterParam, 10) : undefined;
+    const targetSem = semester || 3;
 
-    // 1. Fetch Students list for filter selection
+    // 1. Fetch available subjects/courses for filter dropdown
+    let courses: any[] = [];
+    if (departmentId) {
+      courses = await prisma.course.findMany({
+        where: {
+          departmentId,
+          semester: targetSem,
+          isActive: true,
+          isArchived: false,
+        },
+        orderBy: { code: "asc" },
+      });
+    }
+
+    // 2. Fetch student roster matching Department, Semester, and optional Section
     const studentWhere: any = { isArchived: false };
     if (departmentId) studentWhere.departmentId = departmentId;
-    if (sectionId) studentWhere.sectionId = sectionId;
+    if (targetSem) studentWhere.currentSemester = targetSem;
+    if (sectionId && sectionId !== "all" && sectionId !== "undefined") {
+      studentWhere.sectionId = sectionId;
+    }
     if (search) {
       studentWhere.OR = [
         { fullName: { contains: search, mode: "insensitive" } },
@@ -46,69 +64,35 @@ export async function GET(req: Request) {
         departmentId: true,
         sectionId: true,
         academicYear: true,
+        cgpa: true,
         department: { select: { id: true, code: true, name: true } },
         section: { select: { id: true, name: true } },
       },
       orderBy: { registerNo: "asc" },
-      take: 100,
     });
 
-    let selectedStudent: any = null;
-    let targetStudentId = studentId;
-
-    if (!targetStudentId && students.length > 0) {
-      targetStudentId = students[0].id;
-    }
-
-    if (targetStudentId) {
-      selectedStudent = await prisma.studentProfile.findUnique({
-        where: { id: targetStudentId },
-        include: {
-          department: true,
-          section: true,
-          batch: true,
-        },
-      });
-    }
-
-    const targetDeptId = selectedStudent?.departmentId || departmentId;
-    const targetSem = semester || selectedStudent?.currentSemester || 3;
-
-    // 2. Fetch Applicable Active Courses from Course table
-    let courses: any[] = [];
-    if (targetDeptId) {
-      courses = await prisma.course.findMany({
-        where: {
-          departmentId: targetDeptId,
-          semester: targetSem,
-          isActive: true,
-          isArchived: false,
-        },
-        orderBy: { code: "asc" },
-      });
-    }
-
-    // 3. Fetch Existing Academic Records for this student & semester
+    // 3. Fetch existing AcademicRecords for the selected subject/course
     let records: any[] = [];
-    if (selectedStudent) {
+    const activeCourseId = courseId || (courses.length > 0 ? courses[0].id : null);
+    if (activeCourseId && students.length > 0) {
+      const studentIds = students.map((s) => s.id);
       records = await prisma.academicRecord.findMany({
         where: {
-          studentId: selectedStudent.id,
+          courseId: activeCourseId,
           semester: targetSem,
           academicYear,
+          studentId: { in: studentIds },
         },
-        include: { course: true },
       });
     }
 
     return NextResponse.json({
       success: true,
       students,
-      selectedStudent,
-      targetSemester: targetSem,
-      academicYear,
       courses,
       records,
+      targetSemester: targetSem,
+      academicYear,
     });
   } catch (error: any) {
     console.error("[GET /api/admin/academics/marks Error]", error);
@@ -124,118 +108,219 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { studentId, semester, academicYear, marks } = body;
+    const { courseId, semester, academicYear, marks } = body;
 
-    if (!studentId || !semester || !Array.isArray(marks) || marks.length === 0) {
-      return NextResponse.json({ error: "Invalid payload. studentId, semester and marks array are required." }, { status: 400 });
+    if (!semester || !Array.isArray(marks) || marks.length === 0) {
+      return NextResponse.json({ error: "Invalid payload. semester and marks array are required." }, { status: 400 });
     }
 
     const targetYear = academicYear || "2025-2029";
     const semNumber = parseInt(semester, 10);
-
-    const student = await prisma.studentProfile.findUnique({
-      where: { id: studentId },
-    });
-
-    if (!student) {
-      return NextResponse.json({ error: "Student profile not found" }, { status: 404 });
-    }
-
     const savedRecords: any[] = [];
+    const affectedStudentIds = new Set<string>();
 
-    for (const entry of marks) {
-      const { courseId, internalMarks, externalMarks, credits } = entry;
-      if (!courseId) continue;
-
+    // Case 1: Class-wise marks entry (single course, multiple students)
+    if (courseId) {
       const course = await prisma.course.findUnique({ where: { id: courseId } });
-      if (!course) continue;
+      if (!course) {
+        return NextResponse.json({ error: "Selected subject not found" }, { status: 404 });
+      }
 
-      const gradeCalc = calculateAcademicGrade(internalMarks, externalMarks);
+      for (const entry of marks) {
+        const { studentId, internalMarks, externalMarks } = entry;
+        if (!studentId) continue;
 
-      // Check existing record for audit logging
-      const existingRecord = await prisma.academicRecord.findUnique({
-        where: {
-          studentId_courseId_semester_academicYear: {
+        const isInternalBlank = internalMarks === "" || internalMarks === undefined || internalMarks === null;
+        const isExternalBlank = externalMarks === "" || externalMarks === undefined || externalMarks === null;
+
+        // If either mark is blank/empty, remove the record if it exists so it remains unmarked
+        if (isInternalBlank || isExternalBlank) {
+          const existing = await prisma.academicRecord.findUnique({
+            where: {
+              studentId_courseId_semester_academicYear: {
+                studentId,
+                courseId,
+                semester: semNumber,
+                academicYear: targetYear,
+              },
+            },
+          });
+
+          if (existing) {
+            await prisma.academicRecord.delete({
+              where: { id: existing.id },
+            });
+
+            await logAuditEvent({
+              action: "MARKS_DELETED",
+              entityType: "ACADEMIC_RECORD",
+              entityId: existing.id,
+              userId: session.id,
+              userEmail: session.email,
+              userRole: session.role,
+              details: {
+                studentId,
+                courseId,
+                semester: semNumber,
+                academicYear: targetYear,
+                message: "Marks cleared to blank",
+              },
+            });
+          }
+
+          affectedStudentIds.add(studentId);
+          continue;
+        }
+
+        // Otherwise calculate grade and upsert
+        const gradeCalc = calculateAcademicGrade(internalMarks, externalMarks);
+
+        const existingRecord = await prisma.academicRecord.findUnique({
+          where: {
+            studentId_courseId_semester_academicYear: {
+              studentId,
+              courseId,
+              semester: semNumber,
+              academicYear: targetYear,
+            },
+          },
+        });
+
+        const updatedRecord = await prisma.academicRecord.upsert({
+          where: {
+            studentId_courseId_semester_academicYear: {
+              studentId,
+              courseId,
+              semester: semNumber,
+              academicYear: targetYear,
+            },
+          },
+          create: {
             studentId,
             courseId,
             semester: semNumber,
             academicYear: targetYear,
+            internalMarks: gradeCalc.internalMarks,
+            externalMarks: gradeCalc.externalMarks,
+            totalMarks: gradeCalc.totalMarks,
+            grade: gradeCalc.grade,
+            result: gradeCalc.result,
+            credits: course.credits || 3,
           },
-        },
-      });
+          update: {
+            internalMarks: gradeCalc.internalMarks,
+            externalMarks: gradeCalc.externalMarks,
+            totalMarks: gradeCalc.totalMarks,
+            grade: gradeCalc.grade,
+            result: gradeCalc.result,
+            credits: course.credits || 3,
+          },
+        });
 
-      const updatedRecord = await prisma.academicRecord.upsert({
-        where: {
-          studentId_courseId_semester_academicYear: {
+        savedRecords.push(updatedRecord);
+        affectedStudentIds.add(studentId);
+
+        // Audit Log Entry
+        const isCreate = !existingRecord;
+        await logAuditEvent({
+          action: isCreate ? "MARKS_CREATED" : "MARKS_UPDATED",
+          entityType: "ACADEMIC_RECORD",
+          entityId: updatedRecord.id,
+          userId: session.id,
+          userEmail: session.email,
+          userRole: session.role,
+          details: {
             studentId,
-            courseId,
+            courseCode: course.code,
+            courseTitle: course.title,
             semester: semNumber,
             academicYear: targetYear,
+            oldInternal: existingRecord?.internalMarks ?? null,
+            newInternal: gradeCalc.internalMarks,
+            oldExternal: existingRecord?.externalMarks ?? null,
+            newExternal: gradeCalc.externalMarks,
+            oldGrade: existingRecord?.grade ?? null,
+            newGrade: gradeCalc.grade,
+            oldResult: existingRecord?.result ?? null,
+            newResult: gradeCalc.result,
+            updatedBy: session.fullName || session.email,
+            updatedById: session.id,
+            timestamp: new Date().toISOString(),
           },
-        },
-        create: {
-          studentId,
-          courseId,
-          semester: semNumber,
-          academicYear: targetYear,
-          internalMarks: gradeCalc.internalMarks,
-          externalMarks: gradeCalc.externalMarks,
-          totalMarks: gradeCalc.totalMarks,
-          grade: gradeCalc.grade,
-          result: gradeCalc.result,
-          credits: Number(credits) || course.credits || 3,
-        },
-        update: {
-          internalMarks: gradeCalc.internalMarks,
-          externalMarks: gradeCalc.externalMarks,
-          totalMarks: gradeCalc.totalMarks,
-          grade: gradeCalc.grade,
-          result: gradeCalc.result,
-          credits: Number(credits) || course.credits || 3,
-        },
-      });
+        });
+      }
+    } else {
+      // Backward compatibility Case 2: Student-wise marks entry
+      const { studentId } = body;
+      if (!studentId) {
+        return NextResponse.json({ error: "studentId or courseId is required" }, { status: 400 });
+      }
 
-      savedRecords.push(updatedRecord);
+      for (const entry of marks) {
+        const { courseId: entryCourseId, internalMarks, externalMarks, credits } = entry;
+        if (!entryCourseId) continue;
 
-      // Audit Log Entry
-      const isCreate = !existingRecord;
-      await logAuditEvent({
-        action: isCreate ? "MARKS_CREATED" : "MARKS_UPDATED",
-        entityType: "ACADEMIC_RECORD",
-        entityId: updatedRecord.id,
-        userId: session.id,
-        userEmail: session.email,
-        userRole: session.role,
-        details: {
-          studentName: student.fullName,
-          registerNo: student.registerNo,
-          courseCode: course.code,
-          courseTitle: course.title,
-          semester: semNumber,
-          academicYear: targetYear,
-          oldInternal: existingRecord?.internalMarks ?? null,
-          newInternal: gradeCalc.internalMarks,
-          oldExternal: existingRecord?.externalMarks ?? null,
-          newExternal: gradeCalc.externalMarks,
-          oldGrade: existingRecord?.grade ?? null,
-          newGrade: gradeCalc.grade,
-          oldResult: existingRecord?.result ?? null,
-          newResult: gradeCalc.result,
-          updatedBy: session.fullName || session.email,
-          updatedById: session.id,
-          timestamp: new Date().toISOString(),
-        },
-      });
+        const course = await prisma.course.findUnique({ where: { id: entryCourseId } });
+        if (!course) continue;
+
+        const gradeCalc = calculateAcademicGrade(internalMarks, externalMarks);
+
+        const existingRecord = await prisma.academicRecord.findUnique({
+          where: {
+            studentId_courseId_semester_academicYear: {
+              studentId,
+              courseId: entryCourseId,
+              semester: semNumber,
+              academicYear: targetYear,
+            },
+          },
+        });
+
+        const updatedRecord = await prisma.academicRecord.upsert({
+          where: {
+            studentId_courseId_semester_academicYear: {
+              studentId,
+              courseId: entryCourseId,
+              semester: semNumber,
+              academicYear: targetYear,
+            },
+          },
+          create: {
+            studentId,
+            courseId: entryCourseId,
+            semester: semNumber,
+            academicYear: targetYear,
+            internalMarks: gradeCalc.internalMarks,
+            externalMarks: gradeCalc.externalMarks,
+            totalMarks: gradeCalc.totalMarks,
+            grade: gradeCalc.grade,
+            result: gradeCalc.result,
+            credits: Number(credits) || course.credits || 3,
+          },
+          update: {
+            internalMarks: gradeCalc.internalMarks,
+            externalMarks: gradeCalc.externalMarks,
+            totalMarks: gradeCalc.totalMarks,
+            grade: gradeCalc.grade,
+            result: gradeCalc.result,
+            credits: Number(credits) || course.credits || 3,
+          },
+        });
+
+        savedRecords.push(updatedRecord);
+        affectedStudentIds.add(studentId);
+      }
     }
 
-    // Recalculate CGPA and update StudentSemesterHistory
-    const newCgpa = await recalculateStudentCgpa(studentId, semNumber);
+    // Recalculate CGPA for all affected students
+    for (const studentId of Array.from(affectedStudentIds)) {
+      await recalculateStudentCgpa(studentId, semNumber);
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Successfully saved marks for ${savedRecords.length} subject(s).`,
+      message: `Successfully processed marks for ${affectedStudentIds.size} student(s).`,
       recordsCount: savedRecords.length,
-      cgpa: newCgpa,
     });
   } catch (error: any) {
     console.error("[POST /api/admin/academics/marks Error]", error);
