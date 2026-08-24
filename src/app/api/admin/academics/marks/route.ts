@@ -327,3 +327,84 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message || "Failed to save academic marks" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await getSession(req);
+    if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const studentId = searchParams.get("studentId");
+    const courseId = searchParams.get("courseId");
+    const semesterParam = searchParams.get("semester");
+    const academicYear = searchParams.get("academicYear") || "2025-2029";
+
+    if (!studentId || !courseId || !semesterParam) {
+      return NextResponse.json(
+        { error: "studentId, courseId, and semester are required" },
+        { status: 400 }
+      );
+    }
+
+    const semester = parseInt(semesterParam, 10);
+
+    // Find the existing record
+    const existing = await prisma.academicRecord.findUnique({
+      where: {
+        studentId_courseId_semester_academicYear: {
+          studentId,
+          courseId,
+          semester,
+          academicYear,
+        },
+      },
+      include: { course: { select: { code: true, title: true } } },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ success: true, message: "No saved record found to remove" });
+    }
+
+    // Delete the record
+    await prisma.academicRecord.delete({ where: { id: existing.id } });
+
+    // Audit log
+    await logAuditEvent({
+      action: "MARKS_DELETED",
+      entityType: "ACADEMIC_RECORD",
+      entityId: existing.id,
+      userId: session.id,
+      userEmail: session.email,
+      userRole: session.role,
+      details: {
+        studentId,
+        courseId,
+        courseCode: existing.course?.code ?? null,
+        courseTitle: existing.course?.title ?? null,
+        semester,
+        academicYear,
+        deletedInternal: existing.internalMarks,
+        deletedExternal: existing.externalMarks,
+        deletedGrade: existing.grade,
+        deletedResult: existing.result,
+        deletedBy: session.fullName || session.email,
+        deletedById: session.id,
+        timestamp: new Date().toISOString(),
+        message: "Admin permanently removed saved marks via Clear Marks action",
+      },
+    });
+
+    // Recalculate CGPA after removal
+    await recalculateStudentCgpa(studentId, semester);
+
+    return NextResponse.json({
+      success: true,
+      message: "Saved marks permanently removed and CGPA recalculated",
+    });
+  } catch (error: any) {
+    console.error("[DELETE /api/admin/academics/marks Error]", error);
+    return NextResponse.json({ error: error.message || "Failed to remove saved marks" }, { status: 500 });
+  }
+}

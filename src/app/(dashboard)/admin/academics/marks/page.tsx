@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   BookOpen,
   X,
+  Trash2,
 } from "lucide-react";
 import { calculateAcademicGrade } from "@/lib/academic-grading";
 
@@ -68,6 +69,11 @@ export default function AdminMarksPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [savingAll, setSavingAll] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // Clear / Confirmation Dialog States
+  const [clearAllConfirm, setClearAllConfirm] = useState<boolean>(false);
+  const [removeSavedConfirm, setRemoveSavedConfirm] = useState<{ studentId: string; fullName: string } | null>(null);
+  const [clearingStudentId, setClearingStudentId] = useState<string | null>(null);
 
   // Fetch Departments on initial load
   useEffect(() => {
@@ -291,6 +297,68 @@ export default function AdminMarksPage() {
     }
   };
 
+  // ── Clear a single row's UI marks (no DB call for unsaved; dialog for saved) ──
+  const handleClearRowMarks = (row: StudentMarkState) => {
+    const hasSavedMarks =
+      row.originalInternal !== "" && row.originalInternal !== undefined;
+
+    if (hasSavedMarks) {
+      // Saved in DB → ask for confirmation before deleting
+      setRemoveSavedConfirm({ studentId: row.studentId, fullName: row.fullName });
+    } else {
+      // Only unsaved UI input → instant clear, no DB operation
+      setStudentMarkStates((prev) =>
+        prev.map((r) =>
+          r.studentId === row.studentId
+            ? { ...r, internalMarks: "", externalMarks: "" }
+            : r
+        )
+      );
+    }
+  };
+
+  // ── Remove saved marks from DB after confirmation ──
+  const handleConfirmRemoveSaved = async () => {
+    if (!removeSavedConfirm || !selectedCourseId) return;
+    const { studentId, fullName } = removeSavedConfirm;
+    setRemoveSavedConfirm(null);
+    setClearingStudentId(studentId);
+    try {
+      const res = await fetch(
+        `/api/admin/academics/marks?studentId=${studentId}&courseId=${selectedCourseId}&semester=${selectedSem}&academicYear=${academicYear}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Saved marks removed for ${fullName}`, "success");
+        // Reset UI row to blank + originalInternal/External so it no longer shows as saved
+        setStudentMarkStates((prev) =>
+          prev.map((r) =>
+            r.studentId === studentId
+              ? { ...r, internalMarks: "", externalMarks: "", originalInternal: "", originalExternal: "" }
+              : r
+          )
+        );
+      } else {
+        showToast(data.error || "Failed to remove saved marks", "error");
+      }
+    } catch (err) {
+      console.error("Remove saved marks error", err);
+      showToast("Network error while removing saved marks", "error");
+    } finally {
+      setClearingStudentId(null);
+    }
+  };
+
+  // ── Clear All: reset every row's UI inputs to blank (no DB call) ──
+  const handleClearAllMarks = () => {
+    setStudentMarkStates((prev) =>
+      prev.map((r) => ({ ...r, internalMarks: "", externalMarks: "" }))
+    );
+    setClearAllConfirm(false);
+    showToast("All marks inputs cleared. Saved records in database are not affected.", "success");
+  };
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
       <Header
@@ -463,18 +531,32 @@ export default function AdminMarksPage() {
               </span>
             </h3>
 
-            <button
-              onClick={saveAllMarks}
-              disabled={savingAll || loading || studentMarkStates.length === 0}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-500/20 transition disabled:opacity-50"
-            >
-              {savingAll ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              <span>Save All Student Marks</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Clear All Marks */}
+              <button
+                onClick={() => setClearAllConfirm(true)}
+                disabled={loading || studentMarkStates.length === 0}
+                title="Clear all entered marks inputs (does not delete saved database records)"
+                className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-500 dark:hover:text-red-400 font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-40"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear All Marks</span>
+              </button>
+
+              {/* Save All Marks */}
+              <button
+                onClick={saveAllMarks}
+                disabled={savingAll || loading || studentMarkStates.length === 0}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-500/20 transition disabled:opacity-50"
+              >
+                {savingAll ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>Save All Marks</span>
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -588,19 +670,42 @@ export default function AdminMarksPage() {
                               </Badge>
                             )}
                           </td>
-                          <td className="p-3.5 text-right">
-                            <button
-                              onClick={() => saveSingleStudentMarks(row)}
-                              disabled={row.isSaving}
-                              className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-700 dark:text-slate-300 font-bold text-xs transition flex items-center gap-1.5 ml-auto"
-                            >
-                              {row.isSaving ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Save className="w-3.5 h-3.5" />
-                              )}
-                              <span>Save</span>
-                            </button>
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              {/* Save button */}
+                              <button
+                                onClick={() => saveSingleStudentMarks(row)}
+                                disabled={row.isSaving || clearingStudentId === row.studentId}
+                                title="Save marks for this student"
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-700 dark:text-slate-300 font-bold text-xs transition flex items-center gap-1"
+                              >
+                                {row.isSaving ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Save className="w-3 h-3" />
+                                )}
+                                <span>Save</span>
+                              </button>
+
+                              {/* Clear Marks button */}
+                              <button
+                                onClick={() => handleClearRowMarks(row)}
+                                disabled={row.isSaving || clearingStudentId === row.studentId}
+                                title={
+                                  row.originalInternal !== ""
+                                    ? "Remove saved marks for this student (requires confirmation)"
+                                    : "Clear entered marks for this student"
+                                }
+                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-red-400 hover:text-red-500 dark:hover:text-red-400 text-slate-500 dark:text-slate-400 font-bold text-xs transition flex items-center gap-1"
+                              >
+                                {clearingStudentId === row.studentId ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <X className="w-3 h-3" />
+                                )}
+                                <span>Clear</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -612,6 +717,75 @@ export default function AdminMarksPage() {
           )}
         </div>
       </div>
+
+      {/* ── Clear All Marks Confirmation Dialog ── */}
+      {clearAllConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Clear All Entered Marks?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  This will reset all Internal and External mark inputs to blank for the current subject.
+                  <strong className="text-slate-700 dark:text-slate-300"> Already saved database records are NOT deleted.</strong>
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setClearAllConfirm(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearAllMarks}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-white transition"
+              >
+                Yes, Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Remove Saved Marks Confirmation Dialog ── */}
+      {removeSavedConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-4.5 h-4.5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Remove Saved Marks?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  This will <strong className="text-red-600 dark:text-red-400">permanently delete</strong> the saved official marks for
+                  <strong className="text-slate-800 dark:text-white"> {removeSavedConfirm.fullName}</strong> for the selected subject.
+                  SGPA / CGPA will be automatically recalculated. This action is logged in the Audit Log.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setRemoveSavedConfirm(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRemoveSaved}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-700 text-white transition"
+              >
+                Remove Saved Marks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
