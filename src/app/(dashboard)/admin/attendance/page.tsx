@@ -279,16 +279,49 @@ export default function AdminAttendancePage() {
 
   // Fetch initial options
   useEffect(() => {
-    fetch("/api/students/options")
+    fetch("/api/departments")
       .then((res) => res.json())
       .then((data) => {
-        const opts = data.data || data;
-        const dList = opts.departments || [];
-        setDepartments(dList);
-        const bList = opts.batches || [];
+        const dList: any[] = data.departments || data.data?.departments || [];
+        const formatted = dList.map((d: any) => {
+          let displayName = d.name;
+          if (d.code === "AIML" || d.name === "AI & ML" || d.name.includes("Artificial Intelligence")) {
+            displayName = "Artificial Intelligence & Machine Learning";
+          }
+          return {
+            ...d,
+            displayName,
+          };
+        });
+
+        if (formatted.length === 0) {
+          formatted.push({
+            id: "aiml-default",
+            code: "AIML",
+            name: "Artificial Intelligence & Machine Learning",
+            displayName: "Artificial Intelligence & Machine Learning",
+          });
+        }
+
+        setDepartments(formatted);
+
+        const aimlDept = formatted.find(
+          (d: any) => d.code === "AIML" || d.displayName.includes("Artificial Intelligence") || d.name === "AI & ML"
+        ) || formatted[0];
+
+        if (aimlDept) {
+          setSelectedDepartmentId(aimlDept.id);
+        }
+      })
+      .catch((err: any) => console.error("[Departments Options Error]", err));
+
+    fetch("/api/batches")
+      .then((res) => res.json())
+      .then((data) => {
+        const bList = data.batches || data.data?.batches || [];
         setBatches(bList);
       })
-      .catch((err: any) => console.error("[Attendance Options Error]", err));
+      .catch((err: any) => console.error("[Batches Options Error]", err));
 
     fetch("/api/academic-years")
       .then((res) => res.json())
@@ -641,12 +674,11 @@ export default function AdminAttendancePage() {
             <select
               value={selectedDepartmentId}
               onChange={(e) => setSelectedDepartmentId(e.target.value)}
-              className="ui-input w-full p-2"
+              className="ui-input w-full p-2 font-bold text-indigo-600"
             >
-              <option value="">All Departments</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.code} — {d.name}
+                  {d.code} — {d.displayName || (d.code === "AIML" || d.name === "AI & ML" ? "Artificial Intelligence & Machine Learning" : d.name)}
                 </option>
               ))}
             </select>
