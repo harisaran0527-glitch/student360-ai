@@ -59,12 +59,28 @@ export async function GET(req: Request) {
       },
     });
 
+    const studentIds = students.map((s) => s.id);
+
     const existingAttendance = courseId && date
       ? await prisma.attendance.findMany({
           where: {
             courseId,
             date,
-            student: studentWhere,
+            studentId: { in: studentIds },
+          },
+        })
+      : [];
+
+    const fullDayAttendance = date && studentIds.length > 0
+      ? await prisma.fullDayAttendance.findMany({
+          where: {
+            date,
+            studentId: { in: studentIds },
+          },
+          select: {
+            studentId: true,
+            status: true,
+            date: true,
           },
         })
       : [];
@@ -77,11 +93,13 @@ export async function GET(req: Request) {
           courses,
           students,
           existingAttendance,
+          fullDayAttendance,
           isEditMode: existingAttendance.length > 0,
         },
         courses,
         students,
         existingAttendance,
+        fullDayAttendance,
         isEditMode: existingAttendance.length > 0,
       }),
       {

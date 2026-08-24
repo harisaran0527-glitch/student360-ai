@@ -379,18 +379,43 @@ export default function AdminAttendancePage() {
 
         const existingMap: Record<string, AttendanceStatus> = {};
         const existingRecords = data.data?.existingAttendance || data.existingAttendance || [];
+        const fullDayRecords = data.data?.fullDayAttendance || data.fullDayAttendance || [];
+
+        // Build full-day map by studentId
+        const fullDayMap: Record<string, AttendanceStatus> = {};
+        fullDayRecords.forEach((rec: any) => {
+          let st = rec.status;
+          if (st === "MEDICAL_LEAVE") st = "ML";
+          fullDayMap[rec.studentId] = st as AttendanceStatus;
+        });
+
+        // Build subject-wise map by studentId
+        const subjectMap: Record<string, AttendanceStatus> = {};
+        existingRecords.forEach((rec: any) => {
+          let st = rec.status;
+          if (st === "MEDICAL_LEAVE") st = "ML";
+          subjectMap[rec.studentId] = st as AttendanceStatus;
+        });
 
         if (existingRecords.length > 0) {
           setIsEditMode(true);
-          existingRecords.forEach((rec: any) => {
-            existingMap[rec.studentId] = rec.status as AttendanceStatus;
-          });
         } else {
           setIsEditMode(false);
-          studentList.forEach((st: any) => {
-            existingMap[st.id] = "PRESENT";
-          });
         }
+
+        // Apply Priority Hierarchy:
+        // 1. Existing saved Subject-Wise record -> use it.
+        // 2. Otherwise Full-Day saved status for that date -> prefill it.
+        // 3. Otherwise -> UNMARKED.
+        studentList.forEach((st: any) => {
+          if (subjectMap[st.id]) {
+            existingMap[st.id] = subjectMap[st.id];
+          } else if (fullDayMap[st.id] && fullDayMap[st.id] !== "UNMARKED" && (fullDayMap[st.id] as any) !== "NOT_MARKED") {
+            existingMap[st.id] = fullDayMap[st.id];
+          } else {
+            existingMap[st.id] = "UNMARKED";
+          }
+        });
 
         setAttendanceState(existingMap);
       } else {
@@ -897,7 +922,7 @@ export default function AdminAttendancePage() {
                           </td>
                           <td className="p-3.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {(["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT", "UNMARKED"] as AttendanceStatus[]).map((stKey) => {
+                              {(["PRESENT", "ABSENT", "OD", "ML", "LONG_ABSENT", "INTERNSHIP", "LATE", "UNMARKED"] as AttendanceStatus[]).map((stKey) => {
                                 const isUnmarkedKey = stKey === "UNMARKED";
                                 const active = isUnmarkedKey
                                   ? (currentStatus === "UNMARKED" || currentStatus === "NOT_MARKED")
@@ -910,6 +935,8 @@ export default function AdminAttendancePage() {
                                   if (stKey === "OD") btnStyle = "bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold";
                                   if (stKey === "ML") btnStyle = "bg-amber-600 text-white shadow-md shadow-amber-500/20 font-bold";
                                   if (stKey === "LONG_ABSENT") btnStyle = "bg-red-700 text-white shadow-md shadow-red-500/20 font-bold";
+                                  if (stKey === "INTERNSHIP") btnStyle = "bg-purple-600 text-white shadow-md shadow-purple-500/20 font-bold";
+                                  if (stKey === "LATE") btnStyle = "bg-orange-600 text-white shadow-md shadow-orange-500/20 font-bold";
                                   if (isUnmarkedKey) btnStyle = "bg-slate-700 text-white shadow-md font-bold dark:bg-slate-600 border border-slate-800";
                                 }
 
@@ -927,6 +954,8 @@ export default function AdminAttendancePage() {
                                     {stKey === "OD" && "OD"}
                                     {stKey === "ML" && "Medical Leave"}
                                     {stKey === "LONG_ABSENT" && "Long Absent"}
+                                    {stKey === "INTERNSHIP" && "Internship"}
+                                    {stKey === "LATE" && "Late"}
                                     {isUnmarkedKey && "Clear"}
                                   </button>
                                 );
