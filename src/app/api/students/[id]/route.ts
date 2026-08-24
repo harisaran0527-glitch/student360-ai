@@ -25,7 +25,7 @@ export async function GET(
         batch: true,
         section: true,
         academicRecords: { include: { course: true } },
-        attendances: { include: { course: true } },
+        attendances: { include: { course: true }, orderBy: { date: "desc" } },
         internships: true,
         certificates: true,
         achievements: true,
@@ -34,7 +34,7 @@ export async function GET(
         placementRecords: true,
         alumniRecord: true,
         busRecord: true,
-        fullDayAttendances: true,
+        fullDayAttendances: { orderBy: { date: "desc" } },
       },
     });
 

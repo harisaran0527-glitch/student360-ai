@@ -29,6 +29,10 @@ import {
   ChevronDown,
   XCircle,
   X,
+  RefreshCw,
+  CheckCircle2,
+  Database,
+  ShieldCheck,
 } from "lucide-react";
 
 type AttendanceStatus =
@@ -56,9 +60,14 @@ export default function AdminAttendancePage() {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
-  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT" | "ABSENTEES" | "HISTORY">("FULL_DAY");
+  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT" | "ABSENTEES" | "HISTORY" | "RECOVERY">("FULL_DAY");
   const [isDeletePanelOpen, setIsDeletePanelOpen] = useState<boolean>(false);
   const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
+
+  // Recovery & Reconciliation state
+  const [recoveryReport, setRecoveryReport] = useState<any | null>(null);
+  const [recoveryLoading, setRecoveryLoading] = useState<boolean>(false);
+  const [reconciling, setReconciling] = useState<boolean>(false);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -95,11 +104,45 @@ export default function AdminAttendancePage() {
     }
   }, [selectedAcademicYear, selectedDepartmentId]);
 
+  const loadRecoveryReport = React.useCallback(async () => {
+    setRecoveryLoading(true);
+    try {
+      const res = await fetch("/api/admin/attendance/reconcile");
+      const data = await res.json();
+      if (data.success) {
+        setRecoveryReport(data.data?.report || data.report || null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }, []);
+
+  const handleRunReconciliation = async () => {
+    setReconciling(true);
+    try {
+      const res = await fetch("/api/admin/attendance/reconcile", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || data.error || "Reconciliation failed");
+      }
+      setRecoveryReport(data.data?.report || data.report || null);
+      setMessage({ text: "Safe reconciliation completed successfully! Attendance percentages updated.", type: "success" });
+    } catch (err: any) {
+      setMessage({ text: err.message, type: "error" });
+    } finally {
+      setReconciling(false);
+    }
+  };
+
   useEffect(() => {
     if (attendanceMode === "HISTORY") {
       loadHistory();
+    } else if (attendanceMode === "RECOVERY") {
+      loadRecoveryReport();
     }
-  }, [attendanceMode, loadHistory]);
+  }, [attendanceMode, loadHistory, loadRecoveryReport]);
 
   // Load detailed historical attendance records when a specific history date is selected (READ-ONLY)
   useEffect(() => {
@@ -551,6 +594,21 @@ export default function AdminAttendancePage() {
           >
             <Calendar className="w-4 h-4" />
             <span>Attendance History (Read Only)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setAttendanceMode("RECOVERY");
+              setSelectedHistoryDate(null);
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              attendanceMode === "RECOVERY"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Recovery & Reconciliation Report</span>
           </button>
         </div>
 
@@ -1154,6 +1212,134 @@ export default function AdminAttendancePage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* RECOVERY & RECONCILIATION TAB */}
+        {attendanceMode === "RECOVERY" && (
+          <div className="space-y-6">
+            <div className="ui-card p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                    <span>Historical Attendance Reconciliation & Recovery Report</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Scans database models (Attendance, AttendanceSession, FullDayAttendance, StudentSemesterHistory) to verify integrity, resolve exact duplicates, and recalculate aggregate percentages.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={loadRecoveryReport}
+                    disabled={recoveryLoading}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-2 transition"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${recoveryLoading ? "animate-spin" : ""}`} />
+                    <span>Scan Database</span>
+                  </button>
+
+                  <button
+                    onClick={handleRunReconciliation}
+                    disabled={reconciling}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition disabled:opacity-50"
+                  >
+                    <Database className="w-4 h-4" />
+                    <span>{reconciling ? "Reconciling..." : "Run Safe Reconciliation"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {recoveryLoading ? (
+                <Skeleton className="h-64 rounded-xl" />
+              ) : recoveryReport ? (
+                <div className="space-y-6">
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
+                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Total Found</span>
+                      <span className="text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-1 block">{recoveryReport.totalRecordsFound}</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
+                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Students</span>
+                      <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1 block">{recoveryReport.totalStudentsWithAttendance}</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
+                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">Duplicates</span>
+                      <span className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1 block">{recoveryReport.duplicateRecordsDetected}</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40">
+                      <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">Conflicts</span>
+                      <span className="text-2xl font-black text-rose-700 dark:text-rose-300 mt-1 block">{recoveryReport.conflictsDetected}</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/40">
+                      <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider block">Reconciled</span>
+                      <span className="text-2xl font-black text-sky-700 dark:text-sky-300 mt-1 block">{recoveryReport.recordsReconciled}</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Skipped</span>
+                      <span className="text-2xl font-black text-slate-700 dark:text-slate-300 mt-1 block">{recoveryReport.recordsSkipped}</span>
+                    </div>
+                  </div>
+
+                  {/* Scanned Database Tables breakdown */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                      Scanned Database Table Summary
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+                      <div><span className="text-slate-500 font-medium">Attendance:</span> <span className="font-bold text-indigo-600">{recoveryReport.tablesScanned.Attendance}</span></div>
+                      <div><span className="text-slate-500 font-medium">Sessions:</span> <span className="font-bold text-indigo-600">{recoveryReport.tablesScanned.AttendanceSession}</span></div>
+                      <div><span className="text-slate-500 font-medium">Full Day:</span> <span className="font-bold text-indigo-600">{recoveryReport.tablesScanned.FullDayAttendance}</span></div>
+                      <div><span className="text-slate-500 font-medium">Semester History:</span> <span className="font-bold text-indigo-600">{recoveryReport.tablesScanned.StudentSemesterHistory}</span></div>
+                      <div><span className="text-slate-500 font-medium">Approved ODs:</span> <span className="font-bold text-indigo-600">{recoveryReport.tablesScanned.ODRecord}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Detected Conflicts Table */}
+                  {recoveryReport.conflictDetails && recoveryReport.conflictDetails.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Detected Conflicts ({recoveryReport.conflictDetails.length}) — Flagged for Review</span>
+                      </h4>
+                      <div className="overflow-x-auto border border-rose-200 dark:border-rose-900/40 rounded-xl">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 font-bold uppercase tracking-wider border-b border-rose-200 dark:border-rose-900/40">
+                              <th className="p-3">Student Name</th>
+                              <th className="p-3">Date</th>
+                              <th className="p-3">Session / Course</th>
+                              <th className="p-3">Conflicting Statuses</th>
+                              <th className="p-3">Action Details</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-rose-100 dark:divide-rose-900/20">
+                            {recoveryReport.conflictDetails.map((c: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-rose-50/50 dark:hover:bg-rose-950/20">
+                                <td className="p-3 font-bold text-slate-900 dark:text-white">{c.studentName || c.studentId}</td>
+                                <td className="p-3 font-semibold">{c.date}</td>
+                                <td className="p-3 font-medium">{c.sessionOrCourse}</td>
+                                <td className="p-3 font-bold text-rose-600">{c.existingStatuses?.join(", ")}</td>
+                                <td className="p-3 text-slate-600 dark:text-slate-400">{c.details}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <EmptyState title="No Reconciliation Report Available" description="Click 'Scan Database' to generate a dry-run attendance recovery report." />
+              )}
+            </div>
           </div>
         )}
       </div>
