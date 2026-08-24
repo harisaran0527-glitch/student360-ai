@@ -21,6 +21,7 @@ import {
 export default function StudentAttendancePage() {
   const [studentData, setStudentData] = useState<any | null>(null);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
   const [allAttendances, setAllAttendances] = useState<any[]>([]);
   const [fullDaySummary, setFullDaySummary] = useState<any | null>(null);
   const [fullDayRecords, setFullDayRecords] = useState<any[]>([]);
@@ -47,6 +48,7 @@ export default function StudentAttendancePage() {
       if (data.success && data.student) {
         setStudentData(data.student);
         setSubjects(data.subjects || []);
+        setSessionHistory(data.sessionHistory || []);
         setAllAttendances(data.allAttendances || []);
         setFullDaySummary(data.fullDayAttendanceSummary || null);
         setFullDayRecords(data.fullDayRecords || []);
@@ -331,41 +333,58 @@ export default function StudentAttendancePage() {
               )}
             </div>
 
-            {/* Subject Attendance Record Log Table */}
+            {/* Subject-Wise Attendance History Table */}
             <div className="ui-card overflow-hidden space-y-4 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-                <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Logged Subject Session History (Semester {selectedSem}) — {allAttendances.length} Records</span>
-              </h3>
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>SUBJECT-WISE ATTENDANCE HISTORY (Semester {selectedSem || 3}) — {sessionHistory.length || allAttendances.length} Entries</span>
+                </h3>
+                <span className="text-xs text-slate-500 font-semibold">
+                  ({subjects.length} Semester Subjects / Date)
+                </span>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                       <th className="p-3.5">Date</th>
-                      <th className="p-3.5">Subject / Course</th>
-                      <th className="p-3.5">Session / Period</th>
-                      <th className="p-3.5">Exact Saved Attendance Status</th>
+                      <th className="p-3.5">Subject</th>
+                      <th className="p-3.5">Period / Source</th>
+                      <th className="p-3.5">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {allAttendances.length === 0 ? (
+                    {(sessionHistory.length > 0 ? sessionHistory : allAttendances).length === 0 ? (
                       <tr>
                         <td colSpan={4} className="p-6">
-                          <EmptyState title="No Attendance Session Logs" description={`No attendance session logs recorded yet for Semester ${selectedSem}.`} />
+                          <EmptyState title="No Attendance Session Logs" description={`No attendance session logs recorded yet for Semester ${selectedSem || 3}.`} />
                         </td>
                       </tr>
                     ) : (
-                      allAttendances.map((att: any) => (
+                      (sessionHistory.length > 0 ? sessionHistory : allAttendances).map((att: any) => (
                         <tr key={att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                           <td className="p-3.5 font-semibold text-slate-900 dark:text-white">
                             {formatDate(att.date)}
                           </td>
                           <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
-                            {att.course ? `${att.course.code}: ${att.course.title}` : "Subject Session"}
+                            {att.courseCode || att.course?.code ? `${att.courseCode || att.course.code}: ${att.courseTitle || att.course.title}` : "Subject Session"}
                           </td>
                           <td className="p-3.5 font-medium text-slate-600 dark:text-slate-400">
-                            {att.session || "FN"}
+                            {att.source === "SUBJECT_SAVED" ? (
+                              <span className="font-semibold text-purple-600 dark:text-purple-400">
+                                {att.session || "FN"} / Subject-Wise
+                              </span>
+                            ) : att.source === "FULL_DAY_PREFILL" ? (
+                              <span className="font-medium text-slate-600 dark:text-slate-300">
+                                Full-Day
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal">
+                                Not Marked
+                              </span>
+                            )}
                           </td>
                           <td className="p-3.5">
                             {renderStatusBadge(att.status)}

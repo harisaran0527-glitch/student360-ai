@@ -219,6 +219,57 @@ export async function GET(req: Request) {
       };
     });
 
+    // Build Session History Matrix (ALL applicable courses for EVERY saved attendance date)
+    const dateSet = new Set<string>();
+    studentAttendances.forEach((a) => dateSet.add(a.date));
+    fullDayRecords.forEach((f) => {
+      if (f.status && f.status.toUpperCase() !== "UNMARKED" && f.status.toUpperCase() !== "NOT_MARKED") {
+        dateSet.add(f.date);
+      }
+    });
+
+    const sortedDates = Array.from(dateSet).sort((a, b) => b.localeCompare(a));
+    const sessionHistory: any[] = [];
+
+    sortedDates.forEach((date) => {
+      const fullDayForDate = fullDayRecords.find((f) => f.date === date);
+
+      applicableCourses.forEach((course) => {
+        const subjectAttForDate = studentAttendances.find(
+          (a) => a.date === date && a.courseId === course.id
+        );
+
+        let status = "UNMARKED";
+        let source = "UNMARKED";
+
+        if (subjectAttForDate) {
+          status = subjectAttForDate.status;
+          source = "SUBJECT_SAVED";
+        } else if (fullDayForDate && fullDayForDate.status && fullDayForDate.status.toUpperCase() !== "UNMARKED") {
+          status = fullDayForDate.status;
+          source = "FULL_DAY_PREFILL";
+        }
+
+        sessionHistory.push({
+          id: `${date}_${course.id}`,
+          date,
+          courseId: course.id,
+          courseCode: course.code,
+          courseTitle: course.title,
+          course: {
+            id: course.id,
+            code: course.code,
+            title: course.title,
+            semester: course.semester,
+          },
+          session: subjectAttForDate?.session || "FN",
+          status,
+          source,
+          remarks: subjectAttForDate?.remarks || fullDayForDate?.remarks || null,
+        });
+      });
+    });
+
     // Full-Day Attendance Summary Calculations
     const validFullDay = fullDayRecords.filter((r) => r.status && r.status.toUpperCase() !== "UNMARKED" && r.status.toUpperCase() !== "NOT_MARKED");
     const totalWorkingDays = validFullDay.length;
@@ -273,6 +324,7 @@ export async function GET(req: Request) {
           } : null,
         },
         subjects,
+        sessionHistory,
         allAttendances: studentAttendances,
         fullDayAttendanceSummary: {
           totalWorkingDays,
