@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiSuccess, apiError, logApiPerf } from "@/lib/apiResponse";
+import { invalidateServerMetadataCache } from "@/lib/serverCache";
 
 export const dynamic = "force-dynamic";
 
@@ -287,6 +288,8 @@ export async function PUT(req: NextRequest) {
     });
 
     logApiPerf("PUT /api/academics/subjects", startTime);
+    invalidateServerMetadataCache();
+
     return apiSuccess(updatedSubject, "Subject updated successfully");
   } catch (err: any) {
     console.error("[PUT /api/academics/subjects Error]", err);

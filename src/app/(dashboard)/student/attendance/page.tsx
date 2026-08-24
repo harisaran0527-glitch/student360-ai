@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
@@ -15,11 +15,15 @@ import {
   BookOpen,
   Calendar,
   Filter,
+  User,
 } from "lucide-react";
 
 export default function StudentAttendancePage() {
   const [studentData, setStudentData] = useState<any | null>(null);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [allAttendances, setAllAttendances] = useState<any[]>([]);
+  const [fullDaySummary, setFullDaySummary] = useState<any | null>(null);
+  const [fullDayRecords, setFullDayRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Tabs
@@ -27,40 +31,48 @@ export default function StudentAttendancePage() {
 
   // Filters
   const [selectedSem, setSelectedSem] = useState<number>(1);
+  const [initialSemLoaded, setInitialSemLoaded] = useState<boolean>(false);
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = useCallback(async (semToFetch?: number) => {
     setLoading(true);
     try {
       const timestamp = Date.now();
-      const res = await fetch(`/api/auth/me?t=${timestamp}`, { cache: "no-store" });
-      const meData = await res.json();
+      const targetSem = semToFetch || selectedSem;
+      const res = await fetch(`/api/reports/attendance/student?semester=${targetSem}&t=${timestamp}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" },
+      });
+      const data = await res.json();
 
-      if (meData.user?.studentProfileId || meData.user?.studentProfile?.id) {
-        const studentId = meData.user?.studentProfileId || meData.user?.studentProfile?.id;
-        const sRes = await fetch(`/api/students/${studentId}?t=${timestamp}`, { cache: "no-store" });
-        const sData = await sRes.json();
-        const profile = sData.student || sData.data?.student;
-        setStudentData(profile);
-        if (profile?.currentSemester) {
-          setSelectedSem(profile.currentSemester);
+      if (data.success && data.student) {
+        setStudentData(data.student);
+        setSubjects(data.subjects || []);
+        setAllAttendances(data.allAttendances || []);
+        setFullDaySummary(data.fullDayAttendanceSummary || null);
+        setFullDayRecords(data.fullDayRecords || []);
+
+        if (!initialSemLoaded && data.student.currentSemester) {
+          setSelectedSem(data.student.currentSemester);
+          setInitialSemLoaded(true);
         }
       }
-
-      const cRes = await fetch(`/api/courses?t=${timestamp}`, { cache: "no-store" });
-      const cData = await cRes.json();
-      setCourses(cData.courses || cData.data?.courses || []);
     } catch (err) {
-      console.error("Failed to load student attendance", err);
+      console.error("Failed to load student attendance data", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedSem, initialSemLoaded]);
 
   useEffect(() => {
     fetchAttendance();
-  }, []);
+  }, [fetchAttendance]);
 
-  if (loading) {
+  const handleSemesterChange = (newSem: number) => {
+    setSelectedSem(newSem);
+    fetchAttendance(newSem);
+  };
+
+  if (loading && !studentData) {
     return (
       <div className="flex-1 p-8 space-y-6">
         <Skeleton className="h-28 rounded-2xl" />
@@ -69,37 +81,21 @@ export default function StudentAttendancePage() {
     );
   }
 
-  const attendances: any[] = studentData?.attendances || [];
-  const fullDayAttendances: any[] = studentData?.fullDayAttendances || [];
   const minRequired = 75.0; // Institutional policy threshold
+  const overallPct = studentData?.overallAttendancePercentage ?? 100.0;
+  const isOverallShortage = overallPct < minRequired;
 
   // Helper to map saved attendance status string to badge variant and display label
   const renderStatusBadge = (statusStr: string) => {
     const s = (statusStr || "").toUpperCase();
-    if (s === "PRESENT") {
-      return <Badge variant="success">Present</Badge>;
-    }
-    if (s === "ABSENT") {
-      return <Badge variant="danger">Absent</Badge>;
-    }
-    if (s === "OD") {
-      return <Badge variant="purple">OD</Badge>;
-    }
-    if (s === "MEDICAL_LEAVE" || s === "ML") {
-      return <Badge variant="warning">Medical Leave</Badge>;
-    }
-    if (s === "LONG_ABSENT") {
-      return <Badge variant="danger">Long Absent</Badge>;
-    }
-    if (s === "INTERNSHIP") {
-      return <Badge variant="info">Internship</Badge>;
-    }
-    if (s === "LATE") {
-      return <Badge variant="warning">Late</Badge>;
-    }
-    if (s === "UNMARKED" || s === "NOT_MARKED") {
-      return <Badge variant="default">Not Marked</Badge>;
-    }
+    if (s === "PRESENT") return <Badge variant="success">Present</Badge>;
+    if (s === "ABSENT") return <Badge variant="danger">Absent</Badge>;
+    if (s === "OD") return <Badge variant="purple">OD</Badge>;
+    if (s === "MEDICAL_LEAVE" || s === "ML") return <Badge variant="warning">Medical Leave</Badge>;
+    if (s === "LONG_ABSENT") return <Badge variant="danger">Long Absent</Badge>;
+    if (s === "INTERNSHIP") return <Badge variant="info">Internship</Badge>;
+    if (s === "LATE") return <Badge variant="warning">Late</Badge>;
+    if (s === "UNMARKED" || s === "NOT_MARKED") return <Badge variant="default">Not Marked</Badge>;
     return <Badge variant="info">{statusStr}</Badge>;
   };
 
@@ -124,37 +120,20 @@ export default function StudentAttendancePage() {
     return days[date.getDay()];
   };
 
-  // Filter subject-wise attendance by selected semester
-  const filteredAttendances = attendances
-    .filter((att: any) => !selectedSem || att.course?.semester === selectedSem || !att.course?.semester)
-    .sort((a: any, b: any) => (b.date || "").localeCompare(a.date || ""));
-
-  const overallPct = studentData?.attendancePercentage ?? 100.0;
-  const isOverallShortage = overallPct < minRequired;
-
-  // Full Day Calculations
-  const fullDayRecords = fullDayAttendances
-    .filter((r: any) => r.status && r.status.toUpperCase() !== "UNMARKED" && r.status.toUpperCase() !== "NOT_MARKED")
-    .sort((a: any, b: any) => (b.date || "").localeCompare(a.date || ""));
-
-  const totalWorkingDays = fullDayRecords.length;
-  const presentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "PRESENT").length;
-  const absentOnly = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "ABSENT").length;
-  const odDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "OD").length;
-  const mlDays = fullDayRecords.filter((r: any) => {
-    const s = r.status.toUpperCase();
-    return s === "MEDICAL_LEAVE" || s === "ML";
-  }).length;
-  const longAbsentDays = fullDayRecords.filter((r: any) => r.status.toUpperCase() === "LONG_ABSENT").length;
-
-  const presentDays = presentOnly + odDays + mlDays;
-  const fullDayPct = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100 * 100) / 100 : 0.0;
+  // Full day calculation metrics
+  const totalWorkingDays = fullDaySummary?.totalWorkingDays || 0;
+  const fullDayPct = fullDaySummary?.fullDayPercentage || 0.0;
+  const presentOnly = fullDaySummary?.present || 0;
+  const absentOnly = fullDaySummary?.absent || 0;
+  const odDays = fullDaySummary?.od || 0;
+  const mlDays = fullDaySummary?.medicalLeave || 0;
+  const longAbsentDays = fullDaySummary?.longAbsent || 0;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950">
       <Header
         title="My Institutional Attendance Center"
-        subtitle="Subject-wise attendance breakdown, approved OD/Internship logs & shortage alerts"
+        subtitle={`Department: ${studentData?.department?.name || "AI & ML"} (${studentData?.department?.code || "AIML"}) | Semester ${selectedSem}`}
       />
 
       <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
@@ -190,7 +169,7 @@ export default function StudentAttendancePage() {
                 <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
                 <div>
                   <span className="font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider block">
-                    ATTENTION REQUIRED - ATTENDANCE SHORTAGE
+                    ATTENTION REQUIRED — ATTENDANCE SHORTAGE
                   </span>
                   <p className="text-rose-600 dark:text-rose-400 mt-0.5">
                     Your overall attendance ({overallPct}%) is currently below the mandatory institutional threshold ({minRequired}%). Please consult your course advisor.
@@ -210,22 +189,22 @@ export default function StudentAttendancePage() {
               />
               <StatCard
                 title="Total Sessions Conducted"
-                value={attendances.length}
-                subtitle={`Present: ${attendances.filter((a: any) => a.status === "PRESENT").length} | Absent: ${attendances.filter((a: any) => a.status === "ABSENT").length}`}
+                value={allAttendances.length}
+                subtitle={`Present: ${allAttendances.filter((a: any) => a.status === "PRESENT").length} | Absent: ${allAttendances.filter((a: any) => a.status === "ABSENT").length}`}
                 icon={BookOpen}
                 color="indigo"
               />
               <StatCard
                 title="Approved OD & Internship"
-                value={attendances.filter((a: any) => a.status === "OD" || a.status === "INTERNSHIP").length}
-                subtitle={`OD: ${attendances.filter((a: any) => a.status === "OD").length} | Internship: ${attendances.filter((a: any) => a.status === "INTERNSHIP").length}`}
+                value={allAttendances.filter((a: any) => a.status === "OD" || a.status === "INTERNSHIP").length}
+                subtitle={`OD: ${allAttendances.filter((a: any) => a.status === "OD").length} | Internship: ${allAttendances.filter((a: any) => a.status === "INTERNSHIP").length}`}
                 icon={FileCheck}
                 color="purple"
               />
               <StatCard
                 title="Medical & Late Sessions"
-                value={attendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "ML" || a.status === "LATE").length}
-                subtitle={`Medical: ${attendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "ML").length} | Late: ${attendances.filter((a: any) => a.status === "LATE").length}`}
+                value={allAttendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "ML" || a.status === "LATE").length}
+                subtitle={`Medical: ${allAttendances.filter((a: any) => a.status === "MEDICAL_LEAVE" || a.status === "ML").length} | Late: ${allAttendances.filter((a: any) => a.status === "LATE").length}`}
                 icon={Briefcase}
                 color="sky"
               />
@@ -246,7 +225,7 @@ export default function StudentAttendancePage() {
                   <label className="block text-slate-500 font-semibold mb-1">Select Semester</label>
                   <select
                     value={selectedSem}
-                    onChange={(e) => setSelectedSem(parseInt(e.target.value, 10))}
+                    onChange={(e) => handleSemesterChange(parseInt(e.target.value, 10))}
                     className="ui-input w-full p-2 font-bold text-indigo-600"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -259,11 +238,104 @@ export default function StudentAttendancePage() {
               </div>
             </div>
 
+            {/* Applicable Subjects Attendance Summary Table (Source of Truth) */}
+            <div className="ui-card overflow-hidden space-y-4 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Semester {selectedSem} Course Attendance Breakdown ({subjects.length} Subjects Configured)</span>
+              </h3>
+
+              {subjects.length === 0 ? (
+                <EmptyState
+                  title="No Subjects Configured"
+                  description={`No active subjects are configured for Semester ${selectedSem} in this department.`}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                        <th className="p-3.5">Subject Code</th>
+                        <th className="p-3.5">Subject Name</th>
+                        <th className="p-3.5">Credits</th>
+                        <th className="p-3.5">Assigned Faculty</th>
+                        <th className="p-3.5">Conducted</th>
+                        <th className="p-3.5">Present</th>
+                        <th className="p-3.5">Absent / OD</th>
+                        <th className="p-3.5">Percentage</th>
+                        <th className="p-3.5">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {subjects.map((sub: any) => {
+                        const summary = sub.attendanceSummary || {};
+                        const hasAtt = summary.hasAttendance;
+                        const pct = summary.attendancePercentage ?? 0;
+                        const isLow = hasAtt && pct < minRequired;
+
+                        return (
+                          <tr key={sub.courseId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                            <td className="p-3.5 font-bold font-mono text-indigo-600 dark:text-indigo-400">
+                              {sub.code}
+                            </td>
+                            <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                              {sub.name || sub.title}
+                            </td>
+                            <td className="p-3.5 font-semibold text-slate-600 dark:text-slate-400">
+                              {sub.credits} Credits
+                            </td>
+                            <td className="p-3.5 font-medium text-slate-700 dark:text-slate-300">
+                              {sub.assignedFaculty ? (
+                                <div className="flex items-center gap-1.5">
+                                  <User className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{sub.assignedFaculty.fullName}</span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic">Unassigned</span>
+                              )}
+                            </td>
+                            <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                              {summary.classesConducted}
+                            </td>
+                            <td className="p-3.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                              {summary.present}
+                            </td>
+                            <td className="p-3.5 font-semibold text-slate-600 dark:text-slate-400">
+                              <span className="text-rose-600 dark:text-rose-400">{summary.absent}</span>
+                              {summary.od > 0 && <span className="text-blue-600 dark:text-blue-400 ml-1">+{summary.od} OD</span>}
+                            </td>
+                            <td className="p-3.5 font-mono font-bold text-sm">
+                              {hasAtt ? (
+                                <span className={isLow ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
+                                  {pct}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">N/A</span>
+                              )}
+                            </td>
+                            <td className="p-3.5">
+                              {!hasAtt ? (
+                                <Badge variant="default">Not Marked</Badge>
+                              ) : isLow ? (
+                                <Badge variant="danger">Shortage Warning</Badge>
+                              ) : (
+                                <Badge variant="success">Good Standing</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
             {/* Subject Attendance Record Log Table */}
             <div className="ui-card overflow-hidden space-y-4 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Subject Attendance Log (Semester {selectedSem}) — {filteredAttendances.length} Records</span>
+                <span>Logged Subject Session History (Semester {selectedSem}) — {allAttendances.length} Records</span>
               </h3>
 
               <div className="overflow-x-auto">
@@ -277,14 +349,14 @@ export default function StudentAttendancePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {filteredAttendances.length === 0 ? (
+                    {allAttendances.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="p-6">
-                          <EmptyState title="No Attendance Records" description={`No attendance records are logged for Semester ${selectedSem}.`} />
+                          <EmptyState title="No Attendance Session Logs" description={`No attendance session logs recorded yet for Semester ${selectedSem}.`} />
                         </td>
                       </tr>
                     ) : (
-                      filteredAttendances.map((att: any) => (
+                      allAttendances.map((att: any) => (
                         <tr key={att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                           <td className="p-3.5 font-semibold text-slate-900 dark:text-white">
                             {formatDate(att.date)}
