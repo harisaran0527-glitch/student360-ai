@@ -8,6 +8,7 @@ import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs, TabItem } from "@/components/ui/Tabs";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { getDepartmentDisplayCode, getDepartmentDisplayName } from "@/lib/departmentEngine";
 import { maskAadhaar } from "@/lib/security";
 import {
   User,
@@ -112,7 +113,7 @@ export default function Student360ProfilePage({ params }: { params: { id: string
                 Register: {student.registerNo} | Roll: {student.rollNo} | Adm: {student.admissionNo}
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <Badge variant="purple">Dept: {student.department?.code}</Badge>
+                <Badge variant="purple">Dept: {getDepartmentDisplayCode(student.department?.code)}</Badge>
                 {student.academicYear && <Badge variant="info">AY: {student.academicYear}</Badge>}
                 <Badge variant="info">Semester {student.currentSemester}</Badge>
                 <Badge variant="success">CGPA: {student.cgpa}</Badge>
@@ -182,7 +183,7 @@ export default function Student360ProfilePage({ params }: { params: { id: string
                     <Building2 className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                     <span>Institutional Academic Setup</span>
                   </div>
-                  <div><span className="text-slate-500 dark:text-slate-400">Department:</span> <strong>{student.department?.name} ({student.department?.code})</strong></div>
+                  <div><span className="text-slate-500 dark:text-slate-400">Department:</span> <strong>{getDepartmentDisplayName(student.department)} ({getDepartmentDisplayCode(student.department?.code)})</strong></div>
                   {student.batch?.name && <div><span className="text-slate-500 dark:text-slate-400">Batch Name:</span> <strong>{student.batch?.name}</strong></div>}
                   <div><span className="text-slate-500 dark:text-slate-400">Academic Year:</span> <strong>{student.academicYear || DEFAULT_ACADEMIC_YEAR}</strong></div>
                   <div><span className="text-slate-500 dark:text-slate-400">Current Semester:</span> <strong>Semester {student.currentSemester}</strong></div>

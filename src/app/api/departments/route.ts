@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getCachedDepartments, setCachedDepartments, invalidateServerMetadataCache } from "@/lib/serverCache";
 
+import { getDepartmentDisplayCode, getDepartmentDisplayName, getDepartmentDisplayLabel } from "@/lib/departmentEngine";
+
 export async function GET(req: Request) {
   try {
     const session = await getSession(req);
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const departments = await prisma.department.findMany({
+    const rawDepts = await prisma.department.findMany({
       select: {
         id: true,
         code: true,
@@ -28,6 +30,13 @@ export async function GET(req: Request) {
       },
       orderBy: { code: "asc" },
     });
+
+    const departments = rawDepts.map((d) => ({
+      ...d,
+      displayCode: getDepartmentDisplayCode(d.code),
+      displayName: getDepartmentDisplayName(d),
+      displayLabel: getDepartmentDisplayLabel(d),
+    }));
 
     const payload = { departments };
     setCachedDepartments(payload);

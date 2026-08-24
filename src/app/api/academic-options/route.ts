@@ -7,6 +7,7 @@ import {
   isSelectableBatch,
 } from "@/lib/academicYearConstants";
 import { getCachedAcademicOptions, setCachedAcademicOptions } from "@/lib/serverCache";
+import { getDepartmentDisplayCode, getDepartmentDisplayName, getDepartmentDisplayLabel } from "@/lib/departmentEngine";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -96,7 +97,12 @@ export async function GET(req: Request) {
         departmentId: b.departmentId,
       }));
 
-    const departments = rawDepts;
+    const departments = rawDepts.map((d) => ({
+      ...d,
+      displayCode: getDepartmentDisplayCode(d.code),
+      displayName: getDepartmentDisplayName(d),
+      displayLabel: getDepartmentDisplayLabel(d),
+    }));
 
     const currentYear = academicYears.find((y) => y.isCurrent) || academicYears[0];
 

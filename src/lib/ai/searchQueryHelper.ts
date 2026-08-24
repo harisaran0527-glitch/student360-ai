@@ -48,11 +48,12 @@ export function parseStructuredSearchQuery(query: string): SearchQueryTranslatio
     explanationParts.push("Aggregation: Batches/Sections sorted by highest verified project count");
   }
 
-  // Department Extraction (e.g. "cse", "ece", "aids")
-  const deptMatch = q.match(/\b(cse|ece|aids|it|mech|civil)\b/i);
+  // Department Extraction (e.g. "cse", "ece", "aids", "ai&ds")
+  const deptMatch = q.match(/\b(cse|ece|aids|ai&ds|it|mech|civil)\b/i);
   if (deptMatch && deptMatch[1]) {
-    filters.department = deptMatch[1].toUpperCase();
-    explanationParts.push(`Filter: Department ${filters.department}`);
+    const rawDept = deptMatch[1].toUpperCase();
+    filters.department = rawDept === "AI&DS" ? "AIDS" : rawDept;
+    explanationParts.push(`Filter: Department ${filters.department === "AIDS" ? "AI&DS" : filters.department}`);
   }
 
   return {

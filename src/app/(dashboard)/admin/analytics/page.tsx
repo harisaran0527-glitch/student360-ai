@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
+import { getDepartmentDisplayCode } from "@/lib/departmentEngine";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -91,7 +92,7 @@ export default function AdminAnalyticsPage() {
 
   const deptCounts: Record<string, number> = {};
   students.forEach((s) => {
-    const code = s.department?.code || "Other";
+    const code = getDepartmentDisplayCode(s.department?.code) || "Other";
     deptCounts[code] = (deptCounts[code] || 0) + 1;
   });
 

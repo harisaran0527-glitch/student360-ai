@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ACADEMIC_YEAR_OPTIONS, DEFAULT_ACADEMIC_YEAR } from "@/lib/academicYearConstants";
 import { getAcademicOptions, invalidateOptionsCache } from "@/lib/clientOptionsCache";
+import { getDepartmentDisplayCode } from "@/lib/departmentEngine";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -965,7 +966,7 @@ export default function MasterRecordsPage() {
                       </td>
                       <td className="p-4">
                         <div className="font-semibold text-slate-900 dark:text-white">
-                          {st.department?.code}
+                          {getDepartmentDisplayCode(st.department?.code)}
                         </div>
                         <div className="text-[11px] text-slate-400">
                           Sem {st.currentSemester} (AY {st.academicYear})
@@ -1081,7 +1082,7 @@ export default function MasterRecordsPage() {
                   {quickViewStudent.fullName}
                 </div>
                 <div className="text-slate-500 font-mono mt-0.5">
-                  Dept: {quickViewStudent.department?.code} | AY: {quickViewStudent.academicYear}
+                  Dept: {getDepartmentDisplayCode(quickViewStudent.department?.code)} | AY: {quickViewStudent.academicYear}
                 </div>
               </div>
               <Link
@@ -1460,7 +1461,7 @@ export default function MasterRecordsPage() {
                   <option value="" disabled>Select Department</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.code} - {d.name}
+                      {d.code === "AIDS" ? "AI&DS" : d.code} — {d.name}
                     </option>
                   ))}
                 </select>

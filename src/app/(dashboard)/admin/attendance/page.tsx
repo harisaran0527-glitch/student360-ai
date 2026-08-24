@@ -284,12 +284,14 @@ export default function AdminAttendancePage() {
       .then((data) => {
         const dList: any[] = data.departments || data.data?.departments || [];
         const formatted = dList.map((d: any) => {
+          let displayCode = d.code === "AIDS" ? "AI&DS" : d.code;
           let displayName = d.name;
-          if (d.code === "AIML" || d.name === "AI & ML" || d.name.includes("Artificial Intelligence")) {
+          if (d.code === "AIML" || d.name === "AI & ML" || (d.name && d.name.includes("Artificial Intelligence & Machine"))) {
             displayName = "Artificial Intelligence & Machine Learning";
           }
           return {
             ...d,
+            displayCode,
             displayName,
           };
         });
@@ -678,7 +680,7 @@ export default function AdminAttendancePage() {
             >
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.code} — {d.displayName || (d.code === "AIML" || d.name === "AI & ML" ? "Artificial Intelligence & Machine Learning" : d.name)}
+                  {d.displayCode || (d.code === "AIDS" ? "AI&DS" : d.code)} — {d.displayName || (d.code === "AIML" || d.name === "AI & ML" ? "Artificial Intelligence & Machine Learning" : d.name)}
                 </option>
               ))}
             </select>

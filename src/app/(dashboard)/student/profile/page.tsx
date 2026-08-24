@@ -1,6 +1,7 @@
 import React from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
+import { getDepartmentDisplayCode, getDepartmentDisplayName } from "@/lib/departmentEngine";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { User, Mail, MapPin, AlertCircle, Bus, BookOpen } from "lucide-react";
@@ -28,7 +29,8 @@ export default async function StudentProfilePage() {
   const registerNo = student?.registerNo || "N/A";
   const rollNo = student?.rollNo || "N/A";
   const admissionNo = student?.admissionNo || "N/A";
-  const deptCode = student?.department?.code || "AIML";
+  const deptCode = getDepartmentDisplayCode(student?.department?.code) || "AIML";
+  const deptName = getDepartmentDisplayName(student?.department) || deptCode;
   const batchName = student?.batch?.name || "N/A";
   const sectionName = student?.section?.name || "N/A";
   const cgpaVal = student?.cgpa ?? 0;
@@ -74,7 +76,7 @@ export default async function StudentProfilePage() {
                 Register: {registerNo} | Roll: {rollNo} | Adm: {admissionNo}
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <Badge variant="purple">Department: {deptCode}</Badge>
+                <Badge variant="purple">Department: {deptCode} ({deptName})</Badge>
                 {student?.academicYear && <Badge variant="info">AY: {student.academicYear}</Badge>}
                 {sectionName !== "N/A" && <Badge variant="default">Section: {sectionName}</Badge>}
                 <Badge variant="success">CGPA: {cgpaVal}</Badge>

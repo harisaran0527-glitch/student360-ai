@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { getDepartmentDisplayCode, getDepartmentDisplayName, getDepartmentDisplayLabel } from "@/lib/departmentEngine";
 
 export interface AcademicYearOption {
   id: string;
@@ -69,13 +70,21 @@ export async function getAcademicOptions(forceRefresh = false): Promise<Academic
         cache: "no-store",
       });
 
+const normalizeDeptList = (depts: any[]) =>
+  (depts || []).map((d: any) => ({
+    ...d,
+    displayCode: d.displayCode || getDepartmentDisplayCode(d.code),
+    displayName: d.displayName || getDepartmentDisplayName(d),
+    displayLabel: d.displayLabel || getDepartmentDisplayLabel(d),
+  }));
+
       if (res.ok) {
         const data = await res.json();
         if (data && data.academicYears && data.batches) {
           cachedData = {
             academicYears: data.academicYears || [],
             batches: data.batches || [],
-            departments: data.departments || [],
+            departments: normalizeDeptList(data.departments),
             currentYearCode: data.currentYearCode || "2025-2029",
           };
           cacheTimestamp = Date.now();
@@ -97,7 +106,7 @@ export async function getAcademicOptions(forceRefresh = false): Promise<Academic
       cachedData = {
         academicYears: ayData.academicYears || [],
         batches: batchData.batches || [],
-        departments: deptData.departments || [],
+        departments: normalizeDeptList(deptData.departments),
         currentYearCode: ayData.currentYearCode || "2025-2029",
       };
       cacheTimestamp = Date.now();

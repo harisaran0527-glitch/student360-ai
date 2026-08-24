@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Badge } from "@/components/ui/Badge";
+import { getDepartmentDisplayCode } from "@/lib/departmentEngine";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -129,7 +130,7 @@ export default function StudentPostsPage() {
                         {post.user?.fullName}
                       </div>
                       <div className="text-[11px] text-slate-500 font-mono">
-                        Dept: {post.student?.department?.code || "CS"} | Reg: {post.student?.registerNo || "N/A"}
+                        Dept: {getDepartmentDisplayCode(post.student?.department?.code) || "CS"} | Reg: {post.student?.registerNo || "N/A"}
                       </div>
                     </div>
                   </div>
