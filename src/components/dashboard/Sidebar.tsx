@@ -47,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: "Student Master Directory", href: "/admin/master-records", icon: Users },
     { name: "Bus Management", href: "/admin/bus", icon: Bus },
     { name: "Semester Subjects & Syllabus", href: "/admin/academics", icon: GraduationCap },
+    { name: "Semester Marks & Transcript", href: "/admin/academics/marks", icon: FileText },
     { name: "Admin Verification Center", href: "/admin/verification", icon: FileCheck },
     { name: "Internship", href: "/admin/internships", icon: Briefcase },
     { name: "Certificates", href: "/admin/certificates", icon: FileCheck },

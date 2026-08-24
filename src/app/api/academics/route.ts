@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { calculateAcademicGrade, recalculateStudentCgpa } from "@/lib/academic-grading";
 
 export async function GET(req: Request) {
   try {
@@ -48,54 +49,25 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { studentId, courseId, semester, internalMarks, externalMarks, credits } = body;
 
-    const internal = Number(internalMarks) || 0;
-    const external = Number(externalMarks) || 0;
-    const total = internal + external;
-
-    let grade = "F";
-    let result = "FAIL";
-    if (total >= 90) grade = "O";
-    else if (total >= 80) grade = "A+";
-    else if (total >= 70) grade = "A";
-    else if (total >= 60) grade = "B+";
-    else if (total >= 50) grade = "B";
-
-    if (total >= 50 && external >= 25) {
-      result = "PASS";
-    }
+    const gradeCalc = calculateAcademicGrade(internalMarks, externalMarks);
+    const semNumber = Number(semester) || 1;
 
     const record = await prisma.academicRecord.create({
       data: {
         studentId,
         courseId,
-        semester: Number(semester) || 1,
-        internalMarks: internal,
-        externalMarks: external,
-        totalMarks: total,
-        grade,
+        semester: semNumber,
+        internalMarks: gradeCalc.internalMarks,
+        externalMarks: gradeCalc.externalMarks,
+        totalMarks: gradeCalc.totalMarks,
+        grade: gradeCalc.grade,
         credits: Number(credits) || 3,
-        result,
+        result: gradeCalc.result,
       },
     });
 
     // Recalculate CGPA
-    const allRecords = await prisma.academicRecord.findMany({ where: { studentId } });
-    let totalGradePoints = 0;
-    let totalCredits = 0;
-    const gradePointMap: Record<string, number> = { "O": 10, "A+": 9, "A": 8, "B+": 7, "B": 6, "F": 0 };
-
-    for (const r of allRecords) {
-      const gp = gradePointMap[r.grade] || 0;
-      totalGradePoints += gp * r.credits;
-      totalCredits += r.credits;
-    }
-
-    const newCgpa = totalCredits > 0 ? Number((totalGradePoints / totalCredits).toFixed(2)) : 0.0;
-
-    await prisma.studentProfile.update({
-      where: { id: studentId },
-      data: { cgpa: newCgpa },
-    });
+    const newCgpa = await recalculateStudentCgpa(studentId, semNumber);
 
     await logAuditEvent({
       userId: session.id,
@@ -104,7 +76,7 @@ export async function POST(req: Request) {
       action: "UPDATE_ACADEMIC_MARKS",
       entityType: "AcademicRecord",
       entityId: record.id,
-      details: { studentId, courseId, total, grade },
+      details: { studentId, courseId, total: gradeCalc.totalMarks, grade: gradeCalc.grade },
     });
 
     return NextResponse.json({ success: true, record, updatedCgpa: newCgpa });

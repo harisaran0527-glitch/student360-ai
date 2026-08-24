@@ -39,7 +39,7 @@ export default async function StudentAcademicsPage() {
 
   const academicRecords = student?.academicRecords || [];
   const fullName = student?.fullName || session?.fullName || "Student";
-  const cgpaDisplay = student?.cgpa ? `${student.cgpa} / 10.0` : "0.00 / 10.0";
+  const cgpaDisplay = student?.cgpa !== undefined ? `${Number(student.cgpa).toFixed(2)} / 10.0` : "0.00 / 10.0";
   const deptCode = student?.department?.code || "AI & ML";
 
   return (

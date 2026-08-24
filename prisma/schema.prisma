@@ -446,6 +446,7 @@ model AcademicRecord {
   studentId     String
   courseId      String
   semester      Int
+  academicYear  String         @default("2025-2029")
   internalMarks Float          @default(0.0)
   externalMarks Float          @default(0.0)
   totalMarks    Float          @default(0.0)
@@ -457,6 +458,8 @@ model AcademicRecord {
 
   student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId, semester, academicYear])
 }
 
 model Internship {
