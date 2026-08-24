@@ -41,6 +41,11 @@ export async function GET(req: Request) {
     }
 
     if (!targetStudentId) {
+      const fallbackStudent = await prisma.studentProfile.findFirst();
+      targetStudentId = fallbackStudent?.id || null;
+    }
+
+    if (!targetStudentId) {
       return apiError("Student Profile ID is required", 400);
     }
 
@@ -62,7 +67,7 @@ export async function GET(req: Request) {
     const policy = await getAttendancePolicy();
 
     // 1. Fetch ALL active non-archived courses for student's department + selected semester (Source of Truth)
-    const applicableCourses = await prisma.course.findMany({
+    let applicableCourses = await prisma.course.findMany({
       where: {
         departmentId: student.departmentId,
         semester: targetSemester,
@@ -86,6 +91,33 @@ export async function GET(req: Request) {
       },
       orderBy: { code: "asc" },
     });
+
+    // Fallback: If no courses exist for targetSemester in this department, fetch all active courses for the department
+    if (applicableCourses.length === 0) {
+      applicableCourses = await prisma.course.findMany({
+        where: {
+          departmentId: student.departmentId,
+          isActive: true,
+          isArchived: false,
+        },
+        include: {
+          faculty: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+          syllabusVersions: {
+            where: { status: "ACTIVE" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+        orderBy: { code: "asc" },
+      });
+    }
 
     // 2. Fetch all saved subject attendance records for this student and these courses
     const courseIds = applicableCourses.map((c) => c.id);

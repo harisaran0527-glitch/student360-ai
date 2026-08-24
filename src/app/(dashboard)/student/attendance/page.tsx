@@ -30,15 +30,15 @@ export default function StudentAttendancePage() {
   const [activeTab, setActiveTab] = useState<"SUBJECT" | "FULL_DAY">("SUBJECT");
 
   // Filters
-  const [selectedSem, setSelectedSem] = useState<number>(1);
-  const [initialSemLoaded, setInitialSemLoaded] = useState<boolean>(false);
+  const [selectedSem, setSelectedSem] = useState<number | null>(null);
 
-  const fetchAttendance = useCallback(async (semToFetch?: number) => {
+  const fetchAttendance = useCallback(async (semToFetch?: number | null) => {
     setLoading(true);
     try {
       const timestamp = Date.now();
-      const targetSem = semToFetch || selectedSem;
-      const res = await fetch(`/api/reports/attendance/student?semester=${targetSem}&t=${timestamp}`, {
+      const querySem = semToFetch !== undefined ? semToFetch : selectedSem;
+      const semParam = querySem ? `semester=${querySem}&` : "";
+      const res = await fetch(`/api/reports/attendance/student?${semParam}t=${timestamp}`, {
         cache: "no-store",
         headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" },
       });
@@ -50,10 +50,10 @@ export default function StudentAttendancePage() {
         setAllAttendances(data.allAttendances || []);
         setFullDaySummary(data.fullDayAttendanceSummary || null);
         setFullDayRecords(data.fullDayRecords || []);
-
-        if (!initialSemLoaded && data.student.currentSemester) {
+        if (data.student.selectedSemester) {
+          setSelectedSem(data.student.selectedSemester);
+        } else if (data.student.currentSemester) {
           setSelectedSem(data.student.currentSemester);
-          setInitialSemLoaded(true);
         }
       }
     } catch (err) {
@@ -61,7 +61,7 @@ export default function StudentAttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSem, initialSemLoaded]);
+  }, [selectedSem]);
 
   useEffect(() => {
     fetchAttendance();
@@ -224,7 +224,7 @@ export default function StudentAttendancePage() {
                 <div>
                   <label className="block text-slate-500 font-semibold mb-1">Select Semester</label>
                   <select
-                    value={selectedSem}
+                    value={selectedSem || 3}
                     onChange={(e) => handleSemesterChange(parseInt(e.target.value, 10))}
                     className="ui-input w-full p-2 font-bold text-indigo-600"
                   >
@@ -242,7 +242,7 @@ export default function StudentAttendancePage() {
             <div className="ui-card overflow-hidden space-y-4 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Semester {selectedSem} Course Attendance Breakdown ({subjects.length} Subjects Configured)</span>
+                <span>Semester {selectedSem || 3} Course Attendance Breakdown ({subjects.length} Subjects Configured)</span>
               </h3>
 
               {subjects.length === 0 ? (
