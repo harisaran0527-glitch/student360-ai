@@ -11,6 +11,7 @@ import {
   Loader2,
   FileSpreadsheet,
   BookOpen,
+  X,
 } from "lucide-react";
 import { calculateAcademicGrade } from "@/lib/academic-grading";
 
@@ -345,17 +346,44 @@ export default function AdminMarksPage() {
 
             {/* Department Filter */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase">
-                Department
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
+                  Department
+                </label>
+                {departmentId && (
+                  <button
+                    type="button"
+                    title="Clear department"
+                    onClick={() => {
+                      setDepartmentId("");
+                      setSelectedSem(3);
+                      setSectionId("all");
+                      setSelectedCourseId("");
+                      setCourses([]);
+                      setStudentMarkStates([]);
+                    }}
+                    className="flex items-center gap-0.5 text-[10px] font-semibold text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear
+                  </button>
+                )}
+              </div>
               <select
                 value={departmentId}
                 onChange={(e) => {
                   setDepartmentId(e.target.value);
                   setSelectedCourseId("");
+                  setSectionId("all");
+                  setStudentMarkStates([]);
                 }}
                 className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
+                {!departmentId && (
+                  <option value="" disabled>
+                    — Select Department —
+                  </option>
+                )}
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.displayLabel || `${d.code === "AIDS" ? "AI&DS" : d.code} — ${d.name}`}
