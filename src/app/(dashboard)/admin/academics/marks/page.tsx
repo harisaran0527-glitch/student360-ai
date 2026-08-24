@@ -74,10 +74,16 @@ export default function AdminMarksPage() {
       try {
         const res = await fetch("/api/departments");
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setDepartments(data);
-          if (data.length > 0) {
-            setDepartmentId(data[0].id);
+        const depts = data.departments || [];
+        if (Array.isArray(depts)) {
+          setDepartments(depts);
+          if (depts.length > 0) {
+            const aimlDept = depts.find((d: any) => d.code === "AIML");
+            if (aimlDept) {
+              setDepartmentId(aimlDept.id);
+            } else {
+              setDepartmentId(depts[0].id);
+            }
           }
         }
       } catch (err) {
@@ -352,7 +358,7 @@ export default function AdminMarksPage() {
               >
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.code === "AIDS" ? "AI&DS" : d.code} — {d.name}
+                    {d.displayLabel || `${d.code === "AIDS" ? "AI&DS" : d.code} — ${d.name}`}
                   </option>
                 ))}
               </select>
